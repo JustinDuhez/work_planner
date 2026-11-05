@@ -10,7 +10,8 @@
     "test": "jest --runInBand"
   },
   "dependencies": {
-    "@work-planner/domain": "0.0.0"
+    "@work-planner/domain": "0.0.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "tsx": "^4.23.15"
