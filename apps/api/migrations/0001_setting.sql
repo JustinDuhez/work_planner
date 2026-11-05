@@ -1,0 +1,20 @@
+CREATE FUNCTION set_updated_at() RETURNS TRIGGER AS $$
+BEGIN
+	NEW.updated_at = NOW();
+	RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TABLE setting (
+	id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	key TEXT NOT NULL UNIQUE,
+	value TEXT NOT NULL,
+	created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+	updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TRIGGER setting_set_updated_at
+	BEFORE UPDATE ON setting
+	FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+INSERT INTO setting (key, value) VALUES ('year_start', '07-01');
