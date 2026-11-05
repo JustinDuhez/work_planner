@@ -20,6 +20,7 @@ describe('API application', () => {
     app.get('/api/v1/test-conflict', () => {
       throw new ConflictError('CLOCK_ALREADY_RUNNING', 'Une période est déjà en cours.');
     });
+    app.post('/api/v1/test-echoes', () => ({ received: true }));
     app.get('/api/v1/test-crash', () => {
       throw new Error('connection string postgres://secret@db leaked');
     });
@@ -87,6 +88,22 @@ describe('API application', () => {
     expect(response.body).not.toContain('secret');
   });
 
+  it('answers a generic 400 for a malformed request body', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/test-echoes',
+      headers: { 'content-type': 'application/json' },
+      payload: '{ not json',
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json<unknown>()).toEqual({
+      code: 'BAD_REQUEST',
+      message: 'Requête invalide.',
+    });
+    expect(response.body).not.toContain('JSON');
+  });
+
   it('sends a strict Content Security Policy and anti-sniffing headers', async () => {
     const response = await app.inject({ method: 'GET', url: '/api/v1/health' });
 
@@ -95,6 +112,23 @@ describe('API application', () => {
     expect(contentSecurityPolicy).toContain("script-src 'self'");
     expect(contentSecurityPolicy).toContain("frame-ancestors 'none'");
     expect(contentSecurityPolicy).not.toContain('unsafe-inline');
+    expect(contentSecurityPolicy).not.toContain('upgrade-insecure-requests');
     expect(response.headers['x-content-type-options']).toBe('nosniff');
+  });
+
+  it('asks browsers to upgrade insecure requests in production', async () => {
+    const productionDb = createDb(UNREACHABLE_DATABASE_URL);
+    const productionApp = await buildApp({
+      config: createTestConfig({ isProduction: true }),
+      db: productionDb,
+    });
+
+    const response = await productionApp.inject({ method: 'GET', url: '/api/v1/unknown' });
+
+    expect(String(response.headers['content-security-policy'])).toContain(
+      'upgrade-insecure-requests',
+    );
+    await productionApp.close();
+    await productionDb.destroy();
   });
 });

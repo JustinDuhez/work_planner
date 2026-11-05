@@ -7,7 +7,7 @@ import {
   ValidationError,
   type ErrorResponse,
 } from '@work-planner/domain';
-import '@fastify/static';
+import type {} from '@fastify/static';
 import type { FastifyInstance } from 'fastify';
 
 const INTERNAL_ERROR: ErrorResponse = {

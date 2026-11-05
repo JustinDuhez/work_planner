@@ -69,11 +69,21 @@ describe('database', () => {
 
       const failure = await migrateToLatest(db, directory).catch((error: unknown) => error);
 
-      expect(failure).toEqual(expect.objectContaining({ message: 'Migration failed' }));
+      expect(failure).toEqual(
+        expect.objectContaining({ message: 'Migration failed: 0002_broken' }),
+      );
       expect((failure as Error).cause).toBeDefined();
       await expect(migrateToLatest(db, MIGRATIONS_DIRECTORY)).resolves.toEqual([]);
     } finally {
       await rm(directory, { recursive: true, force: true });
     }
+  });
+
+  it('rejects without naming a migration when none could be run', async () => {
+    const missingDirectory = path.join(os.tmpdir(), 'migrations-that-do-not-exist');
+
+    const failure = await migrateToLatest(db, missingDirectory).catch((error: unknown) => error);
+
+    expect(failure).toEqual(expect.objectContaining({ message: 'Migration failed' }));
   });
 });
