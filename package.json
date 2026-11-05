@@ -1,0 +1,34 @@
+{
+  "name": "work-planner",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:api": "npm run dev --workspace @work-planner/api",
+    "dev:web": "npm run dev --workspace @work-planner/web",
+    "migrate": "npm run migrate --workspace @work-planner/api",
+    "build": "npm run build --workspaces --if-present",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@swc/core": "^1.16.22",
+    "@swc/jest": "^0.2.39",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.19.2",
+    "eslint": "^10.14.0",
+    "eslint-config-willemse": "^3.0.0",
+    "jest": "^30.5.2",
+    "prettier": "^3.9.10",
+    "typescript": "~6.0.3"
+  }
+}
