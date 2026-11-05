@@ -9,7 +9,7 @@ describe('loadConfig', () => {
     expect(config).toEqual({
       nodeEnv: 'development',
       host: '127.0.0.1',
-      port: 3000,
+      port: 3001,
       databaseUrl: VALID_DATABASE_URL,
       appTimezone: 'Europe/Paris',
       logLevel: 'info',

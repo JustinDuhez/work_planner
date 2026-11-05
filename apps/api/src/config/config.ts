@@ -1,6 +1,8 @@
 import { AppError } from '@work-planner/domain';
 import { z } from 'zod';
 
+const DEFAULT_PORT = 3001;
+
 const LOG_LEVELS = ['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'] as const;
 
 export type LogLevel = (typeof LOG_LEVELS)[number];
@@ -29,7 +31,7 @@ function isKnownTimeZone(timeZone: string): boolean {
 const environmentSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   HOST: z.string().min(1).default('127.0.0.1'),
-  PORT: z.coerce.number().int().min(1).max(65535).default(3000),
+  PORT: z.coerce.number().int().min(1).max(65535).default(DEFAULT_PORT),
   DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
   APP_TIMEZONE: z.string().refine(isKnownTimeZone, 'Unknown time zone').default('Europe/Paris'),
   LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
