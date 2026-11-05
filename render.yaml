@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: work-planner
+    runtime: docker
+    plan: free
+    region: frankfurt
+    healthCheckPath: /api/v1/health
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: APP_TIMEZONE
+        value: Europe/Paris
+      - key: LOG_LEVEL
+        value: info
+      - key: DATABASE_URL
+        sync: false

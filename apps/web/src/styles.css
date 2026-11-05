@@ -1,0 +1,15 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/inter';
+
+@theme {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+
+  --color-primary-50: oklch(97% 0.02 270);
+  --color-primary-100: oklch(94% 0.04 270);
+  --color-primary-500: oklch(60% 0.14 270);
+  --color-primary-600: oklch(54% 0.15 270);
+  --color-primary-700: oklch(47% 0.14 270);
+
+  --radius-card: 0.75rem;
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 1px 3px rgb(15 23 42 / 0.06);
+}
