@@ -1,0 +1,18 @@
+{
+  "name": "@work-planner/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "migrate": "tsx src/migrate.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "jest --runInBand"
+  },
+  "dependencies": {
+    "@work-planner/domain": "0.0.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.15"
+  }
+}
