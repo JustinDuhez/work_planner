@@ -1,3 +1,6 @@
+import { copyFile, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import { sql, type Kysely } from 'kysely';
 import { createMigratedTestDb } from '../test/test-database';
 import type { Database } from './database';
@@ -53,5 +56,24 @@ describe('database', () => {
     const { rows } = await sql<{ day: string }>`SELECT DATE '2026-03-29' AS day`.execute(db);
 
     expect(rows[0]?.day).toBe('2026-03-29');
+  });
+
+  it('rejects a broken migration and leaves nothing behind', async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), 'migrations-'));
+    try {
+      await copyFile(
+        path.join(MIGRATIONS_DIRECTORY, '0001_setting.sql'),
+        path.join(directory, '0001_setting.sql'),
+      );
+      await writeFile(path.join(directory, '0002_broken.sql'), 'CREATE TABLE broken (;');
+
+      const failure = await migrateToLatest(db, directory).catch((error: unknown) => error);
+
+      expect(failure).toEqual(expect.objectContaining({ message: 'Migration failed' }));
+      expect((failure as Error).cause).toBeDefined();
+      await expect(migrateToLatest(db, MIGRATIONS_DIRECTORY)).resolves.toEqual([]);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   });
 });

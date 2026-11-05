@@ -17,7 +17,7 @@ export async function migrateToLatest(
   });
   const { error, results = [] } = await migrator.migrateToLatest();
   if (error) {
-    throw error instanceof Error ? error : new Error('Migration failed', { cause: error });
+    throw new Error('Migration failed', { cause: error });
   }
   return results
     .filter((result) => result.status === 'Success')

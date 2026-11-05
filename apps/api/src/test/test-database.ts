@@ -5,8 +5,7 @@ import { MIGRATIONS_DIRECTORY, migrateToLatest } from '../db/migrator';
 
 const TEST_DATABASE_NAME_SUFFIX = '_test';
 
-function getTestDatabaseUrl(): string {
-  const testDatabaseUrl = process.env.TEST_DATABASE_URL;
+export function assertIsTestDatabaseUrl(testDatabaseUrl: string | undefined): string {
   if (!testDatabaseUrl) {
     throw new Error('TEST_DATABASE_URL is not set (see apps/api/.env.example).');
   }
@@ -20,7 +19,7 @@ function getTestDatabaseUrl(): string {
 }
 
 export async function createMigratedTestDb(): Promise<Kysely<Database>> {
-  const db = createDb(getTestDatabaseUrl());
+  const db = createDb(assertIsTestDatabaseUrl(process.env.TEST_DATABASE_URL));
   await sql`DROP SCHEMA public CASCADE`.execute(db);
   await sql`CREATE SCHEMA public`.execute(db);
   await migrateToLatest(db, MIGRATIONS_DIRECTORY);
