@@ -5,6 +5,7 @@ import type { Database } from './db/database';
 import { registerHealthRoutes } from './health/health-routes';
 import { registerErrorHandlers } from './http/error-handler';
 import { registerSecurityHeaders } from './http/security-headers';
+import { registerSpa } from './http/spa';
 
 export interface AppDependencies {
   config: AppConfig;
@@ -22,12 +23,19 @@ function buildLoggerOptions(config: AppConfig): FastifyServerOptions['logger'] {
   return { level: config.logLevel, transport: { target: 'pino-pretty' } };
 }
 
-export async function buildApp({ config, db }: AppDependencies): Promise<FastifyInstance> {
+export async function buildApp({
+  config,
+  db,
+  webDistDirectory,
+}: AppDependencies): Promise<FastifyInstance> {
   const app = Fastify({ logger: buildLoggerOptions(config) });
 
   await registerSecurityHeaders(app, config.isProduction);
-  registerErrorHandlers(app);
+  registerErrorHandlers(app, { serveSpa: webDistDirectory !== undefined });
   registerHealthRoutes(app, db);
+  if (webDistDirectory !== undefined) {
+    await registerSpa(app, webDistDirectory);
+  }
 
   return app;
 }

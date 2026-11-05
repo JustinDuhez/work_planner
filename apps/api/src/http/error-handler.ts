@@ -7,6 +7,7 @@ import {
   ValidationError,
   type ErrorResponse,
 } from '@work-planner/domain';
+import '@fastify/static';
 import type { FastifyInstance } from 'fastify';
 
 const INTERNAL_ERROR: ErrorResponse = {
@@ -33,7 +34,10 @@ function isClientError(error: unknown): error is { statusCode: number } {
   return typeof statusCode === 'number' && statusCode >= 400 && statusCode < 500;
 }
 
-export function registerErrorHandlers(app: FastifyInstance): void {
+export function registerErrorHandlers(
+  app: FastifyInstance,
+  { serveSpa }: { serveSpa: boolean },
+): void {
   app.setErrorHandler((error: unknown, request, reply) => {
     if (error instanceof AppError && httpStatusFor(error) < 500) {
       const body: ErrorResponse = { code: error.code, message: error.message };
@@ -46,5 +50,11 @@ export function registerErrorHandlers(app: FastifyInstance): void {
     return reply.status(500).send(INTERNAL_ERROR);
   });
 
-  app.setNotFoundHandler((_request, reply) => reply.status(404).send(NOT_FOUND));
+  app.setNotFoundHandler((request, reply) => {
+    const isPageNavigation = request.method === 'GET' && !request.url.startsWith('/api/');
+    if (serveSpa && isPageNavigation) {
+      return reply.type('text/html').sendFile('index.html');
+    }
+    return reply.status(404).send(NOT_FOUND);
+  });
 }

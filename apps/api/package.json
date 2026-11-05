@@ -5,12 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/main.ts",
+    "build": "node scripts/build.js",
+    "start": "node --enable-source-maps dist/main.js",
     "migrate": "tsx src/migrate.ts",
     "typecheck": "tsc -p tsconfig.json",
     "test": "jest --runInBand"
   },
   "dependencies": {
     "@fastify/helmet": "^13.2.0",
+    "@fastify/static": "^10.1.10",
     "@work-planner/domain": "0.0.0",
     "fastify": "^5.12.8",
     "kysely": "^0.29.8",
@@ -19,6 +22,7 @@
   },
   "devDependencies": {
     "@types/pg": "^8.23.1",
+    "esbuild": "^0.28.2",
     "pino-pretty": "^13.2.0",
     "tsx": "^4.23.15"
   }

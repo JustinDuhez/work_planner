@@ -4,9 +4,9 @@ export default {
   transform: {
     '^.+\\.[tj]s$': ['@swc/jest', { jsc: { parser: { syntax: 'typescript' }, target: 'es2023' } }],
   },
-  // Kysely and cookie (pulled in by Fastify's inject) ship ES modules only; Jest runs CommonJS,
+  // Kysely, cookie (pulled in by Fastify's inject) and content-disposition (pulled in by @fastify/static) ship ES modules only; Jest runs CommonJS,
   // so they must be transformed too.
-  transformIgnorePatterns: ['/node_modules/(?!(kysely|cookie)/)'],
+  transformIgnorePatterns: ['/node_modules/(?!(kysely|cookie|content-disposition)/)'],
   moduleNameMapper: {
     '^@work-planner/domain$': '<rootDir>/../../packages/domain/src/index.ts',
   },
