@@ -11,6 +11,7 @@ describe('loadConfig', () => {
       host: '127.0.0.1',
       port: 3001,
       databaseUrl: VALID_DATABASE_URL,
+      migrationDatabaseUrl: VALID_DATABASE_URL,
       appTimezone: 'Europe/Paris',
       logLevel: 'info',
       isProduction: false,
@@ -26,6 +27,22 @@ describe('loadConfig', () => {
 
     expect(config.port).toBe(10000);
     expect(config.isProduction).toBe(true);
+  });
+
+  it('runs migrations over the direct connection when a pooled one serves the app', () => {
+    const pooledUrl = 'postgresql://user:password@ep-x-pooler.eu-central-1.aws.neon.tech/neondb';
+    const directUrl = 'postgresql://user:password@ep-x.eu-central-1.aws.neon.tech/neondb';
+
+    const config = loadConfig({ DATABASE_URL: pooledUrl, DATABASE_URL_UNPOOLED: directUrl });
+
+    expect(config.databaseUrl).toBe(pooledUrl);
+    expect(config.migrationDatabaseUrl).toBe(directUrl);
+  });
+
+  it('refuses a direct database URL that is not PostgreSQL', () => {
+    expect(() =>
+      loadConfig({ DATABASE_URL: VALID_DATABASE_URL, DATABASE_URL_UNPOOLED: 'mysql://x@y/db' }),
+    ).toThrow(/DATABASE_URL_UNPOOLED/);
   });
 
   it('refuses to start without a database URL and names the missing variable', () => {

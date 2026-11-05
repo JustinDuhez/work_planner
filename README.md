@@ -42,4 +42,9 @@ npm run dev:web   # app on http://localhost:5173
 
 ## Deployment
 
-Render (Docker, free plan) + Neon (PostgreSQL). Render deploys `main` once the GitHub CI check passes; the container runs migrations before starting the server.
+Render (Docker, free plan) + Neon (PostgreSQL, `eu-central-1`). Render deploys `main` once the GitHub CI check passes; the container runs migrations before starting the server.
+
+The Neon project is linked with `neon init` (`neon.ts` declares the services; `.neon` and the pulled `.env.local` stay local). On Render, set:
+
+- `DATABASE_URL`: Neon's **pooled** connection string (`-pooler` host), used by the app.
+- `DATABASE_URL_UNPOOLED`: Neon's **direct** connection string, used by migrations (PgBouncer's transaction mode does not support session-level operations).
