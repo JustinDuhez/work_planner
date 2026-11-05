@@ -12,6 +12,8 @@ export interface AppConfig {
   host: string;
   port: number;
   databaseUrl: string;
+  /** Direct (unpooled) connection: Neon's PgBouncer transaction mode breaks session-level DDL. */
+  migrationDatabaseUrl: string;
   appTimezone: string;
   logLevel: LogLevel;
   isProduction: boolean;
@@ -28,11 +30,14 @@ function isKnownTimeZone(timeZone: string): boolean {
   }
 }
 
+const postgresUrl = z.url({ protocol: /^postgres(ql)?$/ });
+
 const environmentSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   HOST: z.string().min(1).default('127.0.0.1'),
   PORT: z.coerce.number().int().min(1).max(65535).default(DEFAULT_PORT),
-  DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
+  DATABASE_URL: postgresUrl,
+  DATABASE_URL_UNPOOLED: postgresUrl.optional(),
   APP_TIMEZONE: z.string().refine(isKnownTimeZone, 'Unknown time zone').default('Europe/Paris'),
   LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
 });
@@ -52,6 +57,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): AppConfig {
     host: environment.HOST,
     port: environment.PORT,
     databaseUrl: environment.DATABASE_URL,
+    migrationDatabaseUrl: environment.DATABASE_URL_UNPOOLED ?? environment.DATABASE_URL,
     appTimezone: environment.APP_TIMEZONE,
     logLevel: environment.LOG_LEVEL,
     isProduction: environment.NODE_ENV === 'production',

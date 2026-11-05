@@ -17,3 +17,5 @@ services:
         value: info
       - key: DATABASE_URL
         sync: false
+      - key: DATABASE_URL_UNPOOLED
+        sync: false

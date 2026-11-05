@@ -5,7 +5,7 @@ import { MIGRATIONS_DIRECTORY, migrateToLatest } from './db/migrator';
 
 loadDotEnvIfPresent();
 const config = loadConfig(process.env);
-const db = createDb(config.databaseUrl);
+const db = createDb(config.migrationDatabaseUrl);
 
 try {
   const appliedMigrations = await migrateToLatest(db, MIGRATIONS_DIRECTORY);
