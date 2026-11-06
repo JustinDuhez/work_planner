@@ -4,6 +4,7 @@ import type { Kysely } from 'kysely';
 import { buildApp } from './app';
 import { createDb } from './db/create-db';
 import type { Database } from './db/database';
+import { TEST_ORIGIN } from './test/auth-helpers';
 import { createTestConfig } from './test/test-config';
 import { createMigratedTestDb } from './test/test-database';
 
@@ -24,6 +25,9 @@ describe('API application', () => {
     app.post('/api/v1/test-echoes', () => ({ received: true }));
     app.get('/api/v1/test-crash', () => {
       throw new Error('connection string postgres://secret@db leaked');
+    });
+    app.get('/api/v1/test-bare-validations', () => {
+      throw new ValidationError('VALIDATION_ERROR', 'Certains champs sont invalides.');
     });
     app.get('/api/v1/test-validations', () => {
       throw new ValidationError('VALIDATION_ERROR', 'Certains champs sont invalides.', {
@@ -98,7 +102,7 @@ describe('API application', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/api/v1/test-echoes',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', origin: TEST_ORIGIN },
       payload: '{ not json',
     });
 
@@ -121,11 +125,21 @@ describe('API application', () => {
     });
   });
 
+  it('sends no fieldErrors key when a validation error has no field messages', async () => {
+    const response = await app.inject({ method: 'GET', url: '/api/v1/test-bare-validations' });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json<unknown>()).toEqual({
+      code: 'VALIDATION_ERROR',
+      message: 'Certains champs sont invalides.',
+    });
+  });
+
   it('answers 415 for a body type the API does not accept', async () => {
     const response = await app.inject({
       method: 'POST',
       url: '/api/v1/test-echoes',
-      headers: { 'content-type': 'text/csv' },
+      headers: { 'content-type': 'text/csv', origin: TEST_ORIGIN },
       payload: 'a,b',
     });
 
@@ -140,7 +154,7 @@ describe('API application', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/api/v1/test-echoes',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', origin: TEST_ORIGIN },
       payload: JSON.stringify({ data: 'x'.repeat(OVERSIZED_BODY_LENGTH) }),
     });
 
