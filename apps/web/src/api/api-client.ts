@@ -1,6 +1,8 @@
 import { AppError, errorResponseSchema } from '@work-planner/domain';
 import type { z } from 'zod';
+import { copy } from '../copy';
 
+const NETWORK_ERROR_CODE = 'NETWORK_ERROR';
 const UNKNOWN_ERROR_CODE = 'UNKNOWN_ERROR';
 const UNKNOWN_ERROR_MESSAGE = 'Une erreur inattendue est survenue.';
 
@@ -44,8 +46,17 @@ async function toApiError(response: Response): Promise<ApiError> {
     : new ApiError(response.status, UNKNOWN_ERROR_CODE, UNKNOWN_ERROR_MESSAGE);
 }
 
+// fetch only rejects when the request never got an answer (offline, DNS, server down).
+async function fetchOrNetworkError(path: string, init: RequestInit): Promise<Response> {
+  try {
+    return await fetch(path, init);
+  } catch {
+    throw new ApiError(0, NETWORK_ERROR_CODE, copy.errors.network);
+  }
+}
+
 export async function apiGet<T>(path: string, schema: z.ZodType<T>): Promise<T> {
-  const response = await fetch(path, {
+  const response = await fetchOrNetworkError(path, {
     headers: { Accept: 'application/json' },
     credentials: 'same-origin',
   });
@@ -59,7 +70,7 @@ async function send(method: WriteMethod, path: string, body: unknown): Promise<R
   const headers: Record<string, string> = { Accept: 'application/json' };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   if (csrfToken !== undefined) headers['X-CSRF-Token'] = csrfToken;
-  const response = await fetch(path, {
+  const response = await fetchOrNetworkError(path, {
     method,
     headers,
     credentials: 'same-origin',

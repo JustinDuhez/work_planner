@@ -4,6 +4,9 @@ export const copy = {
     title: 'Bienvenue',
     subtitle: 'Votre espace de gestion des temps.',
   },
+  errors: {
+    network: 'Connexion au serveur impossible. Vérifiez votre réseau et réessayez.',
+  },
   health: {
     checking: 'Vérification du service…',
     operational: 'Service opérationnel',

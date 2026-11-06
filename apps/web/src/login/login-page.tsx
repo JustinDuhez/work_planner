@@ -3,6 +3,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router';
 import { ApiError } from '../api/api-client';
+import { bannerMessageFor } from '../api/form-errors';
 import { copy } from '../copy';
 import { useLogin, useSession } from '../session/session-queries';
 import { Button } from '../ui/button';
@@ -30,7 +31,7 @@ export function LoginPage() {
   }
 
   const apiError = login.error instanceof ApiError ? login.error : undefined;
-  const hasFieldErrors = apiError !== undefined && Object.keys(apiError.fieldErrors).length > 0;
+  const bannerMessage = bannerMessageFor(login.error, ['email', 'password']);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -48,9 +49,9 @@ export function LoginPage() {
           {copy.login.title}
         </h1>
         <p className="mt-1 text-sm text-zinc-500">{copy.login.subtitle}</p>
-        {apiError && !hasFieldErrors ? (
+        {bannerMessage !== undefined ? (
           <p role="alert" className="mt-4 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">
-            {apiError.message}
+            {bannerMessage}
           </p>
         ) : null}
         <form className="mt-6 space-y-4" onSubmit={handleSubmit} noValidate>

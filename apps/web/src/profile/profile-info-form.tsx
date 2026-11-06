@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { currentUserSchema, type CurrentUser, type SessionResponse } from '@work-planner/domain';
 import { useState, type FormEvent } from 'react';
 import { ApiError, apiSend } from '../api/api-client';
+import { bannerMessageFor } from '../api/form-errors';
 import { copy } from '../copy';
 import { roleLabel } from '../session/role-label';
 import { SESSION_QUERY_KEY } from '../session/session-queries';
@@ -21,6 +22,7 @@ export function ProfileInfoForm({ user }: { user: CurrentUser }) {
     },
   });
   const fieldErrors = save.error instanceof ApiError ? save.error.fieldErrors : {};
+  const bannerMessage = bannerMessageFor(save.error, ['firstName', 'lastName']);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -104,10 +106,9 @@ export function ProfileInfoForm({ user }: { user: CurrentUser }) {
               {copy.profile.infoSaved}
             </p>
           ) : null}
-          {save.error &&
-          !(save.error instanceof ApiError && Object.keys(fieldErrors).length > 0) ? (
+          {bannerMessage !== undefined ? (
             <p role="alert" className="text-sm text-rose-700">
-              {save.error.message}
+              {bannerMessage}
             </p>
           ) : null}
         </div>

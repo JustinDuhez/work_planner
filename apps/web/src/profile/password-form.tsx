@@ -7,6 +7,7 @@ import {
 } from '@work-planner/domain';
 import { useState, type FormEvent } from 'react';
 import { ApiError, apiSendNoContent } from '../api/api-client';
+import { bannerMessageFor } from '../api/form-errors';
 import { copy } from '../copy';
 import { Button } from '../ui/button';
 import { TextField } from '../ui/text-field';
@@ -39,6 +40,11 @@ export function PasswordForm() {
   });
   const serverErrors = change.error instanceof ApiError ? change.error.fieldErrors : {};
   const fieldErrors = { ...serverErrors, ...clientErrors };
+  const bannerMessage = bannerMessageFor(change.error, [
+    'currentPassword',
+    'newPassword',
+    'confirmation',
+  ]);
   const strength = newPassword === '' ? undefined : estimatePasswordStrength(newPassword);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -119,10 +125,9 @@ export function PasswordForm() {
               {copy.password.changed}
             </p>
           ) : null}
-          {change.error &&
-          !(change.error instanceof ApiError && Object.keys(serverErrors).length > 0) ? (
+          {bannerMessage !== undefined ? (
             <p role="alert" className="text-sm text-rose-700">
-              {change.error.message}
+              {bannerMessage}
             </p>
           ) : null}
         </div>

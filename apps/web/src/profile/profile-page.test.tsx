@@ -1,4 +1,5 @@
 import { screen, within } from '@testing-library/react';
+import { PASSWORD_POLICY_MESSAGES } from '@work-planner/domain';
 import userEvent from '@testing-library/user-event';
 import { copy } from '../copy';
 import { mockFetchRoutes, type MockResponse } from '../test/mock-fetch';
@@ -60,6 +61,28 @@ describe('ProfilePage', () => {
     await user.click(screen.getByRole('button', { name: copy.password.submit }));
 
     expect(await screen.findByText(copy.password.mismatch)).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalledWith('/api/v1/me/password', expect.anything());
+  });
+
+  it.each([
+    ['too short', 'a'.repeat(11), PASSWORD_POLICY_MESSAGES.TOO_SHORT],
+    [
+      'the same as the current one',
+      'correct horse battery staple',
+      PASSWORD_POLICY_MESSAGES.SAME_AS_CURRENT,
+    ],
+  ])('does not send a new password that is %s', async (_name, newPassword, message) => {
+    const { fetchMock, user } = renderProfile();
+
+    await user.type(
+      await screen.findByLabelText(copy.password.current),
+      'correct horse battery staple',
+    );
+    await user.type(screen.getByLabelText(copy.password.new), newPassword);
+    await user.type(screen.getByLabelText(copy.password.confirm), newPassword);
+    await user.click(screen.getByRole('button', { name: copy.password.submit }));
+
+    expect(await screen.findByText(message)).toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalledWith('/api/v1/me/password', expect.anything());
   });
 

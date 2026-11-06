@@ -10,6 +10,26 @@ function mockFetch(status: number, readBody: () => Promise<unknown>): void {
   );
 }
 
+describe('network failures', () => {
+  beforeEach(() => {
+    globalThis.fetch = jest.fn(() => Promise.reject(new TypeError('Failed to fetch')));
+  });
+
+  it('reads a failed GET as a French network error', async () => {
+    await expect(apiGet('/api/v1/items/1', itemSchema)).rejects.toMatchObject({
+      status: 0,
+      code: 'NETWORK_ERROR',
+      message: 'Connexion au serveur impossible. Vérifiez votre réseau et réessayez.',
+    });
+  });
+
+  it('reads a failed write as a French network error', async () => {
+    await expect(apiSendNoContent('DELETE', '/api/v1/items/1')).rejects.toMatchObject({
+      code: 'NETWORK_ERROR',
+    });
+  });
+});
+
 describe('apiGet', () => {
   it('returns the body once it matches the expected contract', async () => {
     mockFetch(200, () => Promise.resolve({ name: 'Alice' }));
