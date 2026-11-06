@@ -10,6 +10,7 @@ export function createTestConfig(overrides: Partial<AppConfig> = {}): AppConfig 
     appTimezone: 'Europe/Paris',
     logLevel: 'silent',
     isProduction: false,
+    trustedProxyHopCount: 0,
     ...overrides,
   };
 }

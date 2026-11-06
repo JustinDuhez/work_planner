@@ -20,7 +20,9 @@ describe('session routes', () => {
   let aliceId: number;
   let managerId: number;
 
-  async function newApp(overrides: { isProduction?: boolean } = {}): Promise<FastifyInstance> {
+  async function newApp(
+    overrides: { isProduction?: boolean; trustedProxyHopCount?: number } = {},
+  ): Promise<FastifyInstance> {
     const built = await buildApp({ config: createTestConfig(overrides), db, now: clock.now });
     built.post('/api/v1/test-protected-actions', { onRequest: built.requireAuth }, () => ({
       done: true,
@@ -225,6 +227,67 @@ describe('session routes', () => {
     expect(me.statusCode).toBe(401);
   });
 
+  it('refuses a logout sent from another site and keeps the session', async () => {
+    const { cookie, csrfToken } = await logIn(app, 'alice@example.com');
+
+    const logout = await app.inject({
+      method: 'DELETE',
+      url: '/api/v1/sessions/current',
+      headers: { cookie, origin: 'https://evil.example', 'x-csrf-token': csrfToken },
+    });
+    const me = await app.inject({ method: 'GET', url: '/api/v1/me', headers: { cookie } });
+
+    expect(logout.statusCode).toBe(403);
+    expect(logout.json<{ code: string }>().code).toBe('CSRF_INVALID');
+    expect(me.statusCode).toBe(200);
+  });
+
+  it('clears the cookie with the attributes it was set with', async () => {
+    const productionApp = await newApp({ isProduction: true });
+
+    const logout = await productionApp.inject({
+      method: 'DELETE',
+      url: '/api/v1/sessions/current',
+      headers: { origin: TEST_ORIGIN },
+    });
+
+    expect(logout.cookies).toEqual([
+      expect.objectContaining({ httpOnly: true, sameSite: 'Lax', path: '/', secure: true }),
+    ]);
+    await productionApp.close();
+  });
+
+  it('accepts the https origin forwarded by the hosting proxy', async () => {
+    const proxiedApp = await newApp({ isProduction: true, trustedProxyHopCount: 1 });
+
+    const response = await proxiedApp.inject({
+      method: 'POST',
+      url: '/api/v1/sessions',
+      headers: { origin: 'https://localhost:80', 'x-forwarded-proto': 'https' },
+      payload: { email: 'alice@example.com', password: DEFAULT_TEST_PASSWORD },
+    });
+
+    expect(response.statusCode).toBe(201);
+    await proxiedApp.close();
+  });
+
+  it.each([
+    [0, '127.0.0.1'],
+    [1, '198.51.100.7'],
+  ])('with %i trusted proxies, reads the client address %s', async (hopCount, expectedIp) => {
+    const proxiedApp = await newApp({ trustedProxyHopCount: hopCount });
+    proxiedApp.get('/api/v1/test-ips', (request) => ({ ip: request.ip }));
+
+    const response = await proxiedApp.inject({
+      method: 'GET',
+      url: '/api/v1/test-ips',
+      headers: { 'x-forwarded-for': '203.0.113.66, 198.51.100.7' },
+    });
+
+    expect(response.json<{ ip: string }>().ip).toBe(expectedIp);
+    await proxiedApp.close();
+  });
+
   it('answers 204 to a logout without a session', async () => {
     const response = await app.inject({
       method: 'DELETE',
@@ -258,6 +321,7 @@ describe('session routes', () => {
     });
 
     expect(response.statusCode).toBe(403);
+    expect(response.json<{ code: string }>().code).toBe('CSRF_INVALID');
   });
 
   it('accepts a protected change with the session CSRF token', async () => {

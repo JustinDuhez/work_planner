@@ -34,9 +34,12 @@ export async function buildApp({
   webDistDirectory,
   now = () => new Date(),
 }: AppDependencies): Promise<FastifyInstance> {
-  // Render terminates TLS in front of the app: trust its X-Forwarded-* headers for the
-  // client IP (rate limits) and the protocol (Origin check), in production only.
-  const app = Fastify({ logger: buildLoggerOptions(config), trustProxy: config.isProduction });
+  // Trust exactly the hops of our own hosting proxy (client IP for rate limits, protocol for
+  // the Origin check), never the X-Forwarded-For entries a client writes itself.
+  const app = Fastify({
+    logger: buildLoggerOptions(config),
+    trustProxy: (_address: string, hopIndex: number) => hopIndex < config.trustedProxyHopCount,
+  });
   const authDependencies = { db, now, isProduction: config.isProduction };
 
   await registerSecurityHeaders(app, config.isProduction);

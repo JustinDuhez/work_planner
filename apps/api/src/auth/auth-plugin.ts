@@ -27,10 +27,7 @@ function readHeader(request: FastifyRequest, name: string): string | undefined {
   return typeof value === 'string' ? value : undefined;
 }
 
-export async function registerAuth(
-  app: FastifyInstance,
-  deps: AuthDependencies & { isProduction: boolean },
-): Promise<void> {
+export async function registerAuth(app: FastifyInstance, deps: AuthDependencies): Promise<void> {
   await app.register(fastifyCookie);
   await app.register(fastifyRateLimit, { global: false });
   app.decorateRequest('authSession', null);
@@ -56,4 +53,11 @@ export async function registerAuth(
     }
     request.authSession = session;
   });
+}
+
+export function requireSession(request: FastifyRequest): ResolvedSession {
+  if (!request.authSession) {
+    throw new UnauthenticatedError();
+  }
+  return request.authSession;
 }

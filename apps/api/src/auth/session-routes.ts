@@ -5,8 +5,8 @@ import {
 import type { FastifyInstance } from 'fastify';
 import { parseInput } from '../http/parse-input';
 import { loadCurrentUser } from '../organization/current-user';
-import { TooManyAttemptsError, UnauthenticatedError } from './auth-errors';
-import { SESSION_COOKIE_NAME } from './auth-plugin';
+import { TooManyAttemptsError } from './auth-errors';
+import { requireSession, SESSION_COOKIE_NAME } from './auth-plugin';
 import { authenticate } from './authenticate';
 import type { LoginFailureLimiter } from './login-failure-limiter';
 import { createSession, deleteSession, type AuthDependencies } from './session-service';
@@ -20,14 +20,9 @@ export interface SessionRouteDependencies extends AuthDependencies {
   loginFailureLimiter: LoginFailureLimiter;
 }
 
-function sessionCookieOptions(isProduction: boolean) {
-  return {
-    httpOnly: true,
-    sameSite: 'lax' as const,
-    path: '/',
-    secure: isProduction,
-    maxAge: SESSION_ABSOLUTE_LIFETIME_IN_MILLISECONDS / MILLISECONDS_PER_SECOND,
-  };
+// Clearing a cookie only works when its attributes match those it was set with.
+function sessionCookieAttributes(isProduction: boolean) {
+  return { httpOnly: true, sameSite: 'lax' as const, path: '/', secure: isProduction };
 }
 
 export function registerSessionRoutes(app: FastifyInstance, deps: SessionRouteDependencies): void {
@@ -54,7 +49,10 @@ export function registerSessionRoutes(app: FastifyInstance, deps: SessionRouteDe
       const userId = await authenticate(deps.db, credentials);
       deps.loginFailureLimiter.clear(attemptKey);
       const { token, csrfToken } = await createSession(deps, userId);
-      reply.setCookie(SESSION_COOKIE_NAME, token, sessionCookieOptions(deps.isProduction));
+      reply.setCookie(SESSION_COOKIE_NAME, token, {
+        ...sessionCookieAttributes(deps.isProduction),
+        maxAge: SESSION_ABSOLUTE_LIFETIME_IN_MILLISECONDS / MILLISECONDS_PER_SECOND,
+      });
       return reply.status(201).send({ user: await loadCurrentUser(deps.db, userId), csrfToken });
     },
   );
@@ -65,13 +63,12 @@ export function registerSessionRoutes(app: FastifyInstance, deps: SessionRouteDe
     if (token) {
       await deleteSession(deps, token);
     }
-    reply.clearCookie(SESSION_COOKIE_NAME, { path: '/' });
+    reply.clearCookie(SESSION_COOKIE_NAME, sessionCookieAttributes(deps.isProduction));
     return reply.status(204).send();
   });
 
   app.get('/api/v1/me', { onRequest: app.requireAuth }, async (request) => {
-    const session = request.authSession;
-    if (!session) throw new UnauthenticatedError();
+    const session = requireSession(request);
     return { user: await loadCurrentUser(deps.db, session.user.id), csrfToken: session.csrfToken };
   });
 }

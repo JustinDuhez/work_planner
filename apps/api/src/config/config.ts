@@ -17,6 +17,8 @@ export interface AppConfig {
   appTimezone: string;
   logLevel: LogLevel;
   isProduction: boolean;
+  /** Reverse proxies in front of the app whose X-Forwarded-* headers can be believed. */
+  trustedProxyHopCount: number;
 }
 
 export class ConfigurationError extends AppError {}
@@ -40,6 +42,7 @@ const environmentSchema = z.object({
   DATABASE_URL_UNPOOLED: postgresUrl.optional(),
   APP_TIMEZONE: z.string().refine(isKnownTimeZone, 'Unknown time zone').default('Europe/Paris'),
   LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
+  TRUSTED_PROXY_HOP_COUNT: z.coerce.number().int().min(0).default(0),
 });
 
 export function loadConfig(env: NodeJS.ProcessEnv): AppConfig {
@@ -61,5 +64,6 @@ export function loadConfig(env: NodeJS.ProcessEnv): AppConfig {
     appTimezone: environment.APP_TIMEZONE,
     logLevel: environment.LOG_LEVEL,
     isProduction: environment.NODE_ENV === 'production',
+    trustedProxyHopCount: environment.TRUSTED_PROXY_HOP_COUNT,
   };
 }
