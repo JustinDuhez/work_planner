@@ -1,18 +1,9 @@
 export default {
-  testEnvironment: 'jsdom',
+  testEnvironment: '<rootDir>/jest.environment.js',
   setupFilesAfterEnv: ['<rootDir>/src/test/setup.ts'],
-  transform: {
-    '^.+[.]tsx?$': [
-      '@swc/jest',
-      {
-        jsc: {
-          parser: { syntax: 'typescript', tsx: true },
-          transform: { react: { runtime: 'automatic' } },
-          target: 'es2023',
-        },
-      },
-    ],
-  },
+  transform: { '^.+[.]m?[jt]sx?$': '<rootDir>/jest.transform.js' },
+  // react-router, @remix-run/* and cookie-es ship ESM only; swc compiles them to CommonJS like our own sources.
+  transformIgnorePatterns: ['/node_modules/(?!react-router|@remix-run|cookie-es)'],
   moduleNameMapper: {
     '^@work-planner/domain$': '<rootDir>/../../packages/domain/src/index.ts',
   },

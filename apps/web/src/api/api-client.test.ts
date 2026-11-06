@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { ApiError, apiGet } from './api-client';
+import { ApiError, apiGet, apiSend, apiSendNoContent, setCsrfToken } from './api-client';
+import { mockFetchRoutes } from '../test/mock-fetch';
 
 const itemSchema = z.object({ name: z.string() });
 
@@ -41,5 +42,49 @@ describe('apiGet', () => {
     mockFetch(200, () => Promise.resolve({ unexpected: true }));
 
     await expect(apiGet('/api/v1/items/1', itemSchema)).rejects.toThrow();
+  });
+});
+
+describe('apiSend', () => {
+  afterEach(() => {
+    setCsrfToken(undefined);
+  });
+
+  it('sends JSON with the CSRF token and parses the answer', async () => {
+    const fetchMock = mockFetchRoutes({
+      'PATCH /api/v1/items/1': { status: 200, body: { name: 'B' } },
+    });
+    setCsrfToken('csrf-123');
+
+    await expect(apiSend('PATCH', '/api/v1/items/1', { name: 'B' }, itemSchema)).resolves.toEqual({
+      name: 'B',
+    });
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(init).toMatchObject({
+      method: 'PATCH',
+      credentials: 'same-origin',
+      body: '{"name":"B"}',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': 'csrf-123' },
+    });
+  });
+
+  it('accepts an answer without content', async () => {
+    mockFetchRoutes({ 'DELETE /api/v1/sessions/current': { status: 204 } });
+
+    await expect(apiSendNoContent('DELETE', '/api/v1/sessions/current')).resolves.toBeUndefined();
+  });
+
+  it('exposes the field messages of a validation error', async () => {
+    mockFetchRoutes({
+      'PATCH /api/v1/items/1': {
+        status: 400,
+        body: { code: 'VALIDATION_ERROR', message: 'Invalide', fieldErrors: { name: 'Requis.' } },
+      },
+    });
+
+    await expect(apiSend('PATCH', '/api/v1/items/1', {}, itemSchema)).rejects.toMatchObject({
+      status: 400,
+      fieldErrors: { name: 'Requis.' },
+    });
   });
 });
