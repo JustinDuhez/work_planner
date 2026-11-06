@@ -30,10 +30,36 @@ npm run dev:api   # API on http://127.0.0.1:3001
 npm run dev:web   # app on http://localhost:5173
 ```
 
+## Demo data
+
+`npm run seed` creates the admin account (`ADMIN_EMAIL` / `ADMIN_PASSWORD`) and a fictional company. It can run any number of times: existing people, teams and passwords are never changed.
+
+| Account                                                                      | Role                                                   |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------ |
+| claire.martin@example.com                                                    | Manager, Direction (top of the hierarchy)              |
+| julien.bernard@example.com                                                   | Manager, Tech (inside Direction, above Front and Back) |
+| sophie.dubois@example.com / thomas.petit@example.com                         | Managers, Front / Back                                 |
+| lea.moreau@example.com, camille.simon@example.com, emma.lefebvre@example.com | Collaborators                                          |
+| hugo.laurent@example.com                                                     | Collaborator in two teams (Front and Back)             |
+| ines.garcia@example.com                                                      | HR collaborator with the administrator option          |
+| lucas.fournier@example.com                                                   | Blocked account                                        |
+| chloe.girard@example.com                                                     | Archived account (cannot log in, hidden everywhere)    |
+
+All demo accounts share the password set in `DEMO_PASSWORD`. Because one of them is an administrator, that password is **not** published here; it is shared privately along with the admin credentials.
+
+To seed the production database (Neon), run from your machine with the production connection strings:
+
+```bash
+cd apps/api
+set -a && . ../../.env.local && set +a   # Neon DATABASE_URL / DATABASE_URL_UNPOOLED
+ADMIN_EMAIL=... ADMIN_PASSWORD=... DEMO_PASSWORD=... npx tsx src/seed.ts
+```
+
 ## Scripts
 
 | Command             | What it does                                             |
 | ------------------- | -------------------------------------------------------- |
+| `npm run seed`      | Idempotent admin + demo company                          |
 | `npm test`          | Jest tests (integration tests reset `work_planner_test`) |
 | `npm run lint`      | ESLint with the Willemse config                          |
 | `npm run typecheck` | TypeScript in every workspace                            |
