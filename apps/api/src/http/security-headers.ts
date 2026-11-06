@@ -8,6 +8,12 @@ export async function registerSecurityHeaders(
   app: FastifyInstance,
   isProduction: boolean,
 ): Promise<void> {
+  // API responses carry the CSRF token and personal data: no cache or proxy may keep them.
+  app.addHook('onSend', async (request, reply) => {
+    if (request.url.startsWith('/api/')) {
+      reply.header('cache-control', 'no-store');
+    }
+  });
   await app.register(helmet, {
     contentSecurityPolicy: {
       directives: {

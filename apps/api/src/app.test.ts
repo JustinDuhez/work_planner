@@ -67,6 +67,12 @@ describe('API application', () => {
     UNREACHABLE_DATABASE_TIMEOUT_IN_MILLISECONDS,
   );
 
+  it('forbids caching of API responses', async () => {
+    const response = await app.inject({ method: 'GET', url: '/api/v1/health' });
+
+    expect(response.headers['cache-control']).toBe('no-store');
+  });
+
   it('answers a JSON 404 for an unknown API route', async () => {
     const response = await app.inject({ method: 'GET', url: '/api/v1/unknown-resources' });
 

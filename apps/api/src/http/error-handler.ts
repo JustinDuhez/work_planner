@@ -28,6 +28,14 @@ const CLIENT_ERROR_BY_STATUS: ReadonlyMap<number, ErrorResponse> = new Map([
   ],
 ]);
 
+// OWASP A09: authentication failures are logged as structured events, by error code, so the
+// log never needs the email, password, cookie or token of the request.
+const SECURITY_EVENT_BY_CODE: ReadonlyMap<string, string> = new Map([
+  ['INVALID_CREDENTIALS', 'auth.login_failed'],
+  ['TOO_MANY_ATTEMPTS', 'auth.login_locked'],
+  ['CSRF_INVALID', 'auth.csrf_refused'],
+]);
+
 export function httpStatusFor(error: AppError): number {
   if (error instanceof ValidationError) return 400;
   if (error instanceof UnauthorizedError) return 401;
@@ -59,6 +67,10 @@ export function registerErrorHandlers(
 ): void {
   app.setErrorHandler((error: unknown, request, reply) => {
     if (error instanceof AppError && httpStatusFor(error) < 500) {
+      const securityEvent = SECURITY_EVENT_BY_CODE.get(error.code);
+      if (securityEvent !== undefined) {
+        request.log.warn({ event: securityEvent, code: error.code }, 'Security event');
+      }
       return reply.status(httpStatusFor(error)).send(toErrorResponse(error));
     }
     if (isClientError(error)) {
