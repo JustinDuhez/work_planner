@@ -3,6 +3,7 @@ import type { Kysely } from 'kysely';
 import { registerAuth } from './auth/auth-plugin';
 import { LoginFailureLimiter } from './auth/login-failure-limiter';
 import { burnPasswordVerification } from './auth/password-hasher';
+import { registerMeRoutes } from './auth/me-routes';
 import { registerSessionRoutes } from './auth/session-routes';
 import type { AppConfig } from './config/config';
 import type { Database } from './db/database';
@@ -53,6 +54,7 @@ export async function buildApp({
     ...authDependencies,
     loginFailureLimiter: new LoginFailureLimiter(now),
   });
+  registerMeRoutes(app, authDependencies);
   if (webDistDirectory !== undefined) {
     await registerSpa(app, webDistDirectory);
   }
