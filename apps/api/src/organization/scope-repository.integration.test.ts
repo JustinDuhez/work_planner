@@ -96,7 +96,41 @@ describe('team scope', () => {
     });
   });
 
+  describe('findDirectReportIds (archived and self)', () => {
+    it('leaves archived members out of the direct reports', async () => {
+      expect(await findDirectReportIds(db, ids.frontLead ?? -1)).toEqual(idsOf('alice', 'carol'));
+    });
+
+    it('never counts a manager among their own reports or managed users', async () => {
+      const selfManagerId = await insertUser(db, { email: 'self.manager@example.com' });
+      const colleagueId = await insertUser(db, { email: 'self.colleague@example.com' });
+      await insertTeam(db, {
+        name: 'Équipe autogérée',
+        managerId: selfManagerId,
+        memberIds: [selfManagerId, colleagueId],
+      });
+
+      expect(await findDirectReportIds(db, selfManagerId)).toEqual(new Set([colleagueId]));
+      expect(await findManagedUserIds(db, selfManagerId)).toEqual(new Set([colleagueId]));
+    });
+  });
+
   describe('findDirectManagerIds', () => {
+    it('leaves an archived manager out', async () => {
+      const archivedManagerId = await insertUser(db, {
+        email: 'archived.manager@example.com',
+        isArchived: true,
+      });
+      const memberId = await insertUser(db, { email: 'archived.manager.member@example.com' });
+      await insertTeam(db, {
+        name: 'Équipe orpheline',
+        managerId: archivedManagerId,
+        memberIds: [memberId],
+      });
+
+      expect(await findDirectManagerIds(db, memberId)).toEqual(new Set());
+    });
+
     it('gives a member of two teams both team managers', async () => {
       expect(await findDirectManagerIds(db, ids.carol ?? -1)).toEqual(
         idsOf('frontLead', 'salesLead'),
