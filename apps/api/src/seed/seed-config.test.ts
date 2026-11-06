@@ -28,6 +28,14 @@ describe('loadSeedConfig', () => {
     );
   });
 
+  it.each(['ADMIN_PASSWORD', 'DEMO_PASSWORD'])('refuses a placeholder %s', (name) => {
+    const environment = { ...VALID_ENVIRONMENT, [name]: 'change-this-passphrase' };
+
+    expect(() => loadSeedConfig(environment)).toThrow(/placeholder/);
+    expect(() => loadSeedConfig(environment)).toThrow(name);
+    expect(() => loadSeedConfig(environment)).not.toThrow(/passphrase/);
+  });
+
   it('never echoes the passwords in its error', () => {
     expect(() => loadSeedConfig({ ...VALID_ENVIRONMENT, ADMIN_PASSWORD: 's3cr3t' })).not.toThrow(
       /s3cr3t/,

@@ -5,3 +5,5 @@
 .git
 docs
 .superpowers
+.env.local
+.neon

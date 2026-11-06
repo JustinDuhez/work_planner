@@ -4,7 +4,11 @@ import { createDb } from './db/create-db';
 import { seedDatabase } from './seed/seed-database';
 import { loadSeedConfig } from './seed/seed-config';
 
-loadDotEnvIfPresent();
+// A run configured by the shell (production) must use exactly what the shell provides: a stray
+// .env file must never supply the admin credentials of the production database.
+if (process.env.DATABASE_URL === undefined) {
+  loadDotEnvIfPresent();
+}
 const config = loadConfig(process.env);
 const seedConfig = loadSeedConfig(process.env);
 const db = createDb(config.databaseUrl);

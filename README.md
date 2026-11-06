@@ -47,7 +47,7 @@ npm run dev:web   # app on http://localhost:5173
 
 All demo accounts share the password set in `DEMO_PASSWORD`. Because one of them is an administrator, that password is **not** published here; it is shared privately along with the admin credentials.
 
-To seed the production database (Neon), run from your machine with the production connection strings:
+To seed the production database (Neon), run from your machine. The shell must provide all three seed variables (`ADMIN_EMAIL`, `ADMIN_PASSWORD`, `DEMO_PASSWORD`) with real values (never a `change-this-...` placeholder). When `DATABASE_URL` is set in the shell, `apps/api/.env` is not read at all:
 
 ```bash
 cd apps/api

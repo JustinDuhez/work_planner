@@ -8,10 +8,16 @@ export interface SeedConfig {
   demoPassword: string;
 }
 
+// Placeholder prefix of the old .env.example: such a value must never become a real password.
+const PLACEHOLDER_PASSWORD_PREFIX = 'change-this-';
+
 const policyCompliantPassword = z
   .string()
   .refine((password) => findPasswordPolicyViolation(password) === null, {
     message: 'Must contain 12 to 128 characters',
+  })
+  .refine((password) => !password.startsWith(PLACEHOLDER_PASSWORD_PREFIX), {
+    message: `Must not be a placeholder starting with "${PLACEHOLDER_PASSWORD_PREFIX}"`,
   });
 
 const seedEnvironmentSchema = z.object({
