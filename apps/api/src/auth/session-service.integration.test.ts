@@ -160,6 +160,7 @@ describe('session service', () => {
       .execute();
 
     expect(await resolveSession(deps, token)).toBeNull();
+    expect(await countSessions(userId)).toBe(0);
   });
 
   it('deletes a session on logout', async () => {
