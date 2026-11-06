@@ -121,6 +121,19 @@ describe('my profile routes', () => {
     });
   });
 
+  it('throttles current-password guesses on the sixth attempt of a session', async () => {
+    const session = await newLoggedInUser();
+    const guess = { currentPassword: 'not my password', newPassword: NEW_PASSWORD };
+
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      expect((await send('PUT', '/api/v1/me/password', session, guess)).statusCode).toBe(400);
+    }
+    const response = await send('PUT', '/api/v1/me/password', session, guess);
+
+    expect(response.statusCode).toBe(429);
+    expect(response.json<{ code: string }>().code).toBe('TOO_MANY_ATTEMPTS');
+  });
+
   it.each([
     ['too short', 'short pass', 'Le mot de passe doit contenir au moins 12 caractères.'],
     [
