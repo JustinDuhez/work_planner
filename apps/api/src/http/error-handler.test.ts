@@ -3,6 +3,7 @@ import {
   ConflictError,
   ForbiddenError,
   NotFoundError,
+  TooManyRequestsError,
   UnauthorizedError,
   ValidationError,
 } from '@work-planner/domain';
@@ -15,6 +16,7 @@ describe('httpStatusFor', () => {
     [new ForbiddenError('CODE', 'message'), 403],
     [new NotFoundError('CODE', 'message'), 404],
     [new ConflictError('CODE', 'message'), 409],
+    [new TooManyRequestsError('CODE', 'message'), 429],
   ])('maps %p to HTTP %i', (error, expectedStatus) => {
     expect(httpStatusFor(error)).toBe(expectedStatus);
   });

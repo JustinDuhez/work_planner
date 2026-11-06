@@ -1,4 +1,4 @@
-import { ConflictError } from '@work-planner/domain';
+import { ConflictError, ValidationError } from '@work-planner/domain';
 import type { FastifyInstance } from 'fastify';
 import type { Kysely } from 'kysely';
 import { buildApp } from './app';
@@ -7,6 +7,7 @@ import type { Database } from './db/database';
 import { createTestConfig } from './test/test-config';
 import { createMigratedTestDb } from './test/test-database';
 
+const OVERSIZED_BODY_LENGTH = 1_100_000; // Fastify's default body limit is 1 MiB
 const UNREACHABLE_DATABASE_URL = 'postgres://unused:unused@127.0.0.1:1/unused';
 const UNREACHABLE_DATABASE_TIMEOUT_IN_MILLISECONDS = 15_000;
 
@@ -23,6 +24,11 @@ describe('API application', () => {
     app.post('/api/v1/test-echoes', () => ({ received: true }));
     app.get('/api/v1/test-crash', () => {
       throw new Error('connection string postgres://secret@db leaked');
+    });
+    app.get('/api/v1/test-validations', () => {
+      throw new ValidationError('VALIDATION_ERROR', 'Certains champs sont invalides.', {
+        firstName: 'Prénom requis.',
+      });
     });
   });
 
@@ -102,6 +108,47 @@ describe('API application', () => {
       message: 'Requête invalide.',
     });
     expect(response.body).not.toContain('JSON');
+  });
+
+  it('sends field messages along with a validation error', async () => {
+    const response = await app.inject({ method: 'GET', url: '/api/v1/test-validations' });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json<unknown>()).toEqual({
+      code: 'VALIDATION_ERROR',
+      message: 'Certains champs sont invalides.',
+      fieldErrors: { firstName: 'Prénom requis.' },
+    });
+  });
+
+  it('answers 415 for a body type the API does not accept', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/test-echoes',
+      headers: { 'content-type': 'text/csv' },
+      payload: 'a,b',
+    });
+
+    expect(response.statusCode).toBe(415);
+    expect(response.json<unknown>()).toEqual({
+      code: 'UNSUPPORTED_MEDIA_TYPE',
+      message: 'Format de requête non pris en charge.',
+    });
+  });
+
+  it('answers 413 for a body above the size limit', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/test-echoes',
+      headers: { 'content-type': 'application/json' },
+      payload: JSON.stringify({ data: 'x'.repeat(OVERSIZED_BODY_LENGTH) }),
+    });
+
+    expect(response.statusCode).toBe(413);
+    expect(response.json<unknown>()).toEqual({
+      code: 'PAYLOAD_TOO_LARGE',
+      message: 'Requête trop volumineuse.',
+    });
   });
 
   it('sends a strict Content Security Policy and anti-sniffing headers', async () => {

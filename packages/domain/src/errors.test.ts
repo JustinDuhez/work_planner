@@ -3,6 +3,7 @@ import {
   ConflictError,
   ForbiddenError,
   NotFoundError,
+  TooManyRequestsError,
   UnauthorizedError,
   ValidationError,
 } from './errors';
@@ -14,6 +15,7 @@ describe('AppError hierarchy', () => {
     ['ForbiddenError', ForbiddenError],
     ['NotFoundError', NotFoundError],
     ['ConflictError', ConflictError],
+    ['TooManyRequestsError', TooManyRequestsError],
   ])('a %s is an AppError that keeps its code, message and class name', (name, ErrorClass) => {
     const error = new ErrorClass('SOME_CODE', 'Un message lisible');
 
@@ -31,5 +33,19 @@ describe('AppError hierarchy', () => {
 
     expect(error).toBeInstanceOf(ConflictError);
     expect(error.name).toBe('ClockAlreadyRunningError');
+  });
+});
+
+describe('ValidationError', () => {
+  it('carries per-field messages for forms', () => {
+    const error = new ValidationError('VALIDATION_ERROR', 'Certains champs sont invalides.', {
+      firstName: 'Prénom requis.',
+    });
+
+    expect(error.fieldErrors).toEqual({ firstName: 'Prénom requis.' });
+  });
+
+  it('has no field messages when none are given', () => {
+    expect(new ValidationError('CODE', 'message').fieldErrors).toBeUndefined();
   });
 });
