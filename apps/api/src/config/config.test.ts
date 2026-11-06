@@ -15,7 +15,20 @@ describe('loadConfig', () => {
       appTimezone: 'Europe/Paris',
       logLevel: 'info',
       isProduction: false,
+      trustedProxyHopCount: 0,
     });
+  });
+
+  it('reads how many reverse proxies to trust', () => {
+    const config = loadConfig({ DATABASE_URL: VALID_DATABASE_URL, TRUSTED_PROXY_HOP_COUNT: '1' });
+
+    expect(config.trustedProxyHopCount).toBe(1);
+  });
+
+  it('refuses a negative proxy hop count', () => {
+    expect(() =>
+      loadConfig({ DATABASE_URL: VALID_DATABASE_URL, TRUSTED_PROXY_HOP_COUNT: '-1' }),
+    ).toThrow('TRUSTED_PROXY_HOP_COUNT');
   });
 
   it('reads the port as a number and flags production mode', () => {

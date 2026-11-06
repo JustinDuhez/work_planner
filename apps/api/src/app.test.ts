@@ -1,12 +1,14 @@
-import { ConflictError } from '@work-planner/domain';
+import { ConflictError, ValidationError } from '@work-planner/domain';
 import type { FastifyInstance } from 'fastify';
 import type { Kysely } from 'kysely';
 import { buildApp } from './app';
 import { createDb } from './db/create-db';
 import type { Database } from './db/database';
+import { TEST_ORIGIN } from './test/auth-helpers';
 import { createTestConfig } from './test/test-config';
 import { createMigratedTestDb } from './test/test-database';
 
+const OVERSIZED_BODY_LENGTH = 1_100_000; // Fastify's default body limit is 1 MiB
 const UNREACHABLE_DATABASE_URL = 'postgres://unused:unused@127.0.0.1:1/unused';
 const UNREACHABLE_DATABASE_TIMEOUT_IN_MILLISECONDS = 15_000;
 
@@ -23,6 +25,14 @@ describe('API application', () => {
     app.post('/api/v1/test-echoes', () => ({ received: true }));
     app.get('/api/v1/test-crash', () => {
       throw new Error('connection string postgres://secret@db leaked');
+    });
+    app.get('/api/v1/test-bare-validations', () => {
+      throw new ValidationError('VALIDATION_ERROR', 'Certains champs sont invalides.');
+    });
+    app.get('/api/v1/test-validations', () => {
+      throw new ValidationError('VALIDATION_ERROR', 'Certains champs sont invalides.', {
+        firstName: 'Prénom requis.',
+      });
     });
   });
 
@@ -56,6 +66,12 @@ describe('API application', () => {
     },
     UNREACHABLE_DATABASE_TIMEOUT_IN_MILLISECONDS,
   );
+
+  it('forbids caching of API responses', async () => {
+    const response = await app.inject({ method: 'GET', url: '/api/v1/health' });
+
+    expect(response.headers['cache-control']).toBe('no-store');
+  });
 
   it('answers a JSON 404 for an unknown API route', async () => {
     const response = await app.inject({ method: 'GET', url: '/api/v1/unknown-resources' });
@@ -92,7 +108,7 @@ describe('API application', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/api/v1/test-echoes',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', origin: TEST_ORIGIN },
       payload: '{ not json',
     });
 
@@ -102,6 +118,57 @@ describe('API application', () => {
       message: 'Requête invalide.',
     });
     expect(response.body).not.toContain('JSON');
+  });
+
+  it('sends field messages along with a validation error', async () => {
+    const response = await app.inject({ method: 'GET', url: '/api/v1/test-validations' });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json<unknown>()).toEqual({
+      code: 'VALIDATION_ERROR',
+      message: 'Certains champs sont invalides.',
+      fieldErrors: { firstName: 'Prénom requis.' },
+    });
+  });
+
+  it('sends no fieldErrors key when a validation error has no field messages', async () => {
+    const response = await app.inject({ method: 'GET', url: '/api/v1/test-bare-validations' });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json<unknown>()).toEqual({
+      code: 'VALIDATION_ERROR',
+      message: 'Certains champs sont invalides.',
+    });
+  });
+
+  it('answers 415 for a body type the API does not accept', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/test-echoes',
+      headers: { 'content-type': 'text/csv', origin: TEST_ORIGIN },
+      payload: 'a,b',
+    });
+
+    expect(response.statusCode).toBe(415);
+    expect(response.json<unknown>()).toEqual({
+      code: 'UNSUPPORTED_MEDIA_TYPE',
+      message: 'Format de requête non pris en charge.',
+    });
+  });
+
+  it('answers 413 for a body above the size limit', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/test-echoes',
+      headers: { 'content-type': 'application/json', origin: TEST_ORIGIN },
+      payload: JSON.stringify({ data: 'x'.repeat(OVERSIZED_BODY_LENGTH) }),
+    });
+
+    expect(response.statusCode).toBe(413);
+    expect(response.json<unknown>()).toEqual({
+      code: 'PAYLOAD_TOO_LARGE',
+      message: 'Requête trop volumineuse.',
+    });
   });
 
   it('sends a strict Content Security Policy and anti-sniffing headers', async () => {

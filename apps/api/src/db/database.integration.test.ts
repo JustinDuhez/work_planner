@@ -1,4 +1,4 @@
-import { copyFile, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { sql, type Kysely } from 'kysely';
@@ -61,16 +61,13 @@ describe('database', () => {
   it('rejects a broken migration and leaves nothing behind', async () => {
     const directory = await mkdtemp(path.join(os.tmpdir(), 'migrations-'));
     try {
-      await copyFile(
-        path.join(MIGRATIONS_DIRECTORY, '0001_setting.sql'),
-        path.join(directory, '0001_setting.sql'),
-      );
-      await writeFile(path.join(directory, '0002_broken.sql'), 'CREATE TABLE broken (;');
+      await cp(MIGRATIONS_DIRECTORY, directory, { recursive: true });
+      await writeFile(path.join(directory, '9999_broken.sql'), 'CREATE TABLE broken (;');
 
       const failure = await migrateToLatest(db, directory).catch((error: unknown) => error);
 
       expect(failure).toEqual(
-        expect.objectContaining({ message: 'Migration failed: 0002_broken' }),
+        expect.objectContaining({ message: 'Migration failed: 9999_broken' }),
       );
       expect((failure as Error).cause).toBeDefined();
       await expect(migrateToLatest(db, MIGRATIONS_DIRECTORY)).resolves.toEqual([]);

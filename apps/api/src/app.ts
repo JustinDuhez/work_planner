@@ -1,5 +1,10 @@
 import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify';
 import type { Kysely } from 'kysely';
+import { registerAuth } from './auth/auth-plugin';
+import { LoginFailureLimiter } from './auth/login-failure-limiter';
+import { burnPasswordVerification } from './auth/password-hasher';
+import { registerMeRoutes } from './auth/me-routes';
+import { registerSessionRoutes } from './auth/session-routes';
 import type { AppConfig } from './config/config';
 import type { Database } from './db/database';
 import { registerHealthRoutes } from './health/health-routes';
@@ -11,6 +16,7 @@ export interface AppDependencies {
   config: AppConfig;
   db: Kysely<Database>;
   webDistDirectory?: string;
+  now?: () => Date;
 }
 
 function buildLoggerOptions(config: AppConfig): FastifyServerOptions['logger'] {
@@ -27,12 +33,28 @@ export async function buildApp({
   config,
   db,
   webDistDirectory,
+  now = () => new Date(),
 }: AppDependencies): Promise<FastifyInstance> {
-  const app = Fastify({ logger: buildLoggerOptions(config) });
+  // Trust exactly the hops of our own hosting proxy (client IP for rate limits, protocol for
+  // the Origin check), never the X-Forwarded-For entries a client writes itself.
+  const app = Fastify({
+    logger: buildLoggerOptions(config),
+    trustProxy: (_address: string, hopIndex: number) => hopIndex < config.trustedProxyHopCount,
+  });
+  const authDependencies = { db, now, isProduction: config.isProduction };
 
   await registerSecurityHeaders(app, config.isProduction);
   registerErrorHandlers(app, { serveSpa: webDistDirectory !== undefined });
+  await registerAuth(app, authDependencies);
+  // Pre-compute the timing-equalization hash so the very first unknown-email login
+  // does not take twice as long as a wrong password.
+  await burnPasswordVerification('warm-up');
   registerHealthRoutes(app, db);
+  registerSessionRoutes(app, {
+    ...authDependencies,
+    loginFailureLimiter: new LoginFailureLimiter(now),
+  });
+  registerMeRoutes(app, authDependencies);
   if (webDistDirectory !== undefined) {
     await registerSpa(app, webDistDirectory);
   }

@@ -13,6 +13,7 @@
     "dev:api": "npm run dev --workspace @work-planner/api",
     "dev:web": "npm run dev --workspace @work-planner/web",
     "migrate": "npm run migrate --workspace @work-planner/api",
+    "seed": "npm run seed --workspace @work-planner/api",
     "build": "npm run build --workspaces --if-present",
     "lint": "eslint .",
     "format": "prettier --write .",

@@ -8,13 +8,17 @@
     "build": "node scripts/build.js",
     "start": "node --enable-source-maps dist/main.js",
     "migrate": "tsx src/migrate.ts",
+    "seed": "tsx src/seed.ts",
     "typecheck": "tsc -p tsconfig.json",
     "test": "jest --runInBand"
   },
   "dependencies": {
+    "@fastify/cookie": "^11.1.5",
     "@fastify/helmet": "^13.2.0",
+    "@fastify/rate-limit": "^11.2.2",
     "@fastify/static": "^10.1.10",
     "@work-planner/domain": "0.0.0",
+    "argon2": "^0.45.2",
     "fastify": "^5.12.8",
     "kysely": "^0.29.8",
     "pg": "^8.23.1",
