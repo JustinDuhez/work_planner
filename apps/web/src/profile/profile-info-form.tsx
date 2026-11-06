@@ -24,6 +24,7 @@ export function ProfileInfoForm({ user }: { user: CurrentUser }) {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    save.reset();
     save.mutate();
   }
 
@@ -80,7 +81,9 @@ export function ProfileInfoForm({ user }: { user: CurrentUser }) {
             </dd>
           </div>
           <div>
-            <dt className="text-zinc-500">{copy.profile.managers}</dt>
+            <dt className="text-zinc-500">
+              {user.directManagers.length > 1 ? copy.profile.managers : copy.profile.manager}
+            </dt>
             <dd className="mt-0.5 font-medium">
               {user.directManagers.length === 0
                 ? copy.profile.noManager

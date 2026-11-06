@@ -43,6 +43,7 @@ export function PasswordForm() {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    change.reset();
     const violation = findPasswordPolicyViolation(newPassword, currentPassword);
     const errors: Record<string, string> = {};
     if (violation) errors.newPassword = PASSWORD_POLICY_MESSAGES[violation];
@@ -81,23 +82,25 @@ export function PasswordForm() {
           error={fieldErrors.newPassword}
           description={copy.password.rule}
         />
-        {strength ? (
-          <div aria-live="polite">
-            <div className="flex gap-1" aria-hidden>
-              {STRENGTH_SEGMENTS.map((segment) => (
-                <span
-                  key={segment}
-                  className={`h-1 flex-1 rounded-full ${
-                    segment <= STRENGTH_SEGMENT_COUNT_BY_LEVEL[strength]
-                      ? STRENGTH_SEGMENT_CLASS[strength]
-                      : 'bg-zinc-200'
-                  }`}
-                />
-              ))}
-            </div>
-            <p className="mt-1 text-xs text-zinc-600">{`${copy.password.strengthLabel} ${copy.password.strength[strength]}`}</p>
-          </div>
-        ) : null}
+        <div aria-live="polite">
+          {strength ? (
+            <>
+              <div className="flex gap-1" aria-hidden>
+                {STRENGTH_SEGMENTS.map((segment) => (
+                  <span
+                    key={segment}
+                    className={`h-1 flex-1 rounded-full ${
+                      segment <= STRENGTH_SEGMENT_COUNT_BY_LEVEL[strength]
+                        ? STRENGTH_SEGMENT_CLASS[strength]
+                        : 'bg-zinc-200'
+                    }`}
+                  />
+                ))}
+              </div>
+              <p className="mt-1 text-xs text-zinc-600">{`${copy.password.strengthLabel} ${copy.password.strength[strength]}`}</p>
+            </>
+          ) : null}
+        </div>
         <TextField
           label={copy.password.confirm}
           name="confirmation"
@@ -114,6 +117,12 @@ export function PasswordForm() {
           {change.isSuccess ? (
             <p role="status" className="text-sm text-emerald-700">
               {copy.password.changed}
+            </p>
+          ) : null}
+          {change.error &&
+          !(change.error instanceof ApiError && Object.keys(serverErrors).length > 0) ? (
+            <p role="alert" className="text-sm text-rose-700">
+              {change.error.message}
             </p>
           ) : null}
         </div>

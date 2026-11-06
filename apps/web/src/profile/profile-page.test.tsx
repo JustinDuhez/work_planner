@@ -107,4 +107,42 @@ describe('ProfilePage', () => {
     expect(await screen.findByText(copy.password.changed)).toBeInTheDocument();
     expect(screen.getByLabelText(copy.password.current)).toHaveValue('');
   });
+
+  it('shows the server message when the password change fails without a field error', async () => {
+    const { user } = renderProfile({
+      'PUT /api/v1/me/password': {
+        status: 429,
+        body: {
+          code: 'TOO_MANY_ATTEMPTS',
+          message: 'Trop de tentatives. Réessayez dans quelques minutes.',
+        },
+      },
+    });
+
+    await user.type(
+      await screen.findByLabelText(copy.password.current),
+      'correct horse battery staple',
+    );
+    await user.type(screen.getByLabelText(copy.password.new), 'a brand new passphrase');
+    await user.type(screen.getByLabelText(copy.password.confirm), 'a brand new passphrase');
+    await user.click(screen.getByRole('button', { name: copy.password.submit }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Trop de tentatives. Réessayez dans quelques minutes.',
+    );
+  });
+
+  it('updates the header initials after the names are saved', async () => {
+    const { user } = renderProfile({
+      'PATCH /api/v1/me': { status: 200, body: { ...SIGNED_IN_SESSION.user, firstName: 'Zoé' } },
+    });
+    const firstName = await screen.findByLabelText(copy.profile.firstName);
+
+    await user.clear(firstName);
+    await user.type(firstName, 'Zoé');
+    await user.click(screen.getByRole('button', { name: copy.profile.saveInfo }));
+
+    await screen.findByText(copy.profile.infoSaved);
+    expect(screen.getByRole('button', { name: copy.userMenu.open })).toHaveTextContent('ZM');
+  });
 });
