@@ -60,6 +60,16 @@ describe('buildDemoClockHistory', () => {
     expect(early.some((day) => day.workDate === '2026-11-06')).toBe(false);
   });
 
+  it('seeds nothing for a weekend day', () => {
+    const saturday = buildDemoClockHistory({
+      now: new Date('2026-11-07T10:00:00Z'),
+      timeZone: PARIS,
+      emails: EMAILS,
+    });
+
+    expect(saturday.some((day) => day.workDate === '2026-11-07')).toBe(false);
+  });
+
   it('keeps every period inside its own Paris day', () => {
     expect(
       history.every((day) =>

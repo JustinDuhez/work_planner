@@ -100,7 +100,8 @@ export function buildDemoClockHistory(options: {
   emails: readonly string[];
 }): DemoClockDay[] {
   const today = toWorkDate(options.now, options.timeZone);
-  const [currentMonday] = datesOfIsoWeek(isoWeekOf(today)) ?? [];
+  const currentWeekDates = datesOfIsoWeek(isoWeekOf(today)) ?? [];
+  const [currentMonday] = currentWeekDates;
   if (currentMonday === undefined) return [];
   const firstMonday = addDays(currentMonday, -PAST_WEEK_COUNT * DAYS_PER_WEEK);
   const unclosedThursday = addDays(currentMonday, THURSDAY_INDEX - DAYS_PER_WEEK);
@@ -115,7 +116,9 @@ export function buildDemoClockHistory(options: {
     pastDaysOf(email, workDates, unclosedThursday, options.timeZone),
   );
   const dayStart = instant(today, DAY_START, options.timeZone);
-  if (options.emails.includes(RUNNING_EMAIL) && options.now.getTime() >= dayStart.getTime()) {
+  const isWorkingDay = currentWeekDates.slice(0, WORKING_DAYS_PER_WEEK).includes(today);
+  const hasDayStarted = options.now.getTime() >= dayStart.getTime();
+  if (options.emails.includes(RUNNING_EMAIL) && isWorkingDay && hasDayStarted) {
     history.push({
       email: RUNNING_EMAIL,
       workDate: today,
