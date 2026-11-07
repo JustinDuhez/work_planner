@@ -101,24 +101,25 @@ export async function seedDatabase(
     timeZone: clock.timeZone,
     emails: activeEmails,
   })) {
-    const inserted = await db
-      .insertInto('clockDay')
-      .values({
-        userId: await idOfUser(db, day.email),
-        workDate: day.workDate,
-        workMode: day.workMode,
-      })
-      .onConflict((conflict) => conflict.columns(['userId', 'workDate']).doNothing())
-      .returning('id')
-      .executeTakeFirst();
-    // An existing day is left exactly as it is (it may have been changed in the app).
-    if (!inserted) continue;
-    for (const period of day.periods) {
-      await db
-        .insertInto('clockPeriod')
-        .values({ clockDayId: inserted.id, ...period })
-        .execute();
-    }
+    const userId = await idOfUser(db, day.email);
+    // One transaction per day: a crash must not leave a day without periods, which the
+    // DO NOTHING below would never repair.
+    await db.transaction().execute(async (trx) => {
+      const inserted = await trx
+        .insertInto('clockDay')
+        .values({ userId, workDate: day.workDate, workMode: day.workMode })
+        .onConflict((conflict) => conflict.columns(['userId', 'workDate']).doNothing())
+        .returning('id')
+        .executeTakeFirst();
+      // An existing day is left exactly as it is (it may have been changed in the app).
+      if (!inserted) return;
+      for (const period of day.periods) {
+        await trx
+          .insertInto('clockPeriod')
+          .values({ clockDayId: inserted.id, ...period })
+          .execute();
+      }
+    });
   }
   return {
     userCount: await countRows(db, 'appUser'),
