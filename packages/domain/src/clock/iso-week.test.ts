@@ -34,6 +34,7 @@ describe('datesOfIsoWeek', () => {
     ['week 53 of a 52-week year', '2025-W53'],
     ['week 0', '2026-W00'],
     ['a malformed week', '2026-45'],
+    ['a week whose Monday leaves the 4-digit years', '9999-W53'],
   ])('refuses %s', (_description, isoWeek) => {
     expect(datesOfIsoWeek(isoWeek)).toBeNull();
   });

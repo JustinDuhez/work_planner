@@ -4,6 +4,7 @@ const ISO_WEEK_PATTERN = /^(\d{4})-W(\d{2})$/;
 const DAYS_PER_WEEK = 7;
 const MILLISECONDS_PER_DAY = 86_400_000;
 const THURSDAY_INDEX = 3;
+const MAX_YEAR = 9999;
 // January 4 is always in ISO week 1.
 const ISO_WEEK_ANCHOR_DAY = 4;
 
@@ -47,6 +48,9 @@ export function datesOfIsoWeek(isoWeek: string): string[] | null {
   const monday = new Date(
     firstMondayOfIsoYear(year) + (weekNumber - 1) * DAYS_PER_WEEK * MILLISECONDS_PER_DAY,
   );
+  const sunday = new Date(monday.getTime() + (DAYS_PER_WEEK - 1) * MILLISECONDS_PER_DAY);
+  // Beyond four digits toISOString() adds a sign and work dates stop parsing.
+  if (sunday.getUTCFullYear() > MAX_YEAR) return null;
   const mondayDate = monday.toISOString().slice(0, 10);
   const dates = Array.from({ length: DAYS_PER_WEEK }, (_, offset) => addDays(mondayDate, offset));
   // Week 0, or week 53 of a 52-week year, lands in another ISO week: refuse it.
