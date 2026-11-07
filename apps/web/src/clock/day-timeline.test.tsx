@@ -45,6 +45,23 @@ describe('DayTimeline', () => {
     expect(onSelectPeriod).toHaveBeenCalledWith(4);
   });
 
+  it('shows the start and end times as visible text', () => {
+    render(
+      <DayTimeline
+        day={{
+          ...DAY,
+          periods: [
+            { id: 1, startedAt: '2026-11-06T08:00:00.000Z', endedAt: '2026-11-06T11:30:00.000Z' },
+            { id: 2, startedAt: '2026-11-06T12:30:00.000Z', endedAt: null },
+          ],
+        }}
+        now={NOW}
+      />,
+    );
+
+    expect(screen.getByText('09:00 – 12:30 · 13:30 – …')).toBeVisible();
+  });
+
   it('keeps the bands read-only without a selection handler', () => {
     render(<DayTimeline day={DAY} now={NOW} />);
 

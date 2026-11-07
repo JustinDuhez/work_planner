@@ -30,9 +30,19 @@ export function TodayControls({
   const workMode = day.workMode ?? chosenMode;
   const errorMessage = bannerMessageFor(start.error ?? update.error ?? setDayMode.error, []);
 
+  // Only the latest outcome is worth showing: a stale failure must not outlive a later success.
+  function resetErrors() {
+    start.reset();
+    update.reset();
+    setDayMode.reset();
+  }
+
   function chooseMode(mode: WorkMode) {
     if (day.workMode === null) setChosenMode(mode);
-    else setDayMode.mutate({ date: day.date, workMode: mode });
+    else {
+      resetErrors();
+      setDayMode.mutate({ date: day.date, workMode: mode });
+    }
   }
 
   return (
@@ -42,7 +52,7 @@ export function TodayControls({
         {WORK_MODE_OPTIONS.map(({ value, label, Icon }) => (
           <label
             key={value}
-            className={`flex cursor-pointer items-center gap-1 rounded-md px-2.5 py-1 text-xs ${workMode === value ? 'bg-white font-medium text-zinc-900 shadow-card' : 'text-zinc-600'}`}
+            className={`flex cursor-pointer items-center gap-1 rounded-md has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary-500 px-2.5 py-1 text-xs ${workMode === value ? 'bg-white font-medium text-zinc-900 shadow-card' : 'text-zinc-600'}`}
           >
             <input
               type="radio"
@@ -61,14 +71,20 @@ export function TodayControls({
         {runningPeriod ? (
           <Button
             isPending={update.isPending}
-            onClick={() => update.mutate({ periodId: runningPeriod.id, endedAt: 'now' })}
+            onClick={() => {
+              resetErrors();
+              update.mutate({ periodId: runningPeriod.id, endedAt: 'now' });
+            }}
           >
             <Square size={16} aria-hidden /> {copy.clock.stop}
           </Button>
         ) : (
           <Button
             isPending={start.isPending}
-            onClick={() => start.mutate(day.workMode === null ? { workMode } : {})}
+            onClick={() => {
+              resetErrors();
+              start.mutate(day.workMode === null ? { workMode } : {});
+            }}
           >
             <Play size={16} aria-hidden /> {copy.clock.start}
           </Button>

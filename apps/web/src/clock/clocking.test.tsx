@@ -1,5 +1,5 @@
 import { datesOfIsoWeek, toLocalTime, toWorkDate } from '@work-planner/domain';
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { copy } from '../copy';
 import { HUGO, signedInHomeRoutes, weekFixture } from '../test/clock-fixtures';
@@ -136,6 +136,43 @@ describe('clocking from the week view', () => {
     expect(bodyOf(fetchMock, 'PATCH', `/api/v1/clock-days/${TODAY}`)).toEqual({
       workMode: 'telework',
     });
+  });
+
+  it('drops a failed work-mode switch message once a later stop succeeds', async () => {
+    const { user } = renderHome(
+      {
+        [`PATCH /api/v1/clock-days/${TODAY}`]: {
+          status: 409,
+          body: { code: 'CLOCK_DAY_LOCKED', message: 'Changement de mode refusé.' },
+        },
+        [`PATCH /api/v1/clock-periods/${RUNNING_PERIOD.id}`]: {
+          status: 200,
+          body: { ...RUNNING_PERIOD, endedAt: new Date().toISOString() },
+        },
+      },
+      { periods: [RUNNING_PERIOD], workMode: 'on_site', workedMinutes: 60 },
+    );
+
+    await user.click(await screen.findByRole('radio', { name: copy.clock.telework }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Changement de mode refusé.');
+    await user.click(screen.getByRole('button', { name: copy.clock.stop }));
+
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
+  });
+
+  it('does not let a closed period be saved without its end', async () => {
+    const { fetchMock, user } = renderHome(
+      { [`PATCH /api/v1/clock-periods/${CLOSED_PERIOD.id}`]: { status: 200, body: CLOSED_PERIOD } },
+      { periods: [CLOSED_PERIOD], workMode: 'on_site', workedMinutes: 60 },
+    );
+
+    const dialog = await openClosedPeriodDialog(user);
+    await user.clear(within(dialog).getByLabelText(copy.clock.endTime));
+    await user.click(within(dialog).getByRole('button', { name: copy.clock.save }));
+
+    expect(within(dialog).getByLabelText(copy.clock.endTime)).toBeRequired();
+    expect(within(dialog).queryByText(copy.clock.endTimeHint)).not.toBeInTheDocument();
+    expect(bodyOf(fetchMock, 'PATCH', `/api/v1/clock-periods/${CLOSED_PERIOD.id}`)).toBeUndefined();
   });
 
   async function openClosedPeriodDialog(user: ReturnType<typeof userEvent.setup>) {

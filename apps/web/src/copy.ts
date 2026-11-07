@@ -31,7 +31,7 @@ export const copy = {
     cancel: 'Annuler',
     closeDay: "Indiquer l'heure de fin",
     closeDayTitle: 'Heure de fin de la période',
-    closeDayHint: 'Heure réelle à laquelle vous avez arrêté de travailler ce jour-là.',
+    closeDayHint: 'Heure réelle de fin de travail ce jour-là.',
   },
   nav: {
     clock: 'Pointage',
