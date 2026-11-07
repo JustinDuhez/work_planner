@@ -1,4 +1,4 @@
-import { createPool } from './create-db';
+import { createPool, setSessionTimeZone } from './create-db';
 
 describe('createPool', () => {
   it('keeps the process alive when an idle database connection drops', async () => {
@@ -11,5 +11,18 @@ describe('createPool', () => {
 
     consoleError.mockRestore();
     await pool.end();
+  });
+});
+
+describe('setSessionTimeZone', () => {
+  it('logs instead of crashing when the connection drops during the SET', async () => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const failure = new Error('connection terminated');
+
+    setSessionTimeZone({ query: () => Promise.reject(failure) });
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(consoleError).toHaveBeenCalledWith('Could not set the session time zone', failure);
+    consoleError.mockRestore();
   });
 });
