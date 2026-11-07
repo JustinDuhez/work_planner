@@ -9,8 +9,15 @@ import type { AppConfig } from './config/config';
 import type { Database } from './db/database';
 import { registerHealthRoutes } from './health/health-routes';
 import { registerErrorHandlers } from './http/error-handler';
+import { registerProtectedRoutes } from './http/protected-routes';
 import { registerSecurityHeaders } from './http/security-headers';
 import { registerSpa } from './http/spa';
+
+declare module 'fastify' {
+  interface FastifyInstance {
+    registeredApiRoutes: { method: string; url: string }[];
+  }
+}
 
 export interface AppDependencies {
   config: AppConfig;
@@ -41,6 +48,12 @@ export async function buildApp({
     logger: buildLoggerOptions(config),
     trustProxy: (_address: string, hopIndex: number) => hopIndex < config.trustedProxyHopCount,
   });
+  app.decorate('registeredApiRoutes', []);
+  app.addHook('onRoute', (route) => {
+    if (!route.url.startsWith('/api/')) return;
+    const methods = Array.isArray(route.method) ? route.method : [route.method];
+    for (const method of methods) app.registeredApiRoutes.push({ method, url: route.url });
+  });
   const authDependencies = { db, now, isProduction: config.isProduction };
 
   await registerSecurityHeaders(app, config.isProduction);
@@ -54,7 +67,9 @@ export async function buildApp({
     ...authDependencies,
     loginFailureLimiter: new LoginFailureLimiter(now),
   });
-  registerMeRoutes(app, authDependencies);
+  await registerProtectedRoutes(app, (scope) => {
+    registerMeRoutes(scope, authDependencies);
+  });
   if (webDistDirectory !== undefined) {
     await registerSpa(app, webDistDirectory);
   }

@@ -6,7 +6,7 @@ import type { FastifyInstance } from 'fastify';
 import { parseInput } from '../http/parse-input';
 import { loadCurrentUser } from '../organization/current-user';
 import { TooManyAttemptsError } from './auth-errors';
-import { requireSession, SESSION_COOKIE_NAME } from './auth-plugin';
+import { SESSION_COOKIE_NAME } from './auth-plugin';
 import { authenticate } from './authenticate';
 import type { LoginFailureLimiter } from './login-failure-limiter';
 import { createSession, deleteSession, type AuthDependencies } from './session-service';
@@ -65,10 +65,5 @@ export function registerSessionRoutes(app: FastifyInstance, deps: SessionRouteDe
     }
     reply.clearCookie(SESSION_COOKIE_NAME, sessionCookieAttributes(deps.isProduction));
     return reply.status(204).send();
-  });
-
-  app.get('/api/v1/me', { onRequest: app.requireAuth }, async (request) => {
-    const session = requireSession(request);
-    return { user: await loadCurrentUser(deps.db, session.user.id), csrfToken: session.csrfToken };
   });
 }
