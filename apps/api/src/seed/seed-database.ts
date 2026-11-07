@@ -1,6 +1,7 @@
 import type { Kysely } from 'kysely';
 import { hashPassword } from '../auth/password-hasher';
 import type { Database } from '../db/database';
+import { buildDemoClockHistory } from './demo-clock-history';
 import { DEMO_TEAMS, DEMO_USERS, type DemoUser } from './demo-company';
 import type { SeedConfig } from './seed-config';
 
@@ -47,7 +48,7 @@ async function idOfTeam(db: Kysely<Database>, name: string): Promise<number> {
 
 async function countRows(
   db: Kysely<Database>,
-  table: 'appUser' | 'team' | 'teamMember',
+  table: 'appUser' | 'team' | 'teamMember' | 'clockDay',
 ): Promise<number> {
   const { count } = await db
     .selectFrom(table)
@@ -59,7 +60,13 @@ async function countRows(
 export async function seedDatabase(
   db: Kysely<Database>,
   config: SeedConfig,
-): Promise<{ userCount: number; teamCount: number; membershipCount: number }> {
+  clock: { now: Date; timeZone: string },
+): Promise<{
+  userCount: number;
+  teamCount: number;
+  membershipCount: number;
+  clockDayCount: number;
+}> {
   await insertUserIfMissing(
     db,
     { email: config.adminEmail, firstName: 'Admin', lastName: 'Work Planner', isAdmin: true },
@@ -88,9 +95,36 @@ export async function seedDatabase(
         .execute();
     }
   }
+  const activeEmails = DEMO_USERS.filter((user) => !user.isArchived).map((user) => user.email);
+  for (const day of buildDemoClockHistory({
+    now: clock.now,
+    timeZone: clock.timeZone,
+    emails: activeEmails,
+  })) {
+    const userId = await idOfUser(db, day.email);
+    // One transaction per day: a crash must not leave a day without periods, which the
+    // DO NOTHING below would never repair.
+    await db.transaction().execute(async (trx) => {
+      const inserted = await trx
+        .insertInto('clockDay')
+        .values({ userId, workDate: day.workDate, workMode: day.workMode })
+        .onConflict((conflict) => conflict.columns(['userId', 'workDate']).doNothing())
+        .returning('id')
+        .executeTakeFirst();
+      // An existing day is left exactly as it is (it may have been changed in the app).
+      if (!inserted) return;
+      for (const period of day.periods) {
+        await trx
+          .insertInto('clockPeriod')
+          .values({ clockDayId: inserted.id, ...period })
+          .execute();
+      }
+    });
+  }
   return {
     userCount: await countRows(db, 'appUser'),
     teamCount: await countRows(db, 'team'),
     membershipCount: await countRows(db, 'teamMember'),
+    clockDayCount: await countRows(db, 'clockDay'),
   };
 }

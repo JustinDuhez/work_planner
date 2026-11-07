@@ -32,7 +32,7 @@ npm run dev:web   # app on http://localhost:5173
 
 ## Demo data
 
-`npm run seed` creates the admin account (`ADMIN_EMAIL` / `ADMIN_PASSWORD`) and a fictional company. It can run any number of times: existing people, teams and passwords are never changed.
+`npm run seed` creates the admin account (`ADMIN_EMAIL` / `ADMIN_PASSWORD`) and a fictional company. It can run any number of times: existing people, teams and passwords are never changed. It also adds three weeks of clock history (Léa has one unclosed day; Hugo is clocked in today when the seed runs on a weekday after 9:00).
 
 | Account                                                                      | Role                                                   |
 | ---------------------------------------------------------------------------- | ------------------------------------------------------ |

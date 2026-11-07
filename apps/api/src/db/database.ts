@@ -1,3 +1,4 @@
+import type { WorkMode } from '@work-planner/domain';
 import type { ColumnType, Generated } from 'kysely';
 
 type NullableColumn<T> = ColumnType<T | null, T | null | undefined, T | null>;
@@ -51,10 +52,30 @@ export interface TeamMemberTable {
   updatedAt: Generated<Date>;
 }
 
+export interface ClockDayTable {
+  id: Generated<number>;
+  userId: number;
+  workDate: string;
+  workMode: Generated<WorkMode>;
+  createdAt: Generated<Date>;
+  updatedAt: Generated<Date>;
+}
+
+export interface ClockPeriodTable {
+  id: Generated<number>;
+  clockDayId: number;
+  startedAt: Date;
+  endedAt: NullableColumn<Date>;
+  createdAt: Generated<Date>;
+  updatedAt: Generated<Date>;
+}
+
 export interface Database {
   setting: SettingTable;
   appUser: AppUserTable;
   session: SessionTable;
   team: TeamTable;
   teamMember: TeamMemberTable;
+  clockDay: ClockDayTable;
+  clockPeriod: ClockPeriodTable;
 }

@@ -20,7 +20,12 @@ const PASSWORD_CHANGES_PER_WINDOW = 5;
 const PASSWORD_CHANGE_WINDOW_IN_MILLISECONDS = 15 * 60_000;
 
 export function registerMeRoutes(app: FastifyInstance, deps: AuthDependencies): void {
-  app.patch('/api/v1/me', { onRequest: app.requireAuth }, async (request) => {
+  app.get('/api/v1/me', async (request) => {
+    const session = requireSession(request);
+    return { user: await loadCurrentUser(deps.db, session.user.id), csrfToken: session.csrfToken };
+  });
+
+  app.patch('/api/v1/me', async (request) => {
     const { user } = requireSession(request);
     const names = parseInput(updateProfileRequestSchema, request.body);
     await deps.db.updateTable('appUser').set(names).where('id', '=', user.id).execute();
@@ -30,13 +35,11 @@ export function registerMeRoutes(app: FastifyInstance, deps: AuthDependencies): 
   app.put(
     '/api/v1/me/password',
     {
-      onRequest: app.requireAuth,
       config: {
         rateLimit: {
           max: PASSWORD_CHANGES_PER_WINDOW,
           timeWindow: PASSWORD_CHANGE_WINDOW_IN_MILLISECONDS,
-          // The rate-limit hook runs before requireAuth, so the session is not resolved yet:
-          // key on the session cookie (hashed, never stored raw) rather than on the shared IP.
+          // Key on the session (hashed, never stored raw) rather than on the IP shared by many users.
           keyGenerator: (request) => hashToken(request.cookies[SESSION_COOKIE_NAME] ?? request.ip),
           errorResponseBuilder: () => new TooManyAttemptsError(),
         },

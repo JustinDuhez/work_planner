@@ -9,12 +9,25 @@ const MAX_POOL_SIZE = 10;
 // with the server time zone. Keep the raw 'YYYY-MM-DD' string.
 pg.types.setTypeParser(pg.types.builtins.DATE, (value: string) => value);
 
+// A rejection here would be unhandled, and Node terminates on those; a broken client simply
+// fails its next query.
+export function setSessionTimeZone(client: Pick<pg.PoolClient, 'query'>): void {
+  client.query("SET TIME ZONE 'UTC'").catch((error: unknown) => {
+    console.error('Could not set the session time zone', error);
+  });
+}
+
 export function createPool(databaseUrl: string): pg.Pool {
   const pool = new pg.Pool({
     connectionString: databaseUrl,
     max: MAX_POOL_SIZE,
     connectionTimeoutMillis: CONNECTION_TIMEOUT_IN_MILLISECONDS,
   });
+  // Every session in UTC: local Windows Postgres runs Europe/Paris, CI and Neon run UTC.
+  // Nothing should depend on the session time zone, but this keeps all environments alike.
+  // A plain SET (not a startup option) is accepted by poolers such as Neon's; pg queues it
+  // before the client's first query.
+  pool.on('connect', setSessionTimeZone);
   // An idle connection dropped by the server (e.g. Neon suspending compute) emits 'error';
   // without a listener Node would crash the whole process. The pool is created before
   // Fastify's logger exists, hence console.

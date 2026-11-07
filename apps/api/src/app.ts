@@ -5,12 +5,21 @@ import { LoginFailureLimiter } from './auth/login-failure-limiter';
 import { burnPasswordVerification } from './auth/password-hasher';
 import { registerMeRoutes } from './auth/me-routes';
 import { registerSessionRoutes } from './auth/session-routes';
+import { registerClockRoutes } from './clock/clock-routes';
 import type { AppConfig } from './config/config';
 import type { Database } from './db/database';
 import { registerHealthRoutes } from './health/health-routes';
 import { registerErrorHandlers } from './http/error-handler';
+import { registerProtectedRoutes } from './http/protected-routes';
 import { registerSecurityHeaders } from './http/security-headers';
 import { registerSpa } from './http/spa';
+import { registerUserRoutes } from './users/user-routes';
+
+declare module 'fastify' {
+  interface FastifyInstance {
+    registeredApiRoutes: { method: string; url: string }[];
+  }
+}
 
 export interface AppDependencies {
   config: AppConfig;
@@ -41,7 +50,14 @@ export async function buildApp({
     logger: buildLoggerOptions(config),
     trustProxy: (_address: string, hopIndex: number) => hopIndex < config.trustedProxyHopCount,
   });
+  app.decorate('registeredApiRoutes', []);
+  app.addHook('onRoute', (route) => {
+    if (!route.url.startsWith('/api/')) return;
+    const methods = Array.isArray(route.method) ? route.method : [route.method];
+    for (const method of methods) app.registeredApiRoutes.push({ method, url: route.url });
+  });
   const authDependencies = { db, now, isProduction: config.isProduction };
+  const clockDependencies = { db, now, timeZone: config.appTimezone };
 
   await registerSecurityHeaders(app, config.isProduction);
   registerErrorHandlers(app, { serveSpa: webDistDirectory !== undefined });
@@ -54,7 +70,11 @@ export async function buildApp({
     ...authDependencies,
     loginFailureLimiter: new LoginFailureLimiter(now),
   });
-  registerMeRoutes(app, authDependencies);
+  await registerProtectedRoutes(app, (scope) => {
+    registerMeRoutes(scope, authDependencies);
+    registerUserRoutes(scope, { db });
+    registerClockRoutes(scope, clockDependencies);
+  });
   if (webDistDirectory !== undefined) {
     await registerSpa(app, webDistDirectory);
   }

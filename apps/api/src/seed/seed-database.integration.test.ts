@@ -11,13 +11,15 @@ const SEED_CONFIG: SeedConfig = {
   demoPassword: 'a demo passphrase',
 };
 
+const SEED_CLOCK = { now: new Date('2026-11-06T09:30:00Z'), timeZone: 'Europe/Paris' };
+
 describe('seedDatabase', () => {
   let db: Kysely<Database>;
   let firstRun: Awaited<ReturnType<typeof seedDatabase>>;
 
   beforeAll(async () => {
     db = await createMigratedTestDb();
-    firstRun = await seedDatabase(db, SEED_CONFIG);
+    firstRun = await seedDatabase(db, SEED_CONFIG, SEED_CLOCK);
   });
 
   afterAll(async () => {
@@ -29,8 +31,24 @@ describe('seedDatabase', () => {
     expect(firstRun.teamCount).toBe(DEMO_TEAMS.length);
   });
 
+  it('creates clock history for active people but not for archived ones', async () => {
+    const chloe = await db
+      .selectFrom('appUser')
+      .select('id')
+      .where('email', '=', 'chloe.girard@example.com')
+      .executeTakeFirstOrThrow();
+    const chloeDays = await db
+      .selectFrom('clockDay')
+      .select('id')
+      .where('userId', '=', chloe.id)
+      .execute();
+
+    expect(firstRun.clockDayCount).toBeGreaterThan(0);
+    expect(chloeDays).toEqual([]);
+  });
+
   it('changes nothing when it runs a second time', async () => {
-    expect(await seedDatabase(db, SEED_CONFIG)).toEqual(firstRun);
+    expect(await seedDatabase(db, SEED_CONFIG, SEED_CLOCK)).toEqual(firstRun);
   });
 
   it('never overwrites the admin password once the admin has changed it', async () => {
@@ -40,7 +58,7 @@ describe('seedDatabase', () => {
       .where('email', '=', SEED_CONFIG.adminEmail)
       .execute();
 
-    await seedDatabase(db, SEED_CONFIG);
+    await seedDatabase(db, SEED_CONFIG, SEED_CLOCK);
 
     const admin = await db
       .selectFrom('appUser')
