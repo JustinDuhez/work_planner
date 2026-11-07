@@ -1,11 +1,15 @@
 import { datesOfIsoWeek, formatMinutes } from '@work-planner/domain';
+import { useState } from 'react';
 import { useParams, useSearchParams } from 'react-router';
 import { copy } from '../copy';
 import { NotFoundPage } from '../not-found/not-found-page';
 import { useSession } from '../session/session-queries';
 import { currentIsoWeek } from './clock-time';
 import { useClockWeek } from './clock-queries';
+import { CloseDayDialog } from './close-day-dialog';
 import { DayRow } from './day-row';
+import { PeriodDialog } from './period-dialog';
+import { TodayControls } from './today-controls';
 import { liveDayMinutes } from './live-minutes';
 import { useServerClock } from './use-server-clock';
 import { WeekHeader } from './week-header';
@@ -49,6 +53,13 @@ function ClockWeekView({
   const week = useClockWeek(ownerId, isoWeek);
   const now = useServerClock(week.data?.serverNow);
   const isOwnWeek = ownerId === viewerId;
+  const [dialog, setDialog] = useState<
+    | { kind: 'add'; date: string }
+    | { kind: 'edit'; date: string; periodId: number }
+    | { kind: 'close'; date: string }
+    | null
+  >(null);
+  const dialogDay = week.data?.days.find((day) => day.date === dialog?.date);
 
   return (
     <section className="space-y-4">
@@ -70,7 +81,35 @@ function ClockWeekView({
           ) : null}
           <ol className="space-y-2">
             {week.data.days.map((day, index) => (
-              <DayRow key={day.date} day={day} index={index} now={now} />
+              <DayRow
+                key={day.date}
+                day={day}
+                index={index}
+                now={now}
+                onSelectPeriod={
+                  day.canEdit
+                    ? (periodId) => setDialog({ kind: 'edit', date: day.date, periodId })
+                    : undefined
+                }
+                actions={
+                  day.canEdit ? (
+                    <TodayControls
+                      day={day}
+                      ownerId={ownerId}
+                      isoWeek={isoWeek}
+                      onAddPeriod={() => setDialog({ kind: 'add', date: day.date })}
+                    />
+                  ) : day.canClose ? (
+                    <button
+                      type="button"
+                      onClick={() => setDialog({ kind: 'close', date: day.date })}
+                      className="text-sm font-medium text-primary-600 hover:text-primary-700"
+                    >
+                      {copy.clock.closeDay}
+                    </button>
+                  ) : null
+                }
+              />
             ))}
           </ol>
           <div className="rounded-card border border-zinc-200 bg-white p-4 shadow-card">
@@ -84,6 +123,26 @@ function ClockWeekView({
             </p>
           </div>
         </div>
+      ) : null}
+      {dialog && dialogDay && dialog.kind !== 'close' ? (
+        <PeriodDialog
+          period={
+            dialog.kind === 'edit'
+              ? dialogDay.periods.find((period) => period.id === dialog.periodId)
+              : undefined
+          }
+          ownerId={ownerId}
+          isoWeek={isoWeek}
+          onClose={() => setDialog(null)}
+        />
+      ) : null}
+      {dialog?.kind === 'close' && dialogDay ? (
+        <CloseDayDialog
+          day={dialogDay}
+          ownerId={ownerId}
+          isoWeek={isoWeek}
+          onClose={() => setDialog(null)}
+        />
       ) : null}
     </section>
   );

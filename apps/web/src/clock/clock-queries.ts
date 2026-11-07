@@ -1,6 +1,15 @@
-import { useQuery } from '@tanstack/react-query';
-import { clockWeekSchema, userSummaryListSchema, type ClockWeek } from '@work-planner/domain';
-import { apiGet } from '../api/api-client';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  clockDayModeSchema,
+  clockPeriodSchema,
+  clockWeekSchema,
+  userSummaryListSchema,
+  type ClockWeek,
+  type StartClockPeriodRequest,
+  type UpdateClockPeriodRequest,
+  type WorkMode,
+} from '@work-planner/domain';
+import { apiGet, apiSend, apiSendNoContent } from '../api/api-client';
 
 const RUNNING_WEEK_REFRESH_INTERVAL_IN_MILLISECONDS = 60_000;
 
@@ -32,4 +41,47 @@ export function useActiveUsers() {
     queryFn: () => apiGet('/api/v1/users', userSummaryListSchema),
     staleTime: Infinity,
   });
+}
+
+function useInvalidatingMutation<TVariables, TResult>(
+  ownerId: number,
+  isoWeek: string,
+  mutationFn: (variables: TVariables) => Promise<TResult>,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn,
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: clockWeekQueryKey(ownerId, isoWeek) }),
+  });
+}
+
+export function useStartClockPeriod(ownerId: number, isoWeek: string) {
+  return useInvalidatingMutation(ownerId, isoWeek, (body: StartClockPeriodRequest) =>
+    apiSend('POST', '/api/v1/clock-periods', body, clockPeriodSchema),
+  );
+}
+
+export function useUpdateClockPeriod(ownerId: number, isoWeek: string) {
+  return useInvalidatingMutation(
+    ownerId,
+    isoWeek,
+    ({ periodId, ...body }: { periodId: number } & UpdateClockPeriodRequest) =>
+      apiSend('PATCH', `/api/v1/clock-periods/${periodId}`, body, clockPeriodSchema),
+  );
+}
+
+export function useDeleteClockPeriod(ownerId: number, isoWeek: string) {
+  return useInvalidatingMutation(ownerId, isoWeek, (periodId: number) =>
+    apiSendNoContent('DELETE', `/api/v1/clock-periods/${periodId}`),
+  );
+}
+
+export function useSetDayMode(ownerId: number, isoWeek: string) {
+  return useInvalidatingMutation(
+    ownerId,
+    isoWeek,
+    ({ date, workMode }: { date: string; workMode: WorkMode }) =>
+      apiSend('PATCH', `/api/v1/clock-days/${date}`, { workMode }, clockDayModeSchema),
+  );
 }
