@@ -62,6 +62,7 @@ export function DayTimeline({
           />
         ) : (
           <span
+            role="img"
             key={segment.id}
             title={label}
             aria-label={label}

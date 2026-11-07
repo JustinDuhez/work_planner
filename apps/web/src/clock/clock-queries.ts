@@ -8,7 +8,7 @@ export function clockWeekQueryKey(userId: number, isoWeek: string) {
   return ['clock-week', userId, isoWeek] as const;
 }
 
-function hasRunningPeriod(week: ClockWeek | undefined): boolean {
+export function hasRunningPeriod(week: ClockWeek | undefined): boolean {
   return (
     week?.days.some(
       (day) => day.isToday && day.periods.some((period) => period.endedAt === null),

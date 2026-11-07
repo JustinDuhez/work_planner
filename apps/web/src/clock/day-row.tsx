@@ -8,7 +8,7 @@ import { liveDayMinutes } from './live-minutes';
 
 const WEEKEND_DAY_INDEXES = new Set([5, 6]);
 
-function WorkModeIcon({ workMode }: { workMode: ClockDayView['workMode'] }) {
+export function WorkModeIcon({ workMode }: { workMode: ClockDayView['workMode'] }) {
   if (workMode === 'telework') return <House size={14} aria-label={copy.clock.telework} />;
   if (workMode === 'on_site') return <Building2 size={14} aria-label={copy.clock.onSite} />;
   return null;

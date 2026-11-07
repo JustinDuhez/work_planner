@@ -1,6 +1,7 @@
-import { formatMinutes } from '@work-planner/domain';
+import { datesOfIsoWeek, formatMinutes } from '@work-planner/domain';
 import { useParams, useSearchParams } from 'react-router';
 import { copy } from '../copy';
+import { NotFoundPage } from '../not-found/not-found-page';
 import { useSession } from '../session/session-queries';
 import { currentIsoWeek } from './clock-time';
 import { useClockWeek } from './clock-queries';
@@ -15,7 +16,14 @@ export function ClockWeekPage() {
   const { data: session } = useSession();
   if (!session) return null;
   const pathUserId = userId === undefined ? undefined : Number(userId);
-  const isoWeek = searchParams.get('semaine') ?? currentIsoWeek(new Date());
+  if (pathUserId !== undefined && !(Number.isInteger(pathUserId) && pathUserId > 0)) {
+    return <NotFoundPage />;
+  }
+  const requestedWeek = searchParams.get('semaine');
+  const isoWeek =
+    requestedWeek !== null && datesOfIsoWeek(requestedWeek)
+      ? requestedWeek
+      : currentIsoWeek(new Date());
   return (
     <ClockWeekView
       key={`${pathUserId ?? 'me'}-${isoWeek}`}

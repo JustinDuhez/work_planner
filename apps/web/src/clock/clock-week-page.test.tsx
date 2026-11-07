@@ -82,6 +82,24 @@ describe('ClockWeekPage', () => {
     expect(router.state.location.pathname).toBe(`/pointage/${HUGO.id}`);
   });
 
+  it('falls back to the current week when the URL week is invalid', async () => {
+    mockFetchRoutes(signedInHomeRoutes());
+
+    renderApp('/?semaine=foo');
+
+    expect(
+      await screen.findAllByRole('listitem', { name: /^(LUN|MAR|MER|JEU|VEN|SAM|DIM)/ }),
+    ).toHaveLength(7);
+  });
+
+  it('shows the not found page for a malformed person in the URL', async () => {
+    mockFetchRoutes(signedInHomeRoutes());
+
+    renderApp('/pointage/abc');
+
+    expect(await screen.findByText(copy.notFound.title)).toBeInTheDocument();
+  });
+
   it('says so when the week cannot be loaded', async () => {
     mockFetchRoutes({
       ...signedInHomeRoutes(weekFixture({ isoWeek: WEEK })),
