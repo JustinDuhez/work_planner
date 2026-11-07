@@ -1,3 +1,4 @@
+import type { WorkMode } from '@work-planner/domain';
 import type { Kysely } from 'kysely';
 import { hashPassword } from '../auth/password-hasher';
 import type { Database } from '../db/database';
@@ -53,5 +54,33 @@ export async function insertTeam(db: Kysely<Database>, team: TestTeam): Promise<
   for (const userId of team.memberIds ?? []) {
     await db.insertInto('teamMember').values({ teamId: id, userId }).execute();
   }
+  return id;
+}
+
+export async function insertClockDay(
+  db: Kysely<Database>,
+  day: { userId: number; workDate: string; workMode?: WorkMode },
+): Promise<number> {
+  const { id } = await db
+    .insertInto('clockDay')
+    .values({ userId: day.userId, workDate: day.workDate, workMode: day.workMode })
+    .returning('id')
+    .executeTakeFirstOrThrow();
+  return id;
+}
+
+export async function insertClockPeriod(
+  db: Kysely<Database>,
+  period: { clockDayId: number; startedAt: Date; endedAt?: Date | null },
+): Promise<number> {
+  const { id } = await db
+    .insertInto('clockPeriod')
+    .values({
+      clockDayId: period.clockDayId,
+      startedAt: period.startedAt,
+      endedAt: period.endedAt ?? null,
+    })
+    .returning('id')
+    .executeTakeFirstOrThrow();
   return id;
 }

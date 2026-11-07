@@ -14,6 +14,9 @@ export function createPool(databaseUrl: string): pg.Pool {
     connectionString: databaseUrl,
     max: MAX_POOL_SIZE,
     connectionTimeoutMillis: CONNECTION_TIMEOUT_IN_MILLISECONDS,
+    // Every session in UTC: local Windows Postgres runs Europe/Paris, CI and Neon run UTC.
+    // Nothing should depend on the session time zone, but this keeps all environments alike.
+    options: '-c TimeZone=UTC',
   });
   // An idle connection dropped by the server (e.g. Neon suspending compute) emits 'error';
   // without a listener Node would crash the whole process. The pool is created before
