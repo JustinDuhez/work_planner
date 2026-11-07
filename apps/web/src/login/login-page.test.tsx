@@ -1,6 +1,7 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { copy } from '../copy';
+import { signedInHomeRoutes } from '../test/clock-fixtures';
 import { mockFetchRoutes } from '../test/mock-fetch';
 import { renderApp } from '../test/render-app';
 import { SIGNED_IN_SESSION } from '../test/sessions';
@@ -65,15 +66,15 @@ describe('LoginPage', () => {
 
   it('ignores a return address that leaves the app', async () => {
     mockFetchRoutes({
+      ...signedInHomeRoutes(),
       'GET /api/v1/me': ANONYMOUS,
       'POST /api/v1/sessions': { status: 201, body: SIGNED_IN_SESSION },
-      'GET /api/v1/health': { status: 200, body: { status: 'ok', database: 'up' } },
     });
     const { router } = renderApp(`/connexion?retour=${encodeURIComponent('//evil.com')}`);
 
     await fillAndSubmit('lea.moreau@example.com', 'correct horse battery staple');
 
-    await screen.findByRole('heading', { name: copy.home.title });
+    await screen.findByRole('heading', { name: copy.clock.title });
     expect(router.state.location.pathname).toBe('/');
   });
 

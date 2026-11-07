@@ -1,5 +1,5 @@
 import { createBrowserRouter, type RouteObject } from 'react-router';
-import { HomePage } from './home/home-page';
+import { ClockWeekPage } from './clock/clock-week-page';
 import { LoginPage } from './login/login-page';
 import { NotFoundPage } from './not-found/not-found-page';
 import { ProfilePage } from './profile/profile-page';
@@ -15,7 +15,8 @@ export const routes: RouteObject[] = [
         path: '/',
         element: <AppShell />,
         children: [
-          { index: true, element: <HomePage /> },
+          { index: true, element: <ClockWeekPage /> },
+          { path: 'pointage/:userId', element: <ClockWeekPage /> },
           { path: 'profil', element: <ProfilePage /> },
           { path: '*', element: <NotFoundPage /> },
         ],

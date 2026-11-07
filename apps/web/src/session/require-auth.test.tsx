@@ -1,8 +1,8 @@
 import { screen } from '@testing-library/react';
 import { copy } from '../copy';
+import { signedInHomeRoutes } from '../test/clock-fixtures';
 import { mockFetchRoutes } from '../test/mock-fetch';
 import { renderApp } from '../test/render-app';
-import { SIGNED_IN_SESSION } from '../test/sessions';
 
 const ANONYMOUS = { status: 401, body: { code: 'UNAUTHENTICATED', message: 'Expirée' } };
 
@@ -21,13 +21,12 @@ describe('RequireAuth', () => {
 
   it('lets a signed-in user through', async () => {
     mockFetchRoutes({
-      'GET /api/v1/me': { status: 200, body: SIGNED_IN_SESSION },
-      'GET /api/v1/health': { status: 200, body: { status: 'ok', database: 'up' } },
+      ...signedInHomeRoutes(),
     });
 
     renderApp('/');
 
-    expect(await screen.findByRole('heading', { name: copy.home.title })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: copy.clock.title })).toBeInTheDocument();
   });
 
   it('shows an error instead of the login page when the session cannot be checked', async () => {

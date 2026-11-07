@@ -1,8 +1,26 @@
 export const copy = {
   appName: 'Work Planner',
-  home: {
-    title: 'Bienvenue',
-    subtitle: 'Votre espace de gestion des temps.',
+  clock: {
+    title: 'Pointage',
+    previousWeek: 'Semaine précédente',
+    nextWeek: 'Semaine suivante',
+    today: "Aujourd'hui",
+    weekTotal: 'Total semaine',
+    readOnlyPrefix: 'Semaine de',
+    readOnlySuffix: 'lecture seule',
+    viewWeekOf: 'Voir la semaine de…',
+    searchPerson: 'Rechercher une personne',
+    noPersonFound: 'Aucune personne trouvée',
+    you: '(vous)',
+    unclosed: 'Non débadgée',
+    running: 'En cours',
+    onSite: 'Sur site',
+    telework: 'Télétravail',
+    loadError: 'Impossible de charger la semaine.',
+    loading: 'Chargement de la semaine…',
+  },
+  nav: {
+    clock: 'Pointage',
   },
   errors: {
     network: 'Connexion au serveur impossible. Vérifiez votre réseau et réessayez.',
