@@ -138,10 +138,11 @@ export async function deleteClockPeriodById(db: Kysely<Database>, periodId: numb
 export function findPeriodWithDay(
   db: Kysely<Database>,
   periodId: number,
+  options: { shouldLock?: boolean } = {},
 ): Promise<
   (StoredClockPeriod & { clockDayId: number; userId: number; workDate: string }) | undefined
 > {
-  return db
+  const query = db
     .selectFrom('clockPeriod')
     .innerJoin('clockDay', 'clockDay.id', 'clockPeriod.clockDayId')
     .select([
@@ -152,8 +153,9 @@ export function findPeriodWithDay(
       'clockDay.userId',
       'clockDay.workDate',
     ])
-    .where('clockPeriod.id', '=', periodId)
-    .executeTakeFirst();
+    .where('clockPeriod.id', '=', periodId);
+  // Row lock (period and its day): concurrent edits of the same period run one after the other.
+  return (options.shouldLock ? query.forUpdate() : query).executeTakeFirst();
 }
 
 export function upsertClockDayMode(

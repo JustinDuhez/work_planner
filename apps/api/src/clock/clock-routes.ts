@@ -17,13 +17,24 @@ import {
 import { clockViewerOf, type ClockDependencies } from './clock-dependencies';
 import { buildClockWeek } from './clock-week';
 
+// Postgres INTEGER ceiling: a larger id would crash the query instead of failing validation.
+const MAX_DATABASE_ID = 2_147_483_647;
+
 const clockWeekParamsSchema = z.object({
-  userId: z.coerce.number().int().positive('Utilisateur invalide.').max(2_147_483_647),
+  userId: z.coerce
+    .number()
+    .int()
+    .positive('Utilisateur invalide.')
+    .max(MAX_DATABASE_ID, 'Utilisateur invalide.'),
   isoWeek: isoWeekSchema,
 });
 
 const periodParamsSchema = z.object({
-  id: z.coerce.number().int().positive('Période invalide.').max(2_147_483_647),
+  id: z.coerce
+    .number()
+    .int()
+    .positive('Période invalide.')
+    .max(MAX_DATABASE_ID, 'Période invalide.'),
 });
 const dayParamsSchema = z.object({ date: workDateSchema });
 

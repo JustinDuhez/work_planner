@@ -117,7 +117,9 @@ describe('clocking commands', () => {
     });
 
     it('lets exactly one of two simultaneous Starts through', async () => {
-      const { session } = await newPerson();
+      const { id, session } = await newPerson();
+      // The day row exists beforehand so both transactions race on the period constraints.
+      await insertClockDay(db, { userId: id, workDate: '2026-11-06' });
 
       const responses = await Promise.all([
         send(session, 'POST', '/api/v1/clock-periods', {}),
@@ -325,6 +327,54 @@ describe('clocking commands', () => {
       expect(response.json<{ code: string }>().code).toBe('VALIDATION_ERROR');
     });
 
+    it('refuses to edit a period of a future day', async () => {
+      const { id, session } = await newPerson();
+      const dayId = await insertClockDay(db, { userId: id, workDate: '2026-11-07' });
+      const periodId = await insertClockPeriod(db, {
+        clockDayId: dayId,
+        startedAt: new Date('2026-11-07T08:00:00Z'),
+      });
+
+      const response = await send(session, 'PATCH', `/api/v1/clock-periods/${periodId}`, {
+        endedAt: '17:00',
+      });
+
+      expect(response.statusCode).toBe(403);
+    });
+
+    it("refuses a manager editing their managed person's period of today", async () => {
+      const dayId = await insertClockDay(db, { userId: managedId, workDate: '2026-11-06' });
+      const periodId = await insertClockPeriod(db, {
+        clockDayId: dayId,
+        startedAt: new Date('2026-11-06T08:00:00Z'),
+      });
+      const session = await logIn(app, 'manager.commands@example.com');
+
+      const response = await send(session, 'PATCH', `/api/v1/clock-periods/${periodId}`, {
+        endedAt: 'now',
+      });
+
+      expect(response.statusCode).toBe(403);
+    });
+
+    it('refuses to delete a period of a past day', async () => {
+      const { id, session } = await newPerson();
+      const periodId = await unclosedPeriodOf(id);
+
+      const response = await send(session, 'DELETE', `/api/v1/clock-periods/${periodId}`);
+
+      expect(response.statusCode).toBe(403);
+    });
+
+    it('answers 404 when deleting an unknown period', async () => {
+      const { session } = await newPerson();
+
+      const response = await send(session, 'DELETE', '/api/v1/clock-periods/999999');
+
+      expect(response.statusCode).toBe(404);
+      expect(response.json<{ code: string }>().code).toBe('CLOCK_PERIOD_NOT_FOUND');
+    });
+
     it('answers 404 for an unknown period', async () => {
       const { session } = await newPerson();
 
@@ -351,6 +401,36 @@ describe('clocking commands', () => {
       expect(first.statusCode).toBe(200);
       expect(first.json<{ endedAt: string }>().endedAt).toBe('2026-11-05T16:00:00.000Z');
       expect(second.statusCode).toBe(403);
+    });
+
+    it("refuses 'now' as the end of an unclosed past day", async () => {
+      const { id, session } = await newPerson();
+      const periodId = await unclosedPeriodOf(id);
+
+      const response = await send(session, 'PATCH', `/api/v1/clock-periods/${periodId}`, {
+        endedAt: 'now',
+      });
+
+      expect(response.statusCode).toBe(403);
+    });
+
+    it('lets only one of two simultaneous closes through', async () => {
+      const { id, session } = await newPerson();
+      const periodId = await unclosedPeriodOf(id);
+
+      const responses = await Promise.all([
+        send(session, 'PATCH', `/api/v1/clock-periods/${periodId}`, { endedAt: '17:00' }),
+        send(session, 'PATCH', `/api/v1/clock-periods/${periodId}`, { endedAt: '18:00' }),
+      ]);
+
+      expect(responses.map((response) => response.statusCode).sort()).toEqual([200, 403]);
+      const winner = responses.find((response) => response.statusCode === 200);
+      const stored = await db
+        .selectFrom('clockPeriod')
+        .select('endedAt')
+        .where('id', '=', periodId)
+        .executeTakeFirstOrThrow();
+      expect(stored.endedAt?.toISOString()).toBe(winner?.json<{ endedAt: string }>().endedAt);
     });
 
     it('refuses to move the start of the unclosed period', async () => {

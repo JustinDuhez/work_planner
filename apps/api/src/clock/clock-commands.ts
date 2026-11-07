@@ -128,7 +128,7 @@ export function updateClockPeriod(
 ): Promise<ClockPeriodView> {
   const { now, today } = momentOf(deps);
   return inTransaction(deps.db, async (trx) => {
-    const period = await findPeriodWithDay(trx, command.periodId);
+    const period = await findPeriodWithDay(trx, command.periodId, { shouldLock: true });
     if (!period) throw new ClockPeriodNotFoundError();
     const isToday = period.workDate === today;
     if (isToday && period.userId !== command.viewer.id) throw new ClockDayNotEditableError();
