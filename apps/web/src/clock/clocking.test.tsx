@@ -1,8 +1,8 @@
-import { datesOfIsoWeek, toWorkDate } from '@work-planner/domain';
+import { datesOfIsoWeek, toLocalTime, toWorkDate } from '@work-planner/domain';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { copy } from '../copy';
-import { signedInHomeRoutes, weekFixture } from '../test/clock-fixtures';
+import { HUGO, signedInHomeRoutes, weekFixture } from '../test/clock-fixtures';
 import { mockFetchRoutes, type MockResponse } from '../test/mock-fetch';
 import { renderApp } from '../test/render-app';
 import { APP_TIME_ZONE, currentIsoWeek, shiftIsoWeek } from './clock-time';
@@ -13,6 +13,14 @@ const RUNNING_PERIOD = {
   startedAt: new Date(Date.now() - 3_600_000).toISOString(),
   endedAt: null,
 };
+
+const CLOSED_PERIOD = {
+  id: 42,
+  startedAt: new Date(Date.now() - 7_200_000).toISOString(),
+  endedAt: new Date(Date.now() - 3_600_000).toISOString(),
+};
+const CLOSED_START = toLocalTime(new Date(CLOSED_PERIOD.startedAt), APP_TIME_ZONE);
+const CLOSED_END = toLocalTime(new Date(CLOSED_PERIOD.endedAt), APP_TIME_ZONE);
 
 function renderHome(extraRoutes: Record<string, MockResponse> = {}, todayOverrides = {}) {
   const week = weekFixture({ days: { [TODAY]: todayOverrides } });
@@ -99,30 +107,110 @@ describe('clocking from the week view', () => {
     );
   });
 
-  it('edits and deletes a period of today', async () => {
-    const closed = {
-      id: 42,
-      startedAt: new Date(Date.now() - 7_200_000).toISOString(),
-      endedAt: new Date(Date.now() - 3_600_000).toISOString(),
-    };
-    const { fetchMock, user } = renderHome(
-      { [`DELETE /api/v1/clock-periods/${closed.id}`]: { status: 204 } },
-      { periods: [closed], workMode: 'on_site', workedMinutes: 60 },
-    );
-    const today = await screen.findByRole('listitem', { current: 'date' });
+  it('adds a period with a start time only', async () => {
+    const { fetchMock, user } = renderHome({
+      'POST /api/v1/clock-periods': { status: 201, body: RUNNING_PERIOD },
+    });
 
-    await user.click(
-      within(today)
-        .getAllByRole('button')
-        .find((button) => button.getAttribute('aria-label')?.includes('–')) as HTMLElement,
+    await user.click(await screen.findByRole('button', { name: copy.clock.addPeriod }));
+    const dialog = screen.getByRole('dialog', { name: copy.clock.addPeriodTitle });
+    await user.type(within(dialog).getByLabelText(copy.clock.startTime), '09:00');
+    await user.click(within(dialog).getByRole('button', { name: copy.clock.save }));
+
+    expect(bodyOf(fetchMock, 'POST', '/api/v1/clock-periods')).toEqual({ startedAt: '09:00' });
+  });
+
+  it('switches the work mode once the day has started', async () => {
+    const { fetchMock, user } = renderHome(
+      {
+        [`PATCH /api/v1/clock-days/${TODAY}`]: {
+          status: 200,
+          body: { date: TODAY, workMode: 'telework' },
+        },
+      },
+      { periods: [CLOSED_PERIOD], workMode: 'on_site', workedMinutes: 60 },
     );
-    const dialog = screen.getByRole('dialog', { name: copy.clock.editPeriodTitle });
+
+    await user.click(await screen.findByRole('radio', { name: copy.clock.telework }));
+
+    expect(bodyOf(fetchMock, 'PATCH', `/api/v1/clock-days/${TODAY}`)).toEqual({
+      workMode: 'telework',
+    });
+  });
+
+  async function openClosedPeriodDialog(user: ReturnType<typeof userEvent.setup>) {
+    const today = await screen.findByRole('listitem', { current: 'date' });
+    await user.click(
+      within(today).getByRole('button', { name: `${CLOSED_START} – ${CLOSED_END}` }),
+    );
+    return screen.getByRole('dialog', { name: copy.clock.editPeriodTitle });
+  }
+
+  it('edits a period of today from its current times', async () => {
+    const { fetchMock, user } = renderHome(
+      { [`PATCH /api/v1/clock-periods/${CLOSED_PERIOD.id}`]: { status: 200, body: CLOSED_PERIOD } },
+      { periods: [CLOSED_PERIOD], workMode: 'on_site', workedMinutes: 60 },
+    );
+
+    const dialog = await openClosedPeriodDialog(user);
+    const startInput = within(dialog).getByLabelText(copy.clock.startTime);
+    expect(startInput).toHaveValue(CLOSED_START);
+    expect(within(dialog).getByLabelText(copy.clock.endTime)).toHaveValue(CLOSED_END);
+    await user.clear(startInput);
+    await user.type(startInput, '06:15');
+    await user.click(within(dialog).getByRole('button', { name: copy.clock.save }));
+
+    expect(bodyOf(fetchMock, 'PATCH', `/api/v1/clock-periods/${CLOSED_PERIOD.id}`)).toEqual({
+      startedAt: '06:15',
+      endedAt: CLOSED_END,
+    });
+  });
+
+  it('deletes a period of today', async () => {
+    const { fetchMock, user } = renderHome(
+      { [`DELETE /api/v1/clock-periods/${CLOSED_PERIOD.id}`]: { status: 204 } },
+      { periods: [CLOSED_PERIOD], workMode: 'on_site', workedMinutes: 60 },
+    );
+
+    const dialog = await openClosedPeriodDialog(user);
     await user.click(within(dialog).getByRole('button', { name: copy.clock.delete }));
 
     expect(fetchMock).toHaveBeenCalledWith(
-      `/api/v1/clock-periods/${closed.id}`,
+      `/api/v1/clock-periods/${CLOSED_PERIOD.id}`,
       expect.objectContaining({ method: 'DELETE' }),
     );
+  });
+
+  it("lets a manager close someone else's unclosed day but not start one", async () => {
+    const isoWeek = shiftIsoWeek(currentIsoWeek(new Date()), -1);
+    const thursday = datesOfIsoWeek(isoWeek)?.[3] ?? '';
+    const open = { id: 44, startedAt: `${thursday}T12:00:00.000Z`, endedAt: null };
+    const week = weekFixture({
+      isoWeek,
+      user: HUGO,
+      isOwnWeek: false,
+      days: { [thursday]: { periods: [open], isUnclosed: true, canClose: true } },
+    });
+    const fetchMock = mockFetchRoutes({
+      ...signedInHomeRoutes(),
+      [`GET /api/v1/users/${HUGO.id}/clock-weeks/${isoWeek}`]: { status: 200, body: week },
+      [`PATCH /api/v1/clock-periods/${open.id}`]: {
+        status: 200,
+        body: { ...open, endedAt: `${thursday}T16:00:00.000Z` },
+      },
+    });
+    renderApp(`/pointage/${HUGO.id}?semaine=${isoWeek}`);
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('button', { name: copy.clock.closeDay }));
+    expect(screen.queryByRole('button', { name: copy.clock.start })).not.toBeInTheDocument();
+    const dialog = screen.getByRole('dialog', { name: copy.clock.closeDayTitle });
+    await user.type(within(dialog).getByLabelText(copy.clock.endTime), '17:00');
+    await user.click(within(dialog).getByRole('button', { name: copy.clock.save }));
+
+    expect(bodyOf(fetchMock, 'PATCH', `/api/v1/clock-periods/${open.id}`)).toEqual({
+      endedAt: '17:00',
+    });
   });
 
   it('closes a day left unclosed with its real end time', async () => {
