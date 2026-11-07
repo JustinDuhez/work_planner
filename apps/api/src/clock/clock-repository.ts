@@ -1,6 +1,7 @@
-import type { ClockPeriodView, WorkMode } from '@work-planner/domain';
+import type { ClockDayMode, ClockPeriodView, WorkMode } from '@work-planner/domain';
 import type { Kysely } from 'kysely';
 import type { Database } from '../db/database';
+import { ClockAlreadyRunningError, ClockPeriodOverlapError } from './clock-errors';
 
 export interface StoredClockPeriod {
   id: number;
@@ -58,4 +59,113 @@ export async function findClockDays(
     }
   }
   return days;
+}
+
+const UNIQUE_VIOLATION = '23505';
+const EXCLUSION_VIOLATION = '23P01';
+const ONE_OPEN_PERIOD_CONSTRAINT = 'clock_period_one_open_per_day';
+
+/** The database is the last line of defense against races (double Start, concurrent edits). */
+export function translateClockConstraintError(error: unknown): never {
+  if (typeof error === 'object' && error !== null && 'code' in error) {
+    const isOpenPeriodConflict =
+      error.code === UNIQUE_VIOLATION &&
+      'constraint' in error &&
+      error.constraint === ONE_OPEN_PERIOD_CONSTRAINT;
+    if (isOpenPeriodConflict) throw new ClockAlreadyRunningError();
+    if (error.code === EXCLUSION_VIOLATION) throw new ClockPeriodOverlapError();
+  }
+  throw error instanceof Error ? error : new Error('Unexpected database error', { cause: error });
+}
+
+export function findPeriodsOfDay(
+  db: Kysely<Database>,
+  clockDayId: number,
+): Promise<StoredClockPeriod[]> {
+  return db
+    .selectFrom('clockPeriod')
+    .select(['id', 'startedAt', 'endedAt'])
+    .where('clockDayId', '=', clockDayId)
+    .orderBy('startedAt')
+    .execute();
+}
+
+export async function ensureClockDay(
+  db: Kysely<Database>,
+  day: { userId: number; workDate: string; workMode: WorkMode },
+): Promise<{ id: number }> {
+  await db
+    .insertInto('clockDay')
+    .values(day)
+    .onConflict((conflict) => conflict.columns(['userId', 'workDate']).doNothing())
+    .execute();
+  return db
+    .selectFrom('clockDay')
+    .select('id')
+    .where('userId', '=', day.userId)
+    .where('workDate', '=', day.workDate)
+    .executeTakeFirstOrThrow();
+}
+
+export function insertClockPeriod(
+  db: Kysely<Database>,
+  values: { clockDayId: number; startedAt: Date; endedAt: Date | null },
+): Promise<StoredClockPeriod> {
+  return db
+    .insertInto('clockPeriod')
+    .values(values)
+    .returning(['id', 'startedAt', 'endedAt'])
+    .executeTakeFirstOrThrow();
+}
+
+export function updateClockPeriodTimes(
+  db: Kysely<Database>,
+  periodId: number,
+  times: { startedAt: Date; endedAt: Date | null },
+): Promise<StoredClockPeriod> {
+  return db
+    .updateTable('clockPeriod')
+    .set(times)
+    .where('id', '=', periodId)
+    .returning(['id', 'startedAt', 'endedAt'])
+    .executeTakeFirstOrThrow();
+}
+
+export async function deleteClockPeriodById(db: Kysely<Database>, periodId: number): Promise<void> {
+  await db.deleteFrom('clockPeriod').where('id', '=', periodId).execute();
+}
+
+export function findPeriodWithDay(
+  db: Kysely<Database>,
+  periodId: number,
+): Promise<
+  (StoredClockPeriod & { clockDayId: number; userId: number; workDate: string }) | undefined
+> {
+  return db
+    .selectFrom('clockPeriod')
+    .innerJoin('clockDay', 'clockDay.id', 'clockPeriod.clockDayId')
+    .select([
+      'clockPeriod.id',
+      'clockPeriod.startedAt',
+      'clockPeriod.endedAt',
+      'clockPeriod.clockDayId',
+      'clockDay.userId',
+      'clockDay.workDate',
+    ])
+    .where('clockPeriod.id', '=', periodId)
+    .executeTakeFirst();
+}
+
+export function upsertClockDayMode(
+  db: Kysely<Database>,
+  day: { userId: number; workDate: string; workMode: WorkMode },
+): Promise<ClockDayMode> {
+  return db
+    .insertInto('clockDay')
+    .values(day)
+    .onConflict((conflict) =>
+      conflict.columns(['userId', 'workDate']).doUpdateSet({ workMode: day.workMode }),
+    )
+    .returning(['workDate as date', 'workMode'])
+    .executeTakeFirstOrThrow();
 }
