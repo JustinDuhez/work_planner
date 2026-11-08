@@ -21,6 +21,18 @@ describe('hasRunningPeriod', () => {
     expect(hasRunningPeriod(week)).toBe(false);
   });
 
+  it('is true on a past week while the global counter is running', () => {
+    const week = weekFixture({
+      isoWeek: '2026-W45',
+      counters: { runningSince: '2026-11-06T08:00:00.000Z' },
+    });
+    expect(hasRunningPeriod(week)).toBe(true);
+  });
+
+  it('is false on a past week when nothing is running', () => {
+    expect(hasRunningPeriod(weekFixture({ isoWeek: '2026-W45' }))).toBe(false);
+  });
+
   it('is false before the week is loaded', () => {
     expect(hasRunningPeriod(undefined)).toBe(false);
   });

@@ -38,6 +38,7 @@ export function CountersCard({
   const workedMinutes = isCurrentWeek
     ? liveGapMinutes(counters.weekCountedWorkedMinutes, timing)
     : counters.weekCountedWorkedMinutes;
+  // Ticks on any week: the running period is today's, and the global gap always includes today.
   const globalGapMinutes = liveGapMinutes(counters.globalGapMinutes, timing);
 
   return (
