@@ -1,5 +1,5 @@
 import { toWorkDate } from '@work-planner/domain';
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { copy } from '../copy';
 import { HUGO, signedInHomeRoutes, weekFixture } from '../test/clock-fixtures';
@@ -132,5 +132,73 @@ describe('resetting a counter', () => {
     expect(
       within(dialog).getByText('par Sophie Dubois le 3 nov. 2026 à 10:15'),
     ).toBeInTheDocument();
+  });
+
+  it('closes the dialog and reloads the week after a reset', async () => {
+    const url = `/api/v1/users/${HUGO.id}/counter-resets`;
+    const { fetchMock, user } = renderHugoWeek(true, {
+      [`POST ${url}`]: { status: 201, body: RESET },
+    });
+    const weekCalls = () =>
+      fetchMock.mock.calls.filter(([callUrl]) => /clock-weeks/.test(callUrl as string)).length;
+
+    await user.click(await screen.findByRole('button', { name: copy.counters.resetButton }));
+    expect(weekCalls()).toBe(1);
+    const dialog = screen.getByRole('dialog', { name: copy.counters.resetTitle });
+    await user.click(within(dialog).getByRole('button', { name: copy.counters.resetConfirm }));
+
+    await waitFor(() => expect(weekCalls()).toBeGreaterThanOrEqual(2));
+    expect(
+      screen.queryByRole('dialog', { name: copy.counters.resetTitle }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('bounds the date between the start date and today', async () => {
+    const { user } = renderHugoWeek(true);
+
+    await user.click(await screen.findByRole('button', { name: copy.counters.resetButton }));
+    const input = within(
+      screen.getByRole('dialog', { name: copy.counters.resetTitle }),
+    ).getByLabelText(copy.counters.resetDate);
+
+    expect(input).toHaveAttribute('min', '2026-10-12');
+    expect(input).toHaveAttribute('max', TODAY);
+  });
+
+  it('shows an ellipsis in the confirmation when the date is cleared', async () => {
+    const { user } = renderHugoWeek(true);
+
+    await user.click(await screen.findByRole('button', { name: copy.counters.resetButton }));
+    const dialog = screen.getByRole('dialog', { name: copy.counters.resetTitle });
+    await user.clear(within(dialog).getByLabelText(copy.counters.resetDate));
+
+    expect(
+      within(dialog).getByText(new RegExp(`${copy.counters.resetSentenceMiddle} …\\.$`)),
+    ).toBeInTheDocument();
+  });
+
+  it('says so when there is no reset yet', async () => {
+    const { user } = renderHugoWeek(true, {
+      [`GET /api/v1/users/${HUGO.id}/counter-resets`]: { status: 200, body: [] },
+    });
+
+    await user.click(await screen.findByRole('button', { name: copy.counters.historyButton }));
+    const dialog = screen.getByRole('dialog', { name: copy.counters.historyTitle });
+
+    expect(await within(dialog).findByText(copy.counters.historyEmpty)).toBeInTheDocument();
+  });
+
+  it('shows an error when the history cannot be loaded', async () => {
+    const { user } = renderHugoWeek(true, {
+      [`GET /api/v1/users/${HUGO.id}/counter-resets`]: {
+        status: 500,
+        body: { code: 'INTERNAL_ERROR', message: 'Erreur.' },
+      },
+    });
+
+    await user.click(await screen.findByRole('button', { name: copy.counters.historyButton }));
+    const dialog = screen.getByRole('dialog', { name: copy.counters.historyTitle });
+
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(copy.counters.loadError);
   });
 });
