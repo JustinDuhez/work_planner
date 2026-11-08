@@ -212,4 +212,27 @@ describe('seedDatabase', () => {
 
     expect(teams.map((team) => team.name)).toEqual(['Back', 'Front']);
   });
+
+  it('gives nobody a reset dated before their start date', async () => {
+    const hugo = await db
+      .selectFrom('appUser')
+      .select('id')
+      .where('email', '=', 'hugo.laurent@example.com')
+      .executeTakeFirstOrThrow();
+    await db.deleteFrom('counterReset').where('userId', '=', hugo.id).execute();
+    await db
+      .updateTable('appUser')
+      .set({ startDate: toWorkDate(SEED_CLOCK.now, SEED_CLOCK.timeZone) })
+      .where('id', '=', hugo.id)
+      .execute();
+
+    await seedDatabase(db, SEED_CONFIG, SEED_CLOCK);
+
+    const resets = await db
+      .selectFrom('counterReset')
+      .select('id')
+      .where('userId', '=', hugo.id)
+      .execute();
+    expect(resets).toEqual([]);
+  });
 });
