@@ -33,7 +33,7 @@ export function DayRow({
     <li
       aria-label={`${weekday} ${dayOfMonth}`}
       aria-current={day.isToday ? 'date' : undefined}
-      className={`rounded-card border p-3 transition-colors grid grid-cols-[1fr_auto] items-center gap-x-4 sm:grid-cols-[5rem_1fr_4rem] ${
+      className={`rounded-card border p-3 transition-colors grid grid-cols-[1fr_auto] items-center gap-x-4 sm:grid-cols-[5rem_1fr_7rem] ${
         day.isToday ? 'border-primary-500 bg-white shadow-card' : 'border-zinc-200 bg-white'
       } ${!day.isToday && (day.isFuture || isWeekend) ? 'opacity-60' : ''}`}
     >
@@ -47,6 +47,11 @@ export function DayRow({
       </div>
       <p className="text-right text-sm font-semibold tabular-nums sm:col-start-3 sm:row-start-1">
         {formatMinutes(liveDayMinutes(day, now))}
+        {day.badgeableMinutes > 0 ? (
+          <span className="ml-1 font-normal text-zinc-400">
+            {`/ ${formatMinutes(day.badgeableMinutes)}`}
+          </span>
+        ) : null}
       </p>
       <div className="col-span-2 mt-2 space-y-2 sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:mt-0">
         <DayTimeline day={day} now={now} onSelectPeriod={onSelectPeriod} />

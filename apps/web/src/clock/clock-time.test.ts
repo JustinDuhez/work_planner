@@ -2,6 +2,8 @@ import {
   clockWeekPath,
   currentIsoWeek,
   dayLabel,
+  formatDateTime,
+  formatLongDate,
   shiftIsoWeek,
   weekNumberLabel,
   weekRangeLabel,
@@ -30,5 +32,15 @@ describe('clock time helpers', () => {
   it('builds the URL of my week or of someone else’s week', () => {
     expect(clockWeekPath(undefined, '2026-W45')).toBe('/?semaine=2026-W45');
     expect(clockWeekPath(9, '2026-W45')).toBe('/pointage/9?semaine=2026-W45');
+  });
+});
+
+describe('date labels', () => {
+  it('shows a calendar day in short French', () => {
+    expect(formatLongDate('2026-11-03')).toBe('3 nov. 2026');
+  });
+
+  it('shows an instant as a Paris date and time', () => {
+    expect(formatDateTime('2026-11-03T09:15:00.000Z')).toBe('3 nov. 2026 à 10:15');
   });
 });

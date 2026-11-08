@@ -1,4 +1,4 @@
-import { datesOfIsoWeek, formatMinutes } from '@work-planner/domain';
+import { datesOfIsoWeek } from '@work-planner/domain';
 import { useState } from 'react';
 import { useParams, useSearchParams } from 'react-router';
 import { copy } from '../copy';
@@ -6,11 +6,11 @@ import { NotFoundPage } from '../not-found/not-found-page';
 import { useSession } from '../session/session-queries';
 import { currentIsoWeek } from './clock-time';
 import { useClockWeek } from './clock-queries';
+import { CountersCard } from './counters-card';
 import { CloseDayDialog } from './close-day-dialog';
 import { DayRow } from './day-row';
 import { PeriodDialog } from './period-dialog';
 import { TodayControls } from './today-controls';
-import { liveDayMinutes } from './live-minutes';
 import { useServerClock } from './use-server-clock';
 import { WeekHeader } from './week-header';
 
@@ -112,16 +112,7 @@ function ClockWeekView({
               />
             ))}
           </ol>
-          <div className="rounded-card border border-zinc-200 bg-white p-4 shadow-card">
-            <p className="flex items-center justify-between text-sm">
-              <span className="text-zinc-500">{copy.clock.weekTotal}</span>
-              <span className="text-lg font-semibold tabular-nums">
-                {formatMinutes(
-                  week.data.days.reduce((total, day) => total + liveDayMinutes(day, now), 0),
-                )}
-              </span>
-            </p>
-          </div>
+          <CountersCard week={week.data} now={now} />
         </div>
       ) : null}
       {dialog && dialogDay && dialog.kind !== 'close' ? (

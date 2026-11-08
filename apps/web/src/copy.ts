@@ -1,11 +1,20 @@
 export const copy = {
+  counters: {
+    weekTitle: 'Semaine',
+    worked: 'Travaillé',
+    target: 'Objectif',
+    weekGap: 'Écart semaine',
+    globalTitle: 'Solde global',
+    since: 'depuis le',
+    lastResetPrefix: 'Remis à zéro le',
+    lastResetBy: 'par',
+  },
   appName: 'Work Planner',
   clock: {
     title: 'Pointage',
     previousWeek: 'Semaine précédente',
     nextWeek: 'Semaine suivante',
     today: "Aujourd'hui",
-    weekTotal: 'Total semaine',
     readOnlyPrefix: 'Semaine de',
     readOnlySuffix: 'lecture seule',
     viewWeekOf: 'Voir la semaine de…',

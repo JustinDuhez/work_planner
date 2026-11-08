@@ -27,6 +27,7 @@ describe('ClockWeekPage', () => {
         '2026-11-02': { workedMinutes: 420, workMode: 'on_site' },
         '2026-11-03': { workedMinutes: 390 },
       },
+      counters: { weekCountedWorkedMinutes: 810 },
     });
     mockFetchRoutes(signedInHomeRoutes(week));
 
@@ -34,7 +35,7 @@ describe('ClockWeekPage', () => {
 
     const monday = await screen.findByRole('listitem', { name: /^LUN 2/ });
     expect(within(monday).getByText('7:00')).toBeInTheDocument();
-    expect(screen.getByText(copy.clock.weekTotal).parentElement).toHaveTextContent('13:30');
+    expect(screen.getByText(copy.counters.worked).parentElement).toHaveTextContent('13:30');
   });
 
   it('warns about a day left unclosed', async () => {
