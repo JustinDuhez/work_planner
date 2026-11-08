@@ -6,6 +6,7 @@ export * from './clock/iso-week';
 export * from './clock/worked-minutes';
 export * from './clock/time-zone';
 export * from './contracts/clock';
+export * from './contracts/counters';
 export * from './contracts/error';
 export * from './contracts/health';
 export * from './contracts/session';

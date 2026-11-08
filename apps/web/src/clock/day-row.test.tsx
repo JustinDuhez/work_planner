@@ -8,6 +8,7 @@ const SUNDAY: ClockDayView = {
   workMode: null,
   periods: [],
   workedMinutes: 0,
+  badgeableMinutes: 0,
   isToday: false,
   isFuture: false,
   isUnclosed: false,

@@ -4,6 +4,7 @@ import {
   type ClockDayView,
   type ClockWeek,
   type UserSummary,
+  type WeekCounters,
 } from '@work-planner/domain';
 import { APP_TIME_ZONE, currentIsoWeek } from '../clock/clock-time';
 import type { MockResponse } from './mock-fetch';
@@ -18,6 +19,7 @@ export function weekFixture(
     user?: UserSummary;
     isOwnWeek?: boolean;
     days?: Partial<Record<string, Partial<ClockDayView>>>;
+    counters?: Partial<WeekCounters>;
   } = {},
 ): ClockWeek {
   const isoWeek = options.isoWeek ?? currentIsoWeek(new Date());
@@ -28,6 +30,7 @@ export function weekFixture(
     workMode: null,
     periods: [],
     workedMinutes: 0,
+    badgeableMinutes: 0,
     isToday: date === today,
     isFuture: date > today,
     isUnclosed: false,
@@ -41,6 +44,19 @@ export function weekFixture(
     serverNow: new Date().toISOString(),
     days,
     weekWorkedMinutes: days.reduce((total, day) => total + day.workedMinutes, 0),
+    counters: {
+      weekTargetMinutes: 0,
+      weekBadgeableMinutes: 0,
+      weekCountedWorkedMinutes: 0,
+      weekGapMinutes: 0,
+      globalGapMinutes: 0,
+      startDate: '2026-01-05',
+      countingStartDate: '2026-01-05',
+      runningSince: null,
+      canResetCounter: false,
+      lastReset: null,
+      ...options.counters,
+    },
   };
 }
 
