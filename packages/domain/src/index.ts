@@ -9,5 +9,6 @@ export * from './contracts/clock';
 export * from './contracts/error';
 export * from './contracts/health';
 export * from './contracts/session';
+export * from './counters/counting';
 export * from './errors';
 export * from './policy';
