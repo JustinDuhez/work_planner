@@ -91,6 +91,8 @@ describe('identity schema', () => {
       'app_user',
       'clock_day',
       'clock_period',
+      'counter_reset',
+      'daily_minutes_change',
       'session',
       'setting',
       'team',
