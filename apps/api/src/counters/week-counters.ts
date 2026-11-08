@@ -2,7 +2,6 @@ import {
   canResetCounter,
   counterDays,
   counterTotals,
-  toWorkDate,
   type WeekCounters,
 } from '@work-planner/domain';
 import type { ClockDependencies, ClockViewer } from '../clock/clock-dependencies';
@@ -11,10 +10,14 @@ import { toCounterResetView, type CounterProfile } from './counter-repository';
 
 export async function buildWeekCounters(
   deps: ClockDependencies,
-  query: { owner: CounterProfile; weekDates: readonly string[]; viewer: ClockViewer },
+  query: {
+    owner: CounterProfile;
+    week: { fromDate: string; toDate: string };
+    instant: { now: Date; today: string };
+    viewer: ClockViewer;
+  },
 ): Promise<{ counters: WeekCounters; targetMinutesByDate: Map<string, number> }> {
-  const now = deps.now();
-  const today = toWorkDate(now, deps.timeZone);
+  const { now, today } = query.instant;
   const [facts, actor] = await Promise.all([
     loadCounterFacts(deps.db, { profile: query.owner, today }),
     query.viewer.loadActor(),
@@ -26,9 +29,7 @@ export async function buildWeekCounters(
     currentDailyMinutes: query.owner.dailyMinutes,
     dailyMinutesChanges: facts.dailyMinutesChanges,
   };
-  const monday = query.weekDates[0] ?? today;
-  const sunday = query.weekDates[query.weekDates.length - 1] ?? today;
-  const weekDays = counterDays({ fromDate: monday, toDate: sunday }, facts.periodsByDate, rules);
+  const weekDays = counterDays(query.week, facts.periodsByDate, rules);
   const week = counterTotals(weekDays);
   const global = counterTotals(
     counterDays({ fromDate: facts.countingStart, toDate: today }, facts.periodsByDate, rules),

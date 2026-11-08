@@ -32,13 +32,14 @@ export async function buildClockWeek(
   if (!owner) throw new UserNotFoundError();
   const profile = await findCounterProfile(deps.db, owner.id);
   if (!profile) throw new UserNotFoundError();
-  const { counters, targetMinutesByDate } = await buildWeekCounters(deps, {
-    owner: profile,
-    weekDates: dates,
-    viewer: query.viewer,
-  });
   const now = deps.now();
   const today = toWorkDate(now, deps.timeZone);
+  const { counters, targetMinutesByDate } = await buildWeekCounters(deps, {
+    owner: profile,
+    week: { fromDate: monday, toDate: sunday },
+    instant: { now, today },
+    viewer: query.viewer,
+  });
   const storedDays = await findClockDays(deps.db, owner.id, monday, sunday);
   const isOwner = query.viewer.id === owner.id;
   const hasUnclosedDay = [...storedDays.values()].some(

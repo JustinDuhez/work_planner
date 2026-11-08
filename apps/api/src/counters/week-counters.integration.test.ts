@@ -21,7 +21,8 @@ import { loadCounterFacts } from './counter-facts';
 const NOW = new Date('2026-11-06T14:30:00Z');
 
 interface CountersBody {
-  days: { date: string; badgeableMinutes: number }[];
+  serverNow: string;
+  days: { date: string; badgeableMinutes: number; workedMinutes: number }[];
   counters: {
     weekTargetMinutes: number;
     weekBadgeableMinutes: number;
@@ -188,8 +189,48 @@ describe('counters in the week', () => {
     expect(counters).toMatchObject({ weekTargetMinutes: 0, weekGapMinutes: 0 });
   });
 
-  it('loads the counter facts in four queries, however long the history', async () => {
-    let queryCount = 0;
+  it('reads the clock once, so the counters and the days agree on the instant', async () => {
+    let calls = 0;
+    const tickingApp = await buildApp({
+      config: createTestConfig(),
+      db,
+      now: () => new Date(NOW.getTime() + calls++ * 60_000),
+    });
+    const { cookie } = await logIn(tickingApp, 'colleague.counters@example.com');
+
+    const response = await tickingApp.inject({
+      method: 'GET',
+      url: `/api/v1/users/${leaId}/clock-weeks/2026-W45`,
+      headers: { cookie },
+    });
+    await tickingApp.close();
+    const { counters, days, serverNow } = response.json<CountersBody>();
+
+    // Léa's Friday period started at 08:00Z and is still running at the answer's instant.
+    const fridayMinutes = (Date.parse(serverNow) - Date.parse('2026-11-06T08:00:00Z')) / 60_000;
+    expect(days[4]?.workedMinutes).toBe(fridayMinutes);
+    expect(counters.weekCountedWorkedMinutes).toBe(
+      days.reduce((total, day) => total + day.workedMinutes, 0),
+    );
+  });
+
+  it('shows no running time before the counting start', async () => {
+    const futureId = await insertUser(db, {
+      email: 'future.start@example.com',
+      startDate: '2026-11-07',
+    });
+    const today = await insertClockDay(db, { userId: futureId, workDate: '2026-11-06' });
+    await insertClockPeriod(db, {
+      clockDayId: today,
+      startedAt: new Date('2026-11-06T08:00:00Z'),
+    });
+
+    const { counters } = await getWeek('colleague.counters@example.com', futureId);
+
+    expect(counters).toMatchObject({ runningSince: null, globalGapMinutes: 0 });
+  });
+
+  it('loads the counter facts in three queries, however long the history', async () => {
     const countingPlugin: KyselyPlugin = {
       transformQuery: (args) => {
         queryCount += 1;
@@ -197,11 +238,21 @@ describe('counters in the week', () => {
       },
       transformResult: (args) => Promise.resolve(args.result),
     };
-    const profile = await findCounterProfile(db, leaId);
-    if (!profile) throw new Error('Léa should exist');
+    let queryCount = 0;
+    const countQueries = async (userId: number) => {
+      const profile = await findCounterProfile(db, userId);
+      if (!profile) throw new Error('The person should exist');
+      queryCount = 0;
+      await loadCounterFacts(db.withPlugin(countingPlugin), { profile, today: '2026-11-06' });
+      return queryCount;
+    };
+    const fewDaysId = await insertUser(db, {
+      email: 'few.days@example.com',
+      startDate: '2026-11-04',
+    });
+    await workedDay(db, fewDaysId, '2026-11-04', 420);
 
-    await loadCounterFacts(db.withPlugin(countingPlugin), { profile, today: '2026-11-06' });
-
-    expect(queryCount).toBe(3);
+    expect(await countQueries(fewDaysId)).toBe(3);
+    expect(await countQueries(leaId)).toBe(3);
   });
 });
