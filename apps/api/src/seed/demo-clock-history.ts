@@ -94,6 +94,13 @@ function pastDaysOf(
   });
 }
 
+export function demoHistoryStartDate(options: { now: Date; timeZone: string }): string {
+  const today = toWorkDate(options.now, options.timeZone);
+  const [currentMonday] = datesOfIsoWeek(isoWeekOf(today)) ?? [];
+  if (currentMonday === undefined) throw new RangeError(`No ISO week for ${today}`);
+  return addDays(currentMonday, -PAST_WEEK_COUNT * DAYS_PER_WEEK);
+}
+
 export function buildDemoClockHistory(options: {
   now: Date;
   timeZone: string;
@@ -103,7 +110,7 @@ export function buildDemoClockHistory(options: {
   const currentWeekDates = datesOfIsoWeek(isoWeekOf(today)) ?? [];
   const [currentMonday] = currentWeekDates;
   if (currentMonday === undefined) return [];
-  const firstMonday = addDays(currentMonday, -PAST_WEEK_COUNT * DAYS_PER_WEEK);
+  const firstMonday = demoHistoryStartDate(options);
   const unclosedThursday = addDays(currentMonday, THURSDAY_INDEX - DAYS_PER_WEEK);
   const workDates: string[] = [];
   for (let offset = 0; offset < (PAST_WEEK_COUNT + 1) * DAYS_PER_WEEK; offset += 1) {

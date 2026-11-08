@@ -2,7 +2,8 @@ import { toWorkDate } from '@work-planner/domain';
 import type { Kysely } from 'kysely';
 import { hashPassword } from '../auth/password-hasher';
 import type { Database } from '../db/database';
-import { buildDemoClockHistory } from './demo-clock-history';
+import { buildDemoClockHistory, demoHistoryStartDate } from './demo-clock-history';
+import { seedDemoCounters } from './demo-counters';
 import { DEMO_TEAMS, DEMO_USERS, type DemoUser } from './demo-company';
 import type { SeedConfig } from './seed-config';
 
@@ -51,7 +52,7 @@ async function idOfTeam(db: Kysely<Database>, name: string): Promise<number> {
 
 async function countRows(
   db: Kysely<Database>,
-  table: 'appUser' | 'team' | 'teamMember' | 'clockDay',
+  table: 'appUser' | 'team' | 'teamMember' | 'clockDay' | 'counterReset',
 ): Promise<number> {
   const { count } = await db
     .selectFrom(table)
@@ -69,6 +70,7 @@ export async function seedDatabase(
   teamCount: number;
   membershipCount: number;
   clockDayCount: number;
+  counterResetCount: number;
 }> {
   const today = toWorkDate(clock.now, clock.timeZone);
   await insertUserIfMissing(
@@ -79,7 +81,7 @@ export async function seedDatabase(
   );
   const demoPasswordHash = await hashPassword(config.demoPassword);
   for (const user of DEMO_USERS) {
-    await insertUserIfMissing(db, user, demoPasswordHash, today);
+    await insertUserIfMissing(db, user, demoPasswordHash, demoHistoryStartDate(clock));
   }
   for (const team of DEMO_TEAMS) {
     await db
@@ -126,10 +128,12 @@ export async function seedDatabase(
       }
     });
   }
+  await seedDemoCounters(db, clock);
   return {
     userCount: await countRows(db, 'appUser'),
     teamCount: await countRows(db, 'team'),
     membershipCount: await countRows(db, 'teamMember'),
     clockDayCount: await countRows(db, 'clockDay'),
+    counterResetCount: await countRows(db, 'counterReset'),
   };
 }
