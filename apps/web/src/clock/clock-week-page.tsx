@@ -4,11 +4,14 @@ import { useParams, useSearchParams } from 'react-router';
 import { copy } from '../copy';
 import { NotFoundPage } from '../not-found/not-found-page';
 import { useSession } from '../session/session-queries';
+import { Button } from '../ui/button';
 import { currentIsoWeek } from './clock-time';
 import { useClockWeek } from './clock-queries';
 import { CountersCard } from './counters-card';
 import { CloseDayDialog } from './close-day-dialog';
 import { DayRow } from './day-row';
+import { CounterResetDialog } from './counter-reset-dialog';
+import { CounterResetHistoryDialog } from './counter-reset-history-dialog';
 import { PeriodDialog } from './period-dialog';
 import { TodayControls } from './today-controls';
 import { useServerClock } from './use-server-clock';
@@ -59,6 +62,7 @@ function ClockWeekView({
     | { kind: 'close'; date: string }
     | null
   >(null);
+  const [counterDialog, setCounterDialog] = useState<'reset' | 'history' | null>(null);
   const dialogDay = week.data?.days.find((day) => day.date === dialog?.date);
 
   return (
@@ -112,7 +116,22 @@ function ClockWeekView({
               />
             ))}
           </ol>
-          <CountersCard week={week.data} now={now} />
+          <CountersCard
+            week={week.data}
+            now={now}
+            actions={
+              week.data.counters.canResetCounter ? (
+                <>
+                  <Button variant="secondary" onClick={() => setCounterDialog('reset')}>
+                    {copy.counters.resetButton}
+                  </Button>
+                  <Button variant="ghost" onClick={() => setCounterDialog('history')}>
+                    {copy.counters.historyButton}
+                  </Button>
+                </>
+              ) : undefined
+            }
+          />
         </div>
       ) : null}
       {dialog && dialogDay && dialog.kind !== 'close' ? (
@@ -134,6 +153,12 @@ function ClockWeekView({
           isoWeek={isoWeek}
           onClose={() => setDialog(null)}
         />
+      ) : null}
+      {counterDialog === 'reset' && week.data ? (
+        <CounterResetDialog week={week.data} onClose={() => setCounterDialog(null)} />
+      ) : null}
+      {counterDialog === 'history' ? (
+        <CounterResetHistoryDialog ownerId={ownerId} onClose={() => setCounterDialog(null)} />
       ) : null}
     </section>
   );
