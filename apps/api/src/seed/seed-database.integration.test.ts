@@ -4,6 +4,7 @@ import { verifyPassword } from '../auth/password-hasher';
 import type { Database } from '../db/database';
 import { createMigratedTestDb } from '../test/test-database';
 import { DEMO_TEAMS, DEMO_USERS } from './demo-company';
+import { seedDemoCorrections } from './demo-corrections';
 import { seedDatabase, type SeedConfig } from './seed-database';
 
 const SEED_CONFIG: SeedConfig = {
@@ -97,6 +98,19 @@ describe('seedDatabase', () => {
     expect(
       new Date(lastAfter?.endedAt ?? 0).getTime() - new Date(lastBefore?.endedAt ?? 0).getTime(),
     ).toBe(30 * 60_000);
+  });
+
+  it("moves Camille's first period 15 minutes later", async () => {
+    const correction = await db
+      .selectFrom('clockCorrection')
+      .select(['beforePeriods', 'afterPeriods'])
+      .where('status', '=', 'refused')
+      .executeTakeFirstOrThrow();
+
+    expect(
+      new Date(correction.afterPeriods[0]?.startedAt ?? 0).getTime() -
+        new Date(correction.beforePeriods[0]?.startedAt ?? 0).getTime(),
+    ).toBe(15 * 60_000);
   });
 
   it('notifies Léa (unread), Camille (read) and Thomas (unread)', async () => {
@@ -300,5 +314,26 @@ describe('seedDatabase', () => {
       .where('userId', '=', hugo.id)
       .execute();
     expect(resets).toEqual([]);
+  });
+
+  it('seeds no correction for a person who has no clock day to correct', async () => {
+    const people = ['lea.moreau@example.com', 'camille.simon@example.com'];
+    const ids = db.selectFrom('appUser').select('id').where('email', 'in', people);
+    await db.deleteFrom('notification').where('userId', 'in', ids).execute();
+    await db.deleteFrom('clockCorrection').where('userId', 'in', ids).execute();
+    await db
+      .deleteFrom('clockDay')
+      .where('userId', 'in', ids)
+      .where('workDate', 'in', ['2026-10-26', '2026-10-27'])
+      .execute();
+
+    await seedDemoCorrections(db, SEED_CLOCK);
+    const corrections = await db
+      .selectFrom('clockCorrection')
+      .select('id')
+      .where('userId', 'in', ids)
+      .execute();
+
+    expect(corrections).toEqual([]);
   });
 });

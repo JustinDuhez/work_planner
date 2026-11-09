@@ -30,13 +30,14 @@ const DEMO_CORRECTIONS: readonly DemoCorrection[] = [
     authorEmail: 'sophie.dubois@example.com',
     dayIndex: TUESDAY_INDEX,
     comment: 'Réunion client oubliée',
+    // Tuesday is a closed day in the demo history, so the last period always has an end.
     correct: (periods) =>
       periods.map((period, index) =>
-        index === periods.length - 1 && period.endedAt
+        index === periods.length - 1
           ? {
               ...period,
               endedAt: new Date(
-                period.endedAt.getTime() + LEA_EXTENSION_MINUTES * MINUTES_IN_MILLISECONDS,
+                Number(period.endedAt) + LEA_EXTENSION_MINUTES * MINUTES_IN_MILLISECONDS,
               ),
             }
           : period,
@@ -112,12 +113,10 @@ async function seedCorrectionIfMissing(
   const isRefused = correction.refusal !== null;
   await db.transaction().execute(async (trx) => {
     await trx.deleteFrom('clockPeriod').where('clockDayId', '=', day.id).execute();
-    if (after.length > 0) {
-      await trx
-        .insertInto('clockPeriod')
-        .values(after.map((period) => ({ clockDayId: day.id, ...period })))
-        .execute();
-    }
+    await trx
+      .insertInto('clockPeriod')
+      .values(after.map((period) => ({ clockDayId: day.id, ...period })))
+      .execute();
     const { id: correctionId } = await trx
       .insertInto('clockCorrection')
       .values({
@@ -164,7 +163,8 @@ export async function seedDemoCorrections(
   clock: { now: Date; timeZone: string },
 ): Promise<void> {
   const [currentMonday] = datesOfIsoWeek(isoWeekOf(toWorkDate(clock.now, clock.timeZone))) ?? [];
-  if (currentMonday === undefined) return;
+  if (currentMonday === undefined)
+    throw new RangeError(`No ISO week for ${clock.now.toISOString()}`);
   const lastMonday = addDays(currentMonday, -DAYS_PER_WEEK);
   for (const correction of DEMO_CORRECTIONS) {
     await seedCorrectionIfMissing(db, correction, {
