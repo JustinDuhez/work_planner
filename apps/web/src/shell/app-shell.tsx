@@ -1,6 +1,7 @@
 import { Link, NavLink, Outlet } from 'react-router';
 import { copy } from '../copy';
 import { HealthStatus } from '../health/health-status';
+import { NotificationBell } from '../notifications/notification-bell';
 import { UserMenu } from './user-menu';
 
 export function AppShell() {
@@ -20,7 +21,10 @@ export function AppShell() {
           >
             {copy.nav.clock}
           </NavLink>
-          <UserMenu />
+          <div className="flex items-center gap-1">
+            <NotificationBell />
+            <UserMenu />
+          </div>
         </div>
       </header>
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">

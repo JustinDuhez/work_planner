@@ -4,6 +4,7 @@ import { verifyPassword } from '../auth/password-hasher';
 import type { Database } from '../db/database';
 import { createMigratedTestDb } from '../test/test-database';
 import { DEMO_TEAMS, DEMO_USERS } from './demo-company';
+import { seedDemoCorrections } from './demo-corrections';
 import { seedDatabase, type SeedConfig } from './seed-database';
 
 const SEED_CONFIG: SeedConfig = {
@@ -50,6 +51,85 @@ describe('seedDatabase', () => {
 
   it('changes nothing when it runs a second time', async () => {
     expect(await seedDatabase(db, SEED_CONFIG, SEED_CLOCK)).toEqual(firstRun);
+  });
+
+  it('gives Léa a pending correction by Sophie and Camille a refused one by Thomas', async () => {
+    const corrections = await db
+      .selectFrom('clockCorrection')
+      .innerJoin('appUser as owner', 'owner.id', 'clockCorrection.userId')
+      .innerJoin('appUser as author', 'author.id', 'clockCorrection.authorId')
+      .select([
+        'owner.email as ownerEmail',
+        'author.email as authorEmail',
+        'clockCorrection.workDate',
+        'clockCorrection.status',
+        'clockCorrection.responseComment',
+      ])
+      .orderBy('owner.email')
+      .execute();
+
+    expect(corrections).toEqual([
+      {
+        ownerEmail: 'camille.simon@example.com',
+        authorEmail: 'thomas.petit@example.com',
+        workDate: '2026-10-26',
+        status: 'refused',
+        responseComment: "J'étais en déplacement ce jour-là.",
+      },
+      {
+        ownerEmail: 'lea.moreau@example.com',
+        authorEmail: 'sophie.dubois@example.com',
+        workDate: '2026-10-27',
+        status: 'pending',
+        responseComment: null,
+      },
+    ]);
+  });
+
+  it("applies Léa's correction to her day: the afternoon ends 30 minutes later", async () => {
+    const correction = await db
+      .selectFrom('clockCorrection')
+      .select(['beforePeriods', 'afterPeriods'])
+      .where('status', '=', 'pending')
+      .executeTakeFirstOrThrow();
+    const lastBefore = correction.beforePeriods.at(-1);
+    const lastAfter = correction.afterPeriods.at(-1);
+
+    expect(
+      new Date(lastAfter?.endedAt ?? 0).getTime() - new Date(lastBefore?.endedAt ?? 0).getTime(),
+    ).toBe(30 * 60_000);
+  });
+
+  it("moves Camille's first period 15 minutes later", async () => {
+    const correction = await db
+      .selectFrom('clockCorrection')
+      .select(['beforePeriods', 'afterPeriods'])
+      .where('status', '=', 'refused')
+      .executeTakeFirstOrThrow();
+
+    expect(
+      new Date(correction.afterPeriods[0]?.startedAt ?? 0).getTime() -
+        new Date(correction.beforePeriods[0]?.startedAt ?? 0).getTime(),
+    ).toBe(15 * 60_000);
+  });
+
+  it('notifies Léa (unread), Camille (read) and Thomas (unread)', async () => {
+    const notifications = await db
+      .selectFrom('notification')
+      .innerJoin('appUser', 'appUser.id', 'notification.userId')
+      .select([
+        'appUser.email',
+        'notification.type',
+        sql<boolean>`notification.read_at IS NOT NULL`.as('isRead'),
+      ])
+      .orderBy('appUser.email')
+      .execute();
+
+    expect(notifications).toEqual([
+      { email: 'camille.simon@example.com', type: 'clock_correction_received', isRead: true },
+      { email: 'lea.moreau@example.com', type: 'clock_correction_received', isRead: false },
+      { email: 'thomas.petit@example.com', type: 'clock_correction_answered', isRead: false },
+    ]);
   });
 
   it("moves demo people's start date back to the start of their clock history", async () => {
@@ -234,5 +314,104 @@ describe('seedDatabase', () => {
       .where('userId', '=', hugo.id)
       .execute();
     expect(resets).toEqual([]);
+  });
+
+  it('seeds no correction for a person who has no clock day to correct', async () => {
+    const people = ['lea.moreau@example.com', 'camille.simon@example.com'];
+    const ids = db.selectFrom('appUser').select('id').where('email', 'in', people);
+    await db.deleteFrom('notification').where('userId', 'in', ids).execute();
+    await db.deleteFrom('clockCorrection').where('userId', 'in', ids).execute();
+    await db
+      .deleteFrom('clockDay')
+      .where('userId', 'in', ids)
+      .where('workDate', 'in', ['2026-10-26', '2026-10-27'])
+      .execute();
+
+    await seedDemoCorrections(db, SEED_CLOCK);
+    const corrections = await db
+      .selectFrom('clockCorrection')
+      .select('id')
+      .where('userId', 'in', ids)
+      .execute();
+
+    expect(corrections).toEqual([]);
+  });
+
+  describe('when the demo day cannot be corrected safely', () => {
+    const at = (time: string): Date => new Date(`2026-10-${time}Z`);
+    const ALL_DAY_CASES = [
+      {
+        name: 'Léa has an open last period',
+        email: 'lea.moreau@example.com',
+        date: '2026-10-27',
+        periods: [{ startedAt: at('27T07:00:00'), endedAt: null }],
+      },
+      {
+        name: 'Léa has no period',
+        email: 'lea.moreau@example.com',
+        date: '2026-10-27',
+        periods: [],
+      },
+      {
+        name: 'Léa last period ends at 23:45 so 30 more minutes pass midnight',
+        email: 'lea.moreau@example.com',
+        date: '2026-10-27',
+        // 22:45Z is 23:45 in Paris (CET): 30 more minutes would pass midnight.
+        periods: [{ startedAt: at('27T20:00:00'), endedAt: at('27T22:45:00') }],
+      },
+      {
+        name: 'Camille has no period',
+        email: 'camille.simon@example.com',
+        date: '2026-10-26',
+        periods: [],
+      },
+      {
+        name: 'Camille has an open first period',
+        email: 'camille.simon@example.com',
+        date: '2026-10-26',
+        periods: [{ startedAt: at('26T07:00:00'), endedAt: null }],
+      },
+      {
+        name: 'Camille has a first period of 15 minutes',
+        email: 'camille.simon@example.com',
+        date: '2026-10-26',
+        periods: [{ startedAt: at('26T07:00:00'), endedAt: at('26T07:15:00') }],
+      },
+    ];
+
+    it.each(ALL_DAY_CASES)('skips the correction when $name', async ({ email, date, periods }) => {
+      const user = await db
+        .selectFrom('appUser')
+        .select('id')
+        .where('email', '=', email)
+        .executeTakeFirstOrThrow();
+      await db.deleteFrom('notification').where('userId', '=', user.id).execute();
+      await db.deleteFrom('clockCorrection').where('userId', '=', user.id).execute();
+      await db
+        .deleteFrom('clockDay')
+        .where('userId', '=', user.id)
+        .where('workDate', '=', date)
+        .execute();
+      const day = await db
+        .insertInto('clockDay')
+        .values({ userId: user.id, workDate: date, workMode: 'on_site' })
+        .returning('id')
+        .executeTakeFirstOrThrow();
+      if (periods.length > 0) {
+        await db
+          .insertInto('clockPeriod')
+          .values(periods.map((period) => ({ clockDayId: day.id, ...period })))
+          .execute();
+      }
+
+      await seedDemoCorrections(db, SEED_CLOCK);
+
+      const corrections = await db
+        .selectFrom('clockCorrection')
+        .select('id')
+        .where('userId', '=', user.id)
+        .execute();
+      expect(corrections).toEqual([]);
+    });
   });
 });

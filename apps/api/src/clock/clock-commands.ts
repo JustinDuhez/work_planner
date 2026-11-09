@@ -1,5 +1,4 @@
 import {
-  canEditPastClock,
   dayBounds,
   findDayPeriodViolation,
   localTimeToInstant,
@@ -12,8 +11,6 @@ import {
   type UpdateClockPeriodRequest,
   type WorkMode,
 } from '@work-planner/domain';
-import type { Kysely } from 'kysely';
-import type { Database } from '../db/database';
 import type { ClockDependencies, ClockViewer } from './clock-dependencies';
 import {
   ClockDayNotEditableError,
@@ -26,9 +23,9 @@ import {
   ensureClockDay,
   findPeriodsOfDay,
   findPeriodWithDay,
+  inClockTransaction,
   insertClockPeriod,
   toClockPeriodView,
-  translateClockConstraintError,
   updateClockPeriodTimes,
   upsertClockDayMode,
 } from './clock-repository';
@@ -63,17 +60,6 @@ function assertValidDay(
   if (violation) throw clockViolationError(violation);
 }
 
-async function inTransaction<T>(
-  db: Kysely<Database>,
-  work: (trx: Kysely<Database>) => Promise<T>,
-): Promise<T> {
-  try {
-    return await db.transaction().execute(work);
-  } catch (error) {
-    return translateClockConstraintError(error);
-  }
-}
-
 export function startClockPeriod(
   deps: ClockDependencies,
   command: { viewer: ClockViewer } & StartClockPeriodRequest,
@@ -81,7 +67,7 @@ export function startClockPeriod(
   const { now, today } = momentOf(deps);
   const startedAt = command.startedAt ? instantOn(deps, today, command.startedAt) : now;
   const endedAt = command.endedAt ? instantOn(deps, today, command.endedAt) : null;
-  return inTransaction(deps.db, async (trx) => {
+  return inClockTransaction(deps.db, async (trx) => {
     const day = await ensureClockDay(trx, {
       userId: command.viewer.id,
       workDate: today,
@@ -105,21 +91,18 @@ function resolveEnd(
     : instantOn(deps, change.workDate, change.requested);
 }
 
-/** Past days are frozen except the missing end of an unclosed day (owner once, or manager/admin). */
-async function assertCanClosePastPeriod(
+/** Past days are frozen except the owner's missing end of an unclosed day; others correct (E5). */
+function assertCanClosePastPeriod(
   period: { userId: number; endedAt: Date | null },
   command: { viewer: ClockViewer } & UpdateClockPeriodRequest,
-): Promise<void> {
+): void {
   const isClosingTheOpenEnd =
     period.endedAt === null &&
     command.startedAt === undefined &&
     command.endedAt !== undefined &&
     command.endedAt !== 'now';
-  if (!isClosingTheOpenEnd) throw new ClockDayNotEditableError();
-  const isOwner = period.userId === command.viewer.id;
-  if (!isOwner && !canEditPastClock(await command.viewer.loadActor(), period.userId)) {
+  if (!isClosingTheOpenEnd || period.userId !== command.viewer.id)
     throw new ClockDayNotEditableError();
-  }
 }
 
 export function updateClockPeriod(
@@ -127,13 +110,13 @@ export function updateClockPeriod(
   command: { viewer: ClockViewer; periodId: number } & UpdateClockPeriodRequest,
 ): Promise<ClockPeriodView> {
   const { now, today } = momentOf(deps);
-  return inTransaction(deps.db, async (trx) => {
+  return inClockTransaction(deps.db, async (trx) => {
     const period = await findPeriodWithDay(trx, command.periodId, { shouldLock: true });
     if (!period) throw new ClockPeriodNotFoundError();
     const isToday = period.workDate === today;
     if (isToday && period.userId !== command.viewer.id) throw new ClockDayNotEditableError();
     if (!isToday && period.workDate > today) throw new ClockDayNotEditableError();
-    if (!isToday) await assertCanClosePastPeriod(period, command);
+    if (!isToday) assertCanClosePastPeriod(period, command);
     const startedAt = command.startedAt
       ? instantOn(deps, period.workDate, command.startedAt)
       : period.startedAt;

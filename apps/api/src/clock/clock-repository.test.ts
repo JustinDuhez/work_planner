@@ -1,4 +1,8 @@
-import { ClockAlreadyRunningError, ClockPeriodOverlapError } from './clock-errors';
+import {
+  ClockAlreadyRunningError,
+  ClockPeriodOverlapError,
+  ClockWriteConflictError,
+} from './clock-errors';
 import { translateClockConstraintError } from './clock-repository';
 
 describe('translating clock constraint errors', () => {
@@ -10,6 +14,10 @@ describe('translating clock constraint errors', () => {
 
   it('turns an exclusion violation into "period overlap"', () => {
     expect(() => translateClockConstraintError({ code: '23P01' })).toThrow(ClockPeriodOverlapError);
+  });
+
+  it.each(['40P01', '40001'])('turns the %s lock failure into "write conflict"', (code) => {
+    expect(() => translateClockConstraintError({ code })).toThrow(ClockWriteConflictError);
   });
 
   it('rethrows other errors unchanged', () => {

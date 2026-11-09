@@ -1,7 +1,11 @@
 import type { ClockDayMode, ClockPeriodView, WorkMode } from '@work-planner/domain';
 import type { Kysely } from 'kysely';
 import type { Database } from '../db/database';
-import { ClockAlreadyRunningError, ClockPeriodOverlapError } from './clock-errors';
+import {
+  ClockAlreadyRunningError,
+  ClockPeriodOverlapError,
+  ClockWriteConflictError,
+} from './clock-errors';
 
 export interface StoredClockPeriod {
   id: number;
@@ -63,6 +67,7 @@ export async function findClockDays(
 
 const UNIQUE_VIOLATION = '23505';
 const EXCLUSION_VIOLATION = '23P01';
+const LOCK_FAILURE_CODES = ['40P01', '40001']; // deadlock, serialization failure
 const ONE_OPEN_PERIOD_CONSTRAINT = 'clock_period_one_open_per_day';
 
 /** The database is the last line of defense against races (double Start, concurrent edits). */
@@ -74,8 +79,21 @@ export function translateClockConstraintError(error: unknown): never {
       error.constraint === ONE_OPEN_PERIOD_CONSTRAINT;
     if (isOpenPeriodConflict) throw new ClockAlreadyRunningError();
     if (error.code === EXCLUSION_VIOLATION) throw new ClockPeriodOverlapError();
+    if (LOCK_FAILURE_CODES.includes(String(error.code))) throw new ClockWriteConflictError();
   }
   throw error instanceof Error ? error : new Error('Unexpected database error', { cause: error });
+}
+
+/** A clock write: DB constraint violations (races) become the E3 API errors. */
+export async function inClockTransaction<T>(
+  db: Kysely<Database>,
+  work: (trx: Kysely<Database>) => Promise<T>,
+): Promise<T> {
+  try {
+    return await db.transaction().execute(work);
+  } catch (error) {
+    return translateClockConstraintError(error);
+  }
 }
 
 export function findPeriodsOfDay(

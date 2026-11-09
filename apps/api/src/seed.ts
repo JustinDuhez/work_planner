@@ -14,10 +14,16 @@ const seedConfig = loadSeedConfig(process.env);
 const db = createDb(config.databaseUrl);
 
 try {
-  const { userCount, teamCount, membershipCount, clockDayCount, counterResetCount } =
-    await seedDatabase(db, seedConfig, { now: new Date(), timeZone: config.appTimezone });
+  const {
+    userCount,
+    teamCount,
+    membershipCount,
+    clockDayCount,
+    counterResetCount,
+    correctionCount,
+  } = await seedDatabase(db, seedConfig, { now: new Date(), timeZone: config.appTimezone });
   console.log(
-    `Seed done: ${userCount} users, ${teamCount} teams, ${membershipCount} memberships, ${clockDayCount} clock days, ${counterResetCount} counter resets.`,
+    `Seed done: ${userCount} users, ${teamCount} teams, ${membershipCount} memberships, ${clockDayCount} clock days, ${counterResetCount} counter resets, ${correctionCount} corrections.`,
   );
 } finally {
   await db.destroy();

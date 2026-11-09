@@ -2,6 +2,10 @@ import { datesOfIsoWeek } from '@work-planner/domain';
 import { useState } from 'react';
 import { useParams, useSearchParams } from 'react-router';
 import { copy } from '../copy';
+import { CorrectionDetailDialog } from '../corrections/correction-detail-dialog';
+import { CorrectionDialog } from '../corrections/correction-dialog';
+import { CorrectionStatusChip } from '../corrections/correction-status-chip';
+import { RefusedCorrectionsDialog } from '../corrections/refused-corrections-dialog';
 import { NotFoundPage } from '../not-found/not-found-page';
 import { useSession } from '../session/session-queries';
 import { Button } from '../ui/button';
@@ -53,6 +57,10 @@ function ClockWeekView({
   viewerId: number;
   isoWeek: string;
 }) {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const correctionParam = Number(searchParams.get('correction'));
+  const openCorrectionId =
+    Number.isInteger(correctionParam) && correctionParam > 0 ? correctionParam : null;
   const week = useClockWeek(ownerId, isoWeek);
   const now = useServerClock(week.data?.serverNow);
   const isOwnWeek = ownerId === viewerId;
@@ -60,9 +68,22 @@ function ClockWeekView({
     | { kind: 'add'; date: string }
     | { kind: 'edit'; date: string; periodId: number }
     | { kind: 'close'; date: string }
+    | { kind: 'correct'; date: string }
     | null
   >(null);
-  const [counterDialog, setCounterDialog] = useState<'reset' | 'history' | null>(null);
+  const [counterDialog, setCounterDialog] = useState<'reset' | 'history' | 'refused' | null>(null);
+  function openCorrection(correctionId: number) {
+    setSearchParams((params) => {
+      params.set('correction', String(correctionId));
+      return params;
+    });
+  }
+  function closeCorrection() {
+    setSearchParams((params) => {
+      params.delete('correction');
+      return params;
+    });
+  }
   const dialogDay = week.data?.days.find((day) => day.date === dialog?.date);
 
   return (
@@ -96,22 +117,38 @@ function ClockWeekView({
                     : undefined
                 }
                 actions={
-                  day.canEdit ? (
-                    <TodayControls
-                      day={day}
-                      ownerId={ownerId}
-                      isoWeek={isoWeek}
-                      onAddPeriod={() => setDialog({ kind: 'add', date: day.date })}
-                    />
-                  ) : day.canClose ? (
-                    <button
-                      type="button"
-                      onClick={() => setDialog({ kind: 'close', date: day.date })}
-                      className="text-sm font-medium text-primary-600 hover:text-primary-700"
-                    >
-                      {copy.clock.closeDay}
-                    </button>
-                  ) : null
+                  <>
+                    {day.latestCorrection ? (
+                      <CorrectionStatusChip
+                        status={day.latestCorrection.status}
+                        onOpen={() => openCorrection(day.latestCorrection!.id)}
+                      />
+                    ) : null}
+                    {day.canEdit ? (
+                      <TodayControls
+                        day={day}
+                        ownerId={ownerId}
+                        isoWeek={isoWeek}
+                        onAddPeriod={() => setDialog({ kind: 'add', date: day.date })}
+                      />
+                    ) : day.canClose ? (
+                      <button
+                        type="button"
+                        onClick={() => setDialog({ kind: 'close', date: day.date })}
+                        className="text-sm font-medium text-primary-600 hover:text-primary-700"
+                      >
+                        {copy.clock.closeDay}
+                      </button>
+                    ) : day.canCorrect ? (
+                      <button
+                        type="button"
+                        onClick={() => setDialog({ kind: 'correct', date: day.date })}
+                        className="text-sm font-medium text-primary-600 hover:text-primary-700"
+                      >
+                        {copy.corrections.correctDay}
+                      </button>
+                    ) : null}
+                  </>
                 }
               />
             ))}
@@ -119,6 +156,17 @@ function ClockWeekView({
           <CountersCard
             week={week.data}
             now={now}
+            refusalAction={
+              week.data.counters.canViewCorrections ? (
+                <button
+                  type="button"
+                  onClick={() => setCounterDialog('refused')}
+                  className="text-xs font-medium text-rose-700 hover:underline"
+                >
+                  {copy.corrections.refusedLink}
+                </button>
+              ) : undefined
+            }
             actions={
               week.data.counters.canResetCounter ? (
                 <>
@@ -134,7 +182,7 @@ function ClockWeekView({
           />
         </div>
       ) : null}
-      {dialog && dialogDay && dialog.kind !== 'close' ? (
+      {dialog && dialogDay && (dialog.kind === 'add' || dialog.kind === 'edit') ? (
         <PeriodDialog
           period={
             dialog.kind === 'edit'
@@ -154,11 +202,31 @@ function ClockWeekView({
           onClose={() => setDialog(null)}
         />
       ) : null}
+      {dialog?.kind === 'correct' && dialogDay ? (
+        <CorrectionDialog day={dialogDay} ownerId={ownerId} onClose={() => setDialog(null)} />
+      ) : null}
       {counterDialog === 'reset' && week.data ? (
         <CounterResetDialog week={week.data} onClose={() => setCounterDialog(null)} />
       ) : null}
       {counterDialog === 'history' ? (
         <CounterResetHistoryDialog ownerId={ownerId} onClose={() => setCounterDialog(null)} />
+      ) : null}
+      {counterDialog === 'refused' ? (
+        <RefusedCorrectionsDialog
+          ownerId={ownerId}
+          onOpen={(correctionId) => {
+            setCounterDialog(null);
+            openCorrection(correctionId);
+          }}
+          onClose={() => setCounterDialog(null)}
+        />
+      ) : null}
+      {openCorrectionId !== null ? (
+        <CorrectionDetailDialog
+          correctionId={openCorrectionId}
+          ownerId={ownerId}
+          onClose={closeCorrection}
+        />
       ) : null}
     </section>
   );

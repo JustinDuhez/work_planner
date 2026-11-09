@@ -218,7 +218,7 @@ describe('clocking from the week view', () => {
     );
   });
 
-  it("lets a manager close someone else's unclosed day but not start one", async () => {
+  it("offers a manager the correction of someone else's unclosed day", async () => {
     const isoWeek = shiftIsoWeek(currentIsoWeek(new Date()), -1);
     const thursday = datesOfIsoWeek(isoWeek)?.[3] ?? '';
     const open = { id: 44, startedAt: `${thursday}T12:00:00.000Z`, endedAt: null };
@@ -226,28 +226,21 @@ describe('clocking from the week view', () => {
       isoWeek,
       user: HUGO,
       isOwnWeek: false,
-      days: { [thursday]: { periods: [open], isUnclosed: true, canClose: true } },
-    });
-    const fetchMock = mockFetchRoutes({
-      ...signedInHomeRoutes(),
-      [`GET /api/v1/users/${HUGO.id}/clock-weeks/${isoWeek}`]: { status: 200, body: week },
-      [`PATCH /api/v1/clock-periods/${open.id}`]: {
-        status: 200,
-        body: { ...open, endedAt: `${thursday}T16:00:00.000Z` },
+      days: {
+        [thursday]: { periods: [open], isUnclosed: true, canClose: false, canCorrect: true },
       },
     });
-    renderApp(`/pointage/${HUGO.id}?semaine=${isoWeek}`);
-    const user = userEvent.setup();
-
-    await user.click(await screen.findByRole('button', { name: copy.clock.closeDay }));
-    expect(screen.queryByRole('button', { name: copy.clock.start })).not.toBeInTheDocument();
-    const dialog = screen.getByRole('dialog', { name: copy.clock.closeDayTitle });
-    await user.type(within(dialog).getByLabelText(copy.clock.endTime), '17:00');
-    await user.click(within(dialog).getByRole('button', { name: copy.clock.save }));
-
-    expect(bodyOf(fetchMock, 'PATCH', `/api/v1/clock-periods/${open.id}`)).toEqual({
-      endedAt: '17:00',
+    mockFetchRoutes({
+      ...signedInHomeRoutes(),
+      [`GET /api/v1/users/${HUGO.id}/clock-weeks/${isoWeek}`]: { status: 200, body: week },
     });
+    renderApp(`/pointage/${HUGO.id}?semaine=${isoWeek}`);
+
+    expect(
+      await screen.findByRole('button', { name: copy.corrections.correctDay }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: copy.clock.closeDay })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: copy.clock.start })).not.toBeInTheDocument();
   });
 
   it('closes a day left unclosed with its real end time', async () => {

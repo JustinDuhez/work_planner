@@ -66,3 +66,12 @@ const ERROR_BY_VIOLATION: Record<ClockViolation, () => AppError> = {
 export function clockViolationError(violation: ClockViolation): AppError {
   return ERROR_BY_VIOLATION[violation]();
 }
+
+export class ClockWriteConflictError extends ConflictError {
+  constructor() {
+    super(
+      'CLOCK_WRITE_CONFLICT',
+      'Une autre modification de cette journée est en cours. Réessayez.',
+    );
+  }
+}

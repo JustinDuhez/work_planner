@@ -14,6 +14,8 @@ const DAY: ClockDayView = {
   isUnclosed: true,
   canEdit: false,
   canClose: false,
+  canCorrect: false,
+  latestCorrection: null,
 };
 const NOW = new Date('2026-11-06T10:00:00Z');
 const BAND = { name: '09:00 – …' };

@@ -1,7 +1,12 @@
-import type { WorkMode } from '@work-planner/domain';
+import type {
+  ClockCorrectionStatus,
+  NotificationPayload,
+  NotificationType,
+  WorkMode,
+} from '@work-planner/domain';
 import type { Kysely } from 'kysely';
 import { hashPassword } from '../auth/password-hasher';
-import type { Database } from '../db/database';
+import type { Database, SnapshotPeriod } from '../db/database';
 
 export const DEFAULT_TEST_PASSWORD = 'correct horse battery staple';
 
@@ -114,6 +119,68 @@ export async function insertDailyMinutesChange(
   const { id } = await db
     .insertInto('dailyMinutesChange')
     .values(change)
+    .returning('id')
+    .executeTakeFirstOrThrow();
+  return id;
+}
+
+export interface TestClockCorrection {
+  userId: number;
+  authorId: number;
+  workDate: string;
+  status?: ClockCorrectionStatus;
+  beforeWorkMode?: WorkMode | null;
+  afterWorkMode?: WorkMode;
+  beforePeriods?: SnapshotPeriod[];
+  afterPeriods?: SnapshotPeriod[];
+  comment?: string | null;
+  responseComment?: string | null;
+  respondedAt?: Date | null;
+  createdAt?: Date;
+}
+
+export async function insertClockCorrection(
+  db: Kysely<Database>,
+  correction: TestClockCorrection,
+): Promise<number> {
+  const { id } = await db
+    .insertInto('clockCorrection')
+    .values({
+      userId: correction.userId,
+      authorId: correction.authorId,
+      workDate: correction.workDate,
+      status: correction.status ?? 'pending',
+      beforeWorkMode: correction.beforeWorkMode ?? 'on_site',
+      afterWorkMode: correction.afterWorkMode ?? 'on_site',
+      beforePeriods: JSON.stringify(correction.beforePeriods ?? []),
+      afterPeriods: JSON.stringify(correction.afterPeriods ?? []),
+      comment: correction.comment ?? null,
+      responseComment: correction.responseComment ?? null,
+      respondedAt: correction.respondedAt ?? null,
+      createdAt: correction.createdAt,
+    })
+    .returning('id')
+    .executeTakeFirstOrThrow();
+  return id;
+}
+
+export async function insertNotification(
+  db: Kysely<Database>,
+  notification: {
+    userId: number;
+    type: NotificationType;
+    payload: NotificationPayload;
+    readAt?: Date | null;
+  },
+): Promise<number> {
+  const { id } = await db
+    .insertInto('notification')
+    .values({
+      userId: notification.userId,
+      type: notification.type,
+      payload: JSON.stringify(notification.payload),
+      readAt: notification.readAt ?? null,
+    })
     .returning('id')
     .executeTakeFirstOrThrow();
   return id;

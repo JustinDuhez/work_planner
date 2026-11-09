@@ -15,6 +15,8 @@ const RUNNING_TODAY: ClockDayView = {
   isUnclosed: false,
   canEdit: true,
   canClose: false,
+  canCorrect: false,
+  latestCorrection: null,
 };
 
 describe('liveDayMinutes', () => {

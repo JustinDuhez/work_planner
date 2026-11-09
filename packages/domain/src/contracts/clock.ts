@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { clockCorrectionStatusSchema } from './correction-status';
 import { weekCountersSchema } from './counters';
 import { workDateSchema } from './work-date';
 
@@ -69,6 +70,11 @@ export const clockDaySchema = z.object({
   isFuture: z.boolean(),
   isUnclosed: z.boolean(),
   canEdit: z.boolean(),
+  canCorrect: z.boolean(),
+  // Only for viewers allowed to see the person's corrections (spec §4); null otherwise.
+  latestCorrection: z
+    .object({ id: z.number().int(), status: clockCorrectionStatusSchema })
+    .nullable(),
   canClose: z.boolean(),
 });
 

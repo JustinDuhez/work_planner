@@ -4,15 +4,28 @@ import { copy } from '../copy';
 import { formatLongDate } from './clock-time';
 import { liveGapMinutes } from './live-counters';
 
+// Red is reserved for an open refusal: it overrides the gap tone until the day is fixed.
+const REFUSED_TONE = 'text-rose-700';
+
 function gapToneClass(minutes: number): string {
   if (minutes > 0) return 'text-emerald-700';
   if (minutes < 0) return 'text-amber-700';
   return 'text-zinc-900';
 }
 
-function Gap({ minutes, className }: { minutes: number; className: string }) {
+function Gap({
+  minutes,
+  className,
+  isRefused = false,
+}: {
+  minutes: number;
+  className: string;
+  isRefused?: boolean;
+}) {
   return (
-    <span className={`font-semibold tabular-nums ${gapToneClass(minutes)} ${className}`}>
+    <span
+      className={`font-semibold tabular-nums ${isRefused ? REFUSED_TONE : gapToneClass(minutes)} ${className}`}
+    >
       {formatSignedMinutes(minutes)}
     </span>
   );
@@ -22,10 +35,12 @@ export function CountersCard({
   week,
   now,
   actions,
+  refusalAction,
 }: {
   week: ClockWeek;
   now: Date;
   actions?: ReactNode;
+  refusalAction?: ReactNode;
 }) {
   const { counters } = week;
   const timing = { runningSince: counters.runningSince, serverNow: week.serverNow, now };
@@ -67,8 +82,13 @@ export function CountersCard({
       <section className="rounded-card border border-zinc-200 bg-white p-4 shadow-card">
         <h2 className="text-sm font-medium text-zinc-500">{copy.counters.globalTitle}</h2>
         <p className="mt-1">
-          <Gap minutes={globalGapMinutes} className="text-2xl" />
+          <Gap
+            minutes={globalGapMinutes}
+            className="text-2xl"
+            isRefused={counters.hasOpenRefusal}
+          />
         </p>
+        {counters.hasOpenRefusal && refusalAction ? <p className="mt-1">{refusalAction}</p> : null}
         <p className="mt-1 text-xs text-zinc-500">
           {`${copy.counters.since} ${formatLongDate(counters.countingStartDate)}`}
         </p>

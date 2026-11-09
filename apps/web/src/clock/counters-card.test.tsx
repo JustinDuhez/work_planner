@@ -28,6 +28,25 @@ describe('CountersCard', () => {
     expect(screen.getByText(`${copy.counters.since} 3 nov. 2026`)).toBeInTheDocument();
   });
 
+  it('shows the balance in red while a refusal is open', () => {
+    renderCard({ hasOpenRefusal: true, globalGapMinutes: 255 });
+
+    expect(screen.getByText('+4:15')).toHaveClass('text-rose-700');
+  });
+
+  it('shows the refusal action only while a refusal is open', () => {
+    const action = <button type="button">voir</button>;
+    const open = { ...weekFixture({ counters: { hasOpenRefusal: true } }), serverNow: SERVER_NOW };
+    const calm = { ...weekFixture({ counters: { hasOpenRefusal: false } }), serverNow: SERVER_NOW };
+    const now = new Date(SERVER_NOW);
+    const { rerender } = render(<CountersCard week={open} now={now} refusalAction={action} />);
+    expect(screen.getByRole('button', { name: 'voir' })).toBeInTheDocument();
+
+    rerender(<CountersCard week={calm} now={now} refusalAction={action} />);
+
+    expect(screen.queryByRole('button', { name: 'voir' })).not.toBeInTheDocument();
+  });
+
   it('shows a zero gap without color', () => {
     renderCard({
       weekCountedWorkedMinutes: 60,

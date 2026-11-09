@@ -34,7 +34,7 @@ export async function buildClockWeek(
   if (!profile) throw new UserNotFoundError();
   const now = deps.now();
   const today = toWorkDate(now, deps.timeZone);
-  const { counters, targetMinutesByDate } = await buildWeekCounters(deps, {
+  const { counters, targetMinutesByDate, latestCorrectionByDate } = await buildWeekCounters(deps, {
     owner: profile,
     week: { fromDate: monday, toDate: sunday },
     instant: { now, today },
@@ -42,12 +42,7 @@ export async function buildClockWeek(
   });
   const storedDays = await findClockDays(deps.db, owner.id, monday, sunday);
   const isOwner = query.viewer.id === owner.id;
-  const hasUnclosedDay = [...storedDays.values()].some(
-    (day) => day.workDate < today && day.periods.some((period) => period.endedAt === null),
-  );
-  // Managers and admins may close someone else's unclosed day; load the actor only if needed.
-  const canCloseForOwner =
-    isOwner || (hasUnclosedDay && canEditPastClock(await query.viewer.loadActor(), owner.id));
+  const canCorrectOwner = canEditPastClock(await query.viewer.loadActor(), owner.id);
 
   const days = dates.map((date): ClockDayView => {
     const stored = storedDays.get(date);
@@ -64,7 +59,9 @@ export async function buildClockWeek(
       isFuture: date > today,
       isUnclosed,
       canEdit: isOwner && isToday,
-      canClose: isUnclosed && canCloseForOwner,
+      canClose: isUnclosed && isOwner,
+      canCorrect: date < today && canCorrectOwner,
+      latestCorrection: latestCorrectionByDate.get(date) ?? null,
     };
   });
   return {

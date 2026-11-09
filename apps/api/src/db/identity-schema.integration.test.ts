@@ -89,10 +89,12 @@ describe('identity schema', () => {
 
     expect(rows.map((row) => row.tableName)).toEqual([
       'app_user',
+      'clock_correction',
       'clock_day',
       'clock_period',
       'counter_reset',
       'daily_minutes_change',
+      'notification',
       'session',
       'setting',
       'team',

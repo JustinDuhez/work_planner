@@ -4,6 +4,7 @@ import { hashPassword } from '../auth/password-hasher';
 import type { Database } from '../db/database';
 import { buildDemoClockHistory, demoHistoryStartDate } from './demo-clock-history';
 import { seedDemoCounters } from './demo-counters';
+import { seedDemoCorrections } from './demo-corrections';
 import { DEMO_TEAMS, DEMO_USERS, type DemoUser } from './demo-company';
 import type { SeedConfig } from './seed-config';
 
@@ -52,7 +53,7 @@ async function idOfTeam(db: Kysely<Database>, name: string): Promise<number> {
 
 async function countRows(
   db: Kysely<Database>,
-  table: 'appUser' | 'team' | 'teamMember' | 'clockDay' | 'counterReset',
+  table: 'appUser' | 'team' | 'teamMember' | 'clockDay' | 'counterReset' | 'clockCorrection',
 ): Promise<number> {
   const { count } = await db
     .selectFrom(table)
@@ -71,6 +72,7 @@ export async function seedDatabase(
   membershipCount: number;
   clockDayCount: number;
   counterResetCount: number;
+  correctionCount: number;
 }> {
   const today = toWorkDate(clock.now, clock.timeZone);
   await insertUserIfMissing(
@@ -129,11 +131,13 @@ export async function seedDatabase(
     });
   }
   await seedDemoCounters(db, clock);
+  await seedDemoCorrections(db, clock);
   return {
     userCount: await countRows(db, 'appUser'),
     teamCount: await countRows(db, 'team'),
     membershipCount: await countRows(db, 'teamMember'),
     clockDayCount: await countRows(db, 'clockDay'),
     counterResetCount: await countRows(db, 'counterReset'),
+    correctionCount: await countRows(db, 'clockCorrection'),
   };
 }

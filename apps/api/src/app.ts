@@ -6,10 +6,12 @@ import { burnPasswordVerification } from './auth/password-hasher';
 import { registerMeRoutes } from './auth/me-routes';
 import { registerSessionRoutes } from './auth/session-routes';
 import { registerClockRoutes } from './clock/clock-routes';
+import { registerCorrectionRoutes } from './corrections/correction-routes';
 import { registerCounterRoutes } from './counters/counter-routes';
 import type { AppConfig } from './config/config';
 import type { Database } from './db/database';
 import { registerHealthRoutes } from './health/health-routes';
+import { registerNotificationRoutes } from './notifications/notification-routes';
 import { registerErrorHandlers } from './http/error-handler';
 import { registerProtectedRoutes } from './http/protected-routes';
 import { registerSecurityHeaders } from './http/security-headers';
@@ -76,6 +78,8 @@ export async function buildApp({
     registerUserRoutes(scope, { db });
     registerClockRoutes(scope, clockDependencies);
     registerCounterRoutes(scope, clockDependencies);
+    registerCorrectionRoutes(scope, clockDependencies);
+    registerNotificationRoutes(scope, { db, now });
   });
   if (webDistDirectory !== undefined) {
     await registerSpa(app, webDistDirectory);
