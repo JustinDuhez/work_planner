@@ -73,9 +73,10 @@ describe('NotificationBell', () => {
   it('shows no badge when everything is read', async () => {
     renderWithNotifications(0);
 
-    expect(
-      await screen.findByRole('button', { name: copy.notifications.bell }),
-    ).toBeInTheDocument();
+    const bell = await screen.findByRole('button', { name: copy.notifications.bell });
+
+    expect(bell.textContent).toBe('');
+    expect(screen.queryByText(copy.notifications.markAllRead)).not.toBeInTheDocument();
   });
 
   it('lists the notifications as French sentences', async () => {
