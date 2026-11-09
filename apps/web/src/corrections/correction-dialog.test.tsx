@@ -1,7 +1,7 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { copy } from '../copy';
-import { HUGO, signedInHomeRoutes, weekFixture } from '../test/clock-fixtures';
+import { HUGO, LEA, signedInHomeRoutes, weekFixture } from '../test/clock-fixtures';
 import { mockFetchRoutes, type MockResponse } from '../test/mock-fetch';
 import { renderApp } from '../test/render-app';
 
@@ -9,6 +9,22 @@ import { renderApp } from '../test/render-app';
 const ISO_WEEK = '2026-W45';
 const TUESDAY = '2026-11-03';
 const CORRECTION_URL = '/api/v1/clock-corrections';
+const WEEK_URL = `/api/v1/users/${HUGO.id}/clock-weeks/${ISO_WEEK}`;
+const SAVED_CORRECTION = {
+  id: 1,
+  user: HUGO,
+  author: LEA,
+  workDate: TUESDAY,
+  status: 'pending',
+  comment: null,
+  responseComment: null,
+  createdAt: '2026-11-09T09:00:00.000Z',
+  respondedAt: null,
+  before: { workMode: 'telework', periods: [], workedMinutes: 180 },
+  after: { workMode: 'on_site', periods: [], workedMinutes: 420 },
+  differenceMinutes: 240,
+  canAnswer: true,
+};
 
 function renderHugoWeek(extra: Record<string, MockResponse> = {}) {
   const week = weekFixture({
@@ -87,7 +103,7 @@ describe('CorrectionDialog', () => {
 
   it('sends the whole day with the chosen work mode and the comment', async () => {
     const { user, fetchMock } = renderHugoWeek({
-      [`POST ${CORRECTION_URL}`]: { status: 201, body: {} },
+      [`POST ${CORRECTION_URL}`]: { status: 201, body: SAVED_CORRECTION },
     });
     const dialog = await openDialog(user);
 
@@ -124,9 +140,37 @@ describe('CorrectionDialog', () => {
     });
   });
 
+  it('closes the dialog and reloads the week once the correction is saved', async () => {
+    const { user, fetchMock } = renderHugoWeek({
+      [`POST ${CORRECTION_URL}`]: { status: 201, body: SAVED_CORRECTION },
+    });
+    const dialog = await openDialog(user);
+    const weekFetches = () => fetchMock.mock.calls.filter(([url]) => url === WEEK_URL).length;
+    expect(weekFetches()).toBe(1);
+
+    await user.type(
+      within(dialog).getAllByLabelText(copy.corrections.endTime)[1] as HTMLElement,
+      '17:00',
+    );
+    await user.click(within(dialog).getByRole('button', { name: copy.corrections.save }));
+
+    await waitFor(() => expect(weekFetches()).toBeGreaterThanOrEqual(2));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('closes the dialog without sending anything on cancel', async () => {
+    const { user, fetchMock } = renderHugoWeek();
+    const dialog = await openDialog(user);
+
+    await user.click(within(dialog).getByRole('button', { name: copy.corrections.cancel }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(sentBody(fetchMock)).toBeUndefined();
+  });
+
   it('removes a period', async () => {
     const { user, fetchMock } = renderHugoWeek({
-      [`POST ${CORRECTION_URL}`]: { status: 201, body: {} },
+      [`POST ${CORRECTION_URL}`]: { status: 201, body: SAVED_CORRECTION },
     });
     const dialog = await openDialog(user);
 
