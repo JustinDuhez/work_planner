@@ -2,7 +2,7 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { NotificationView } from '@work-planner/domain';
 import { copy } from '../copy';
-import { HUGO, LEA, signedInHomeRoutes } from '../test/clock-fixtures';
+import { HUGO, LEA, signedInHomeRoutes, weekFixture } from '../test/clock-fixtures';
 import { mockFetchRoutes, type MockResponse } from '../test/mock-fetch';
 import { renderApp } from '../test/render-app';
 
@@ -32,12 +32,22 @@ const ANSWERED: NotificationView = {
   createdAt: '2026-11-03T09:00:00.000Z',
 };
 
-function renderWithNotifications(unreadCount: number, extra: Record<string, MockResponse> = {}) {
+const ACCEPTED: NotificationView = {
+  ...ANSWERED,
+  id: 3,
+  payload: { ...ANSWERED.payload, correctionId: 13, status: 'accepted' },
+};
+
+function renderWithNotifications(
+  unreadCount: number,
+  extra: Record<string, MockResponse> = {},
+  notifications: NotificationView[] = [RECEIVED, ANSWERED],
+) {
   const fetchMock = mockFetchRoutes({
     ...signedInHomeRoutes(),
     'GET /api/v1/notifications': {
       status: 200,
-      body: { unreadCount, notifications: [RECEIVED, ANSWERED] },
+      body: { unreadCount, notifications },
     },
     ...extra,
   });
@@ -123,6 +133,34 @@ describe('NotificationBell', () => {
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/v1/notifications',
       expect.objectContaining({ method: 'PATCH' }),
+    );
+  });
+
+  it('words an accepted answer', async () => {
+    const { user } = renderWithNotifications(0, {}, [ACCEPTED]);
+
+    await user.click(await screen.findByRole('button', { name: copy.notifications.bell }));
+
+    expect(
+      screen.getByText('Hugo Laurent a accepté votre correction du 2 nov. 2026'),
+    ).toBeInTheDocument();
+  });
+
+  it('does not mark an already read notification read again', async () => {
+    const { user, router, fetchMock } = renderWithNotifications(0, {
+      [`GET /api/v1/users/${HUGO.id}/clock-weeks/2026-W45`]: {
+        status: 200,
+        body: weekFixture({ isoWeek: '2026-W45', user: HUGO, isOwnWeek: false }),
+      },
+    });
+
+    await user.click(await screen.findByRole('button', { name: copy.notifications.bell }));
+    await user.click(screen.getByRole('link', { name: /a refusé votre correction/ }));
+
+    expect(router.state.location.pathname).toBe(`/pointage/${HUGO.id}`);
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      `/api/v1/notifications/${ANSWERED.id}`,
+      expect.anything(),
     );
   });
 
