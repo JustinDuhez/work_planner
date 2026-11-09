@@ -1,15 +1,14 @@
 import {
-  addDays,
   canEditPastClock,
   correctionPeriodsOf,
   toWorkDate,
   truncateToMinute,
-  ValidationError,
   type ClockCorrectionView,
   type CreateClockCorrectionRequest,
 } from '@work-planner/domain';
 import type { ClockDependencies, ClockViewer } from '../clock/clock-dependencies';
 import { findPeriodsOfDay, inClockTransaction } from '../clock/clock-repository';
+import { assertRealDate } from '../http/real-date';
 import { markCorrectionNotificationsRead } from '../notifications/notification-repository';
 import { notify } from '../notifications/notify';
 import { UserNotFoundError } from '../users/user-errors';
@@ -30,15 +29,6 @@ import {
 } from './correction-repository';
 import { toClockCorrectionView } from './correction-view';
 
-function assertRealDate(date: string): void {
-  // The schema checks the shape only; 2026-02-30 would roll over to March.
-  if (addDays(date, 0) !== date) {
-    throw new ValidationError('VALIDATION_ERROR', 'Certains champs sont invalides.', {
-      date: 'Date invalide.',
-    });
-  }
-}
-
 export async function createClockCorrection(
   deps: ClockDependencies,
   command: { viewer: ClockViewer } & CreateClockCorrectionRequest,
@@ -51,7 +41,7 @@ export async function createClockCorrection(
   if (!canEditPastClock(await command.viewer.loadActor(), owner.id))
     throw new ClockCorrectionForbiddenError();
   const now = truncateToMinute(deps.now());
-  assertRealDate(command.date);
+  assertRealDate(command.date, 'date');
   if (command.date >= toWorkDate(now, deps.timeZone)) throw new ClockCorrectionDayNotPastError();
   const result = correctionPeriodsOf(command.date, command.periods, {
     timeZone: deps.timeZone,

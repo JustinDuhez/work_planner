@@ -291,6 +291,38 @@ describe('creating a correction', () => {
     });
   });
 
+  it('refuses a time that does not exist on the day the clocks change', async () => {
+    const memberId = await newMember();
+
+    const response = await correct(
+      MANAGER,
+      dayOf(memberId, { date: '2026-03-29', periods: [{ startedAt: '02:30', endedAt: '04:00' }] }),
+    );
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json<unknown>()).toMatchObject({
+      code: 'CLOCK_TIME_INVALID',
+      fieldErrors: {
+        'periods.0.startedAt': "Cette heure n'existe pas ce jour-là (changement d'heure).",
+      },
+    });
+  });
+
+  it('points at the end of a period that ends before it starts', async () => {
+    const memberId = await newMember();
+
+    const response = await correct(
+      MANAGER,
+      dayOf(memberId, { periods: [{ startedAt: '12:00', endedAt: '11:00' }] }),
+    );
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json<unknown>()).toMatchObject({
+      code: 'CLOCK_END_BEFORE_START',
+      fieldErrors: { 'periods.0.endedAt': "L'heure de fin doit être après l'heure de début." },
+    });
+  });
+
   it('refuses an impossible date', async () => {
     const memberId = await newMember();
 

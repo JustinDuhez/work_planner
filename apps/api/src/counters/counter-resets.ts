@@ -1,11 +1,6 @@
-import {
-  addDays,
-  canResetCounter,
-  toWorkDate,
-  ValidationError,
-  type CounterResetView,
-} from '@work-planner/domain';
+import { canResetCounter, toWorkDate, type CounterResetView } from '@work-planner/domain';
 import type { ClockDependencies, ClockViewer } from '../clock/clock-dependencies';
+import { assertRealDate } from '../http/real-date';
 import { UserNotFoundError } from '../users/user-errors';
 import {
   CounterResetDateBeforeStartError,
@@ -33,15 +28,6 @@ async function authorizedOwner(
   return owner;
 }
 
-function assertRealDate(date: string): void {
-  // The schema checks the shape only; 2026-02-30 would roll over to March.
-  if (addDays(date, 0) !== date) {
-    throw new ValidationError('VALIDATION_ERROR', 'Certains champs sont invalides.', {
-      resetDate: 'Date invalide.',
-    });
-  }
-}
-
 export async function createCounterReset(
   deps: ClockDependencies,
   command: { viewer: ClockViewer; ownerId: number; resetDate?: string },
@@ -49,7 +35,7 @@ export async function createCounterReset(
   const owner = await authorizedOwner(deps, command);
   const today = toWorkDate(deps.now(), deps.timeZone);
   const resetDate = command.resetDate ?? today;
-  assertRealDate(resetDate);
+  assertRealDate(resetDate, 'resetDate');
   if (resetDate > today) throw new CounterResetDateInFutureError();
   if (resetDate < owner.startDate) throw new CounterResetDateBeforeStartError();
   const resetId = await insertCounterReset(deps.db, {
