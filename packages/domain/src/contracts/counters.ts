@@ -30,6 +30,9 @@ export const weekCountersSchema = z.object({
   // Today's open period: the web keeps both gaps ticking from it.
   runningSince: z.iso.datetime().nullable(),
   canResetCounter: z.boolean(),
+  // E5-D5: a counted day whose latest correction was refused.
+  hasOpenRefusal: z.boolean(),
+  canViewCorrections: z.boolean(),
   lastReset: counterResetSchema.nullable(),
 });
 

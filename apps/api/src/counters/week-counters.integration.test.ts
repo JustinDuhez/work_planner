@@ -230,7 +230,7 @@ describe('counters in the week', () => {
     expect(counters).toMatchObject({ runningSince: null, globalGapMinutes: 0 });
   });
 
-  it('loads the counter facts in three queries, however long the history', async () => {
+  it('loads the counter facts in four queries, however long the history', async () => {
     const countingPlugin: KyselyPlugin = {
       transformQuery: (args) => {
         queryCount += 1;
@@ -252,7 +252,7 @@ describe('counters in the week', () => {
     });
     await workedDay(db, fewDaysId, '2026-11-04', 420);
 
-    expect(await countQueries(fewDaysId)).toBe(3);
-    expect(await countQueries(leaId)).toBe(3);
+    expect(await countQueries(fewDaysId)).toBe(4);
+    expect(await countQueries(leaId)).toBe(4);
   });
 });

@@ -14,6 +14,8 @@ const SUNDAY: ClockDayView = {
   isUnclosed: false,
   canEdit: false,
   canClose: false,
+  canCorrect: false,
+  latestCorrection: null,
 };
 
 describe('DayRow', () => {

@@ -1,5 +1,4 @@
 import {
-  canEditPastClock,
   dayBounds,
   findDayPeriodViolation,
   localTimeToInstant,
@@ -92,21 +91,18 @@ function resolveEnd(
     : instantOn(deps, change.workDate, change.requested);
 }
 
-/** Past days are frozen except the missing end of an unclosed day (owner once, or manager/admin). */
-async function assertCanClosePastPeriod(
+/** Past days are frozen except the owner's missing end of an unclosed day; others correct (E5). */
+function assertCanClosePastPeriod(
   period: { userId: number; endedAt: Date | null },
   command: { viewer: ClockViewer } & UpdateClockPeriodRequest,
-): Promise<void> {
+): void {
   const isClosingTheOpenEnd =
     period.endedAt === null &&
     command.startedAt === undefined &&
     command.endedAt !== undefined &&
     command.endedAt !== 'now';
-  if (!isClosingTheOpenEnd) throw new ClockDayNotEditableError();
-  const isOwner = period.userId === command.viewer.id;
-  if (!isOwner && !canEditPastClock(await command.viewer.loadActor(), period.userId)) {
+  if (!isClosingTheOpenEnd || period.userId !== command.viewer.id)
     throw new ClockDayNotEditableError();
-  }
 }
 
 export function updateClockPeriod(
@@ -120,7 +116,7 @@ export function updateClockPeriod(
     const isToday = period.workDate === today;
     if (isToday && period.userId !== command.viewer.id) throw new ClockDayNotEditableError();
     if (!isToday && period.workDate > today) throw new ClockDayNotEditableError();
-    if (!isToday) await assertCanClosePastPeriod(period, command);
+    if (!isToday) assertCanClosePastPeriod(period, command);
     const startedAt = command.startedAt
       ? instantOn(deps, period.workDate, command.startedAt)
       : period.startedAt;

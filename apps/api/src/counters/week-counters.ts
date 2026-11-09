@@ -1,7 +1,10 @@
 import {
+  canEditPastClock,
   canResetCounter,
   counterDays,
   counterTotals,
+  hasOpenRefusal,
+  type LatestCorrection,
   type WeekCounters,
 } from '@work-planner/domain';
 import type { ClockDependencies, ClockViewer } from '../clock/clock-dependencies';
@@ -16,7 +19,11 @@ export async function buildWeekCounters(
     instant: { now: Date; today: string };
     viewer: ClockViewer;
   },
-): Promise<{ counters: WeekCounters; targetMinutesByDate: Map<string, number> }> {
+): Promise<{
+  counters: WeekCounters;
+  targetMinutesByDate: Map<string, number>;
+  latestCorrectionByDate: Map<string, LatestCorrection>;
+}> {
   const { now, today } = query.instant;
   const [facts, actor] = await Promise.all([
     loadCounterFacts(deps.db, { profile: query.owner, today }),
@@ -35,6 +42,8 @@ export async function buildWeekCounters(
     counterDays({ fromDate: facts.countingStart, toDate: today }, facts.periodsByDate, rules),
   );
   const runningPeriod = facts.periodsByDate.get(today)?.find((period) => period.endedAt === null);
+  const canViewCorrections =
+    query.viewer.id === query.owner.id || canEditPastClock(actor, query.owner.id);
   return {
     counters: {
       weekTargetMinutes: week.targetMinutes,
@@ -46,8 +55,13 @@ export async function buildWeekCounters(
       countingStartDate: facts.countingStart,
       runningSince: runningPeriod?.startedAt.toISOString() ?? null,
       canResetCounter: canResetCounter(actor, query.owner.id),
+      hasOpenRefusal: hasOpenRefusal(facts.latestCorrections, facts.countingStart),
+      canViewCorrections,
       lastReset: facts.lastReset ? toCounterResetView(facts.lastReset) : null,
     },
     targetMinutesByDate: new Map(weekDays.map((day) => [day.date, day.targetMinutes])),
+    latestCorrectionByDate: canViewCorrections
+      ? facts.latestCorrections
+      : new Map<string, LatestCorrection>(),
   };
 }

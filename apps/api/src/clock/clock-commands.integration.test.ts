@@ -459,7 +459,7 @@ describe('clocking commands', () => {
     it.each([
       ['the manager of the person', 'manager.commands@example.com', '2026-11-03'],
       ['an admin', 'admin.commands@example.com', '2026-11-04'],
-    ])('lets %s close it', async (_who, email, workDate) => {
+    ])('refuses %s closing it: that is a correction now', async (_who, email, workDate) => {
       // One unclosed day per case: the managed person cannot have two rows for the same date.
       const dayId = await insertClockDay(db, { userId: managedId, workDate });
       const periodId = await insertClockPeriod(db, {
@@ -472,7 +472,8 @@ describe('clocking commands', () => {
         endedAt: '17:00',
       });
 
-      expect(response.statusCode).toBe(200);
+      expect(response.statusCode).toBe(403);
+      expect(response.json<{ code: string }>().code).toBe('CLOCK_DAY_NOT_EDITABLE');
     });
 
     it('refuses a colleague outside the scope', async () => {

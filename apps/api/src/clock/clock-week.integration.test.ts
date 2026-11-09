@@ -176,12 +176,12 @@ describe('GET /api/v1/users/:userId/clock-weeks/:isoWeek', () => {
   });
 
   it.each([
-    ['their manager', managerEmail, true],
-    ['an admin', 'admin.week@example.com', true],
-  ])('lets %s close the unclosed day', async (_who, email, expected) => {
+    ['their manager', managerEmail],
+    ['an admin', 'admin.week@example.com'],
+  ])('lets %s correct the unclosed day instead of closing it', async (_who, email) => {
     const body = (await getWeek(email, leaId)).json<WeekBody>();
 
-    expect(dayOf(body, '2026-11-05').canClose).toBe(expected);
+    expect(dayOf(body, '2026-11-05')).toMatchObject({ canClose: false, canCorrect: true });
   });
 
   it('answers 404 for an archived or unknown person', async () => {

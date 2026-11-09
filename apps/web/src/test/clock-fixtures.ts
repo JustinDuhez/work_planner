@@ -36,6 +36,8 @@ export function weekFixture(
     isUnclosed: false,
     canEdit: isOwnWeek && date === today,
     canClose: false,
+    canCorrect: false,
+    latestCorrection: null,
     ...options.days?.[date],
   }));
   return {
@@ -54,6 +56,8 @@ export function weekFixture(
       countingStartDate: '2026-01-05',
       runningSince: null,
       canResetCounter: false,
+      hasOpenRefusal: false,
+      canViewCorrections: true,
       lastReset: null,
       ...options.counters,
     },
