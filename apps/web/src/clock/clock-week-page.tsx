@@ -2,6 +2,7 @@ import { datesOfIsoWeek } from '@work-planner/domain';
 import { useState } from 'react';
 import { useParams, useSearchParams } from 'react-router';
 import { copy } from '../copy';
+import { CorrectionDialog } from '../corrections/correction-dialog';
 import { NotFoundPage } from '../not-found/not-found-page';
 import { useSession } from '../session/session-queries';
 import { Button } from '../ui/button';
@@ -60,6 +61,7 @@ function ClockWeekView({
     | { kind: 'add'; date: string }
     | { kind: 'edit'; date: string; periodId: number }
     | { kind: 'close'; date: string }
+    | { kind: 'correct'; date: string }
     | null
   >(null);
   const [counterDialog, setCounterDialog] = useState<'reset' | 'history' | null>(null);
@@ -111,6 +113,14 @@ function ClockWeekView({
                     >
                       {copy.clock.closeDay}
                     </button>
+                  ) : day.canCorrect ? (
+                    <button
+                      type="button"
+                      onClick={() => setDialog({ kind: 'correct', date: day.date })}
+                      className="text-sm font-medium text-primary-600 hover:text-primary-700"
+                    >
+                      {copy.corrections.correctDay}
+                    </button>
                   ) : null
                 }
               />
@@ -134,7 +144,7 @@ function ClockWeekView({
           />
         </div>
       ) : null}
-      {dialog && dialogDay && dialog.kind !== 'close' ? (
+      {dialog && dialogDay && (dialog.kind === 'add' || dialog.kind === 'edit') ? (
         <PeriodDialog
           period={
             dialog.kind === 'edit'
@@ -153,6 +163,9 @@ function ClockWeekView({
           isoWeek={isoWeek}
           onClose={() => setDialog(null)}
         />
+      ) : null}
+      {dialog?.kind === 'correct' && dialogDay ? (
+        <CorrectionDialog day={dialogDay} ownerId={ownerId} onClose={() => setDialog(null)} />
       ) : null}
       {counterDialog === 'reset' && week.data ? (
         <CounterResetDialog week={week.data} onClose={() => setCounterDialog(null)} />
