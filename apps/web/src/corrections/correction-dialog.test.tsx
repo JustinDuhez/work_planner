@@ -67,6 +67,14 @@ function sentBody(fetchMock: jest.Mock): unknown {
 }
 
 describe('CorrectionDialog', () => {
+  it('shows which day is being corrected', async () => {
+    const { user } = renderHugoWeek();
+
+    const dialog = await openDialog(user);
+
+    expect(within(dialog).getByRole('heading', { name: /3 nov. 2026/ })).toBeInTheDocument();
+  });
+
   it('starts from the day as it is, the open period waiting for its end', async () => {
     const { user } = renderHugoWeek();
 

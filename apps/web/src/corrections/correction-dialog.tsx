@@ -11,7 +11,7 @@ import { Building2, House, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ApiError } from '../api/api-client';
 import { bannerMessageFor } from '../api/form-errors';
-import { APP_TIME_ZONE } from '../clock/clock-time';
+import { APP_TIME_ZONE, formatLongDate } from '../clock/clock-time';
 import { copy } from '../copy';
 import { Button } from '../ui/button';
 import { useCreateClockCorrection } from './correction-queries';
@@ -104,7 +104,7 @@ export function CorrectionDialog({
       className="m-auto w-[min(32rem,calc(100vw-2rem))] rounded-card border border-zinc-200 bg-white p-6 shadow-card backdrop:bg-zinc-900/30"
     >
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-        <h2 className="text-base font-semibold">{copy.corrections.dialogTitle}</h2>
+        <h2 className="text-base font-semibold">{`${copy.corrections.dialogTitle} — ${formatLongDate(day.date)}`}</h2>
         <fieldset className="inline-flex rounded-lg border border-zinc-200 bg-zinc-50 p-0.5">
           <legend className="sr-only">{copy.corrections.workMode}</legend>
           {WORK_MODE_OPTIONS.map(({ value, label, Icon }) => (
