@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import type { Kysely } from 'kysely';
+import { sql, type Kysely } from 'kysely';
 import { buildApp } from '../app';
 import type { Database } from '../db/database';
 import { logIn, TEST_ORIGIN } from '../test/auth-helpers';
@@ -23,6 +23,7 @@ describe('answering a correction', () => {
   let app: FastifyInstance;
   let memberCount = 0;
   let teamId: number;
+  const sessions = new Map<string, ReturnType<typeof logIn>>();
 
   async function send(
     email: string,
@@ -30,13 +31,25 @@ describe('answering a correction', () => {
     url: string,
     payload?: Record<string, unknown>,
   ) {
-    const { cookie, csrfToken } = await logIn(app, email);
+    // Logins are rate limited per email, so each person logs in once.
+    const session = sessions.get(email) ?? logIn(app, email);
+    sessions.set(email, session);
+    const { cookie, csrfToken } = await session;
     return app.inject({
       method,
       url,
       headers: { cookie, origin: TEST_ORIGIN, 'x-csrf-token': csrfToken },
       ...(payload ? { payload } : {}),
     });
+  }
+
+  function answeredNotifications(correctionId: number) {
+    return db
+      .selectFrom('notification')
+      .select('payload')
+      .where('type', '=', 'clock_correction_answered')
+      .where(sql<boolean>`payload->>'correctionId' = ${String(correctionId)}`)
+      .execute();
   }
 
   async function newMember(): Promise<{ id: number; email: string }> {
@@ -192,16 +205,92 @@ describe('answering a correction', () => {
     const member = await newMember();
     const correction = await correctionFor(member.id);
 
-    const responses = await Promise.all([
-      send(member.email, 'PATCH', `/api/v1/clock-corrections/${correction.id}`, {
-        status: 'accepted',
-      }),
-      send(member.email, 'PATCH', `/api/v1/clock-corrections/${correction.id}`, {
-        status: 'refused',
-      }),
-    ]);
+    // One login, so both PATCHes really reach the server together.
+    const { cookie, csrfToken } = await logIn(app, member.email);
+    const answer = (status: string) =>
+      app.inject({
+        method: 'PATCH',
+        url: `/api/v1/clock-corrections/${correction.id}`,
+        headers: { cookie, origin: TEST_ORIGIN, 'x-csrf-token': csrfToken },
+        payload: { status },
+      });
+
+    const responses = await Promise.all([answer('accepted'), answer('refused')]);
 
     expect(responses.map((response) => response.statusCode).sort()).toEqual([200, 409]);
+    expect(await answeredNotifications(correction.id)).toHaveLength(1);
+  });
+
+  it('returns 404 for a correction that does not exist', async () => {
+    const response = await send(MANAGER, 'GET', '/api/v1/clock-corrections/999999');
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json<{ code: string }>().code).toBe('CLOCK_CORRECTION_NOT_FOUND');
+  });
+
+  it.each([MANAGER, 'admin.answers@example.com'])(
+    'lets %s view a correction without answering it',
+    async (email) => {
+      const member = await newMember();
+      const correction = await correctionFor(member.id);
+
+      const response = await send(email, 'GET', `/api/v1/clock-corrections/${correction.id}`);
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json<CorrectionBody>().canAnswer).toBe(false);
+    },
+  );
+
+  it('answers 404 for the list of an unknown or archived person', async () => {
+    const archivedId = await insertUser(db, {
+      email: 'archived.answers@example.com',
+      isArchived: true,
+    });
+
+    for (const id of [999999, archivedId]) {
+      const response = await send(MANAGER, 'GET', `/api/v1/users/${id}/clock-corrections`);
+      expect(response.statusCode).toBe(404);
+      expect(response.json<{ code: string }>().code).toBe('USER_NOT_FOUND');
+    }
+  });
+
+  it('lists every status without a filter and rejects an invalid one', async () => {
+    const member = await newMember();
+    const first = await correctionFor(member.id, '2026-11-02');
+    const second = await correctionFor(member.id, '2026-11-04');
+    await send(member.email, 'PATCH', `/api/v1/clock-corrections/${second.id}`, {
+      status: 'accepted',
+    });
+
+    const all = await send(member.email, 'GET', `/api/v1/users/${member.id}/clock-corrections`);
+    const invalid = await send(
+      member.email,
+      'GET',
+      `/api/v1/users/${member.id}/clock-corrections?statut=maybe`,
+    );
+
+    expect(all.json<CorrectionBody[]>().map((item) => item.id)).toEqual([second.id, first.id]);
+    expect(invalid.statusCode).toBe(400);
+  });
+
+  it('records an accepted answer, stores an empty comment as null and tells the author', async () => {
+    const member = await newMember();
+    const correction = await correctionFor(member.id);
+
+    const response = await send(
+      member.email,
+      'PATCH',
+      `/api/v1/clock-corrections/${correction.id}`,
+      { status: 'accepted', responseComment: '' },
+    );
+
+    expect(response.json<CorrectionBody>()).toMatchObject({
+      status: 'accepted',
+      responseComment: null,
+    });
+    expect(await answeredNotifications(correction.id)).toMatchObject([
+      { payload: { status: 'accepted' } },
+    ]);
   });
 
   it('hides a correction from a colleague as if it did not exist', async () => {
