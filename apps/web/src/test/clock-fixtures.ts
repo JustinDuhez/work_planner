@@ -13,6 +13,8 @@ import { SIGNED_IN_SESSION } from './sessions';
 export const LEA: UserSummary = { id: 7, firstName: 'Léa', lastName: 'Moreau' };
 export const HUGO: UserSummary = { id: 9, firstName: 'Hugo', lastName: 'Laurent' };
 
+export const NO_NOTIFICATIONS = { unreadCount: 0, notifications: [] };
+
 export function weekFixture(
   options: {
     isoWeek?: string;
@@ -69,6 +71,7 @@ export function signedInHomeRoutes(week: ClockWeek = weekFixture()): Record<stri
   return {
     'GET /api/v1/me': { status: 200, body: SIGNED_IN_SESSION },
     'GET /api/v1/health': { status: 200, body: { status: 'ok', database: 'up' } },
+    'GET /api/v1/notifications': { status: 200, body: NO_NOTIFICATIONS },
     'GET /api/v1/users': { status: 200, body: [HUGO, LEA] },
     [`GET /api/v1/users/${LEA.id}/clock-weeks/${week.isoWeek}`]: { status: 200, body: week },
   };

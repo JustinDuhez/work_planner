@@ -121,6 +121,15 @@ export const copy = {
     strengthLabel: 'Robustesse :',
     strength: { weak: 'faible', fair: 'moyenne', strong: 'forte' },
   },
+  notifications: {
+    bell: 'Notifications',
+    title: 'Notifications',
+    empty: 'Aucune notification.',
+    markAllRead: 'Tout marquer comme lu',
+    correctedYourDay: 'a corrigé votre journée du',
+    acceptedYourCorrection: 'a accepté votre correction du',
+    refusedYourCorrection: 'a refusé votre correction du',
+  },
   notFound: {
     title: 'Page introuvable',
     description: "Cette page n'existe pas ou a été déplacée.",

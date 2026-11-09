@@ -2,6 +2,7 @@ import { screen, within } from '@testing-library/react';
 import { PASSWORD_POLICY_MESSAGES } from '@work-planner/domain';
 import userEvent from '@testing-library/user-event';
 import { copy } from '../copy';
+import { NO_NOTIFICATIONS } from '../test/clock-fixtures';
 import { mockFetchRoutes, type MockResponse } from '../test/mock-fetch';
 import { renderApp } from '../test/render-app';
 import { SIGNED_IN_SESSION } from '../test/sessions';
@@ -9,6 +10,7 @@ import { SIGNED_IN_SESSION } from '../test/sessions';
 function renderProfile(extraRoutes: Record<string, MockResponse> = {}) {
   const fetchMock = mockFetchRoutes({
     'GET /api/v1/me': { status: 200, body: SIGNED_IN_SESSION },
+    'GET /api/v1/notifications': { status: 200, body: NO_NOTIFICATIONS },
     ...extraRoutes,
   });
   renderApp('/profil');

@@ -1,7 +1,7 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { copy } from '../copy';
-import { signedInHomeRoutes } from '../test/clock-fixtures';
+import { NO_NOTIFICATIONS, signedInHomeRoutes } from '../test/clock-fixtures';
 import { mockFetchRoutes } from '../test/mock-fetch';
 import { renderApp } from '../test/render-app';
 import { SIGNED_IN_SESSION } from '../test/sessions';
@@ -54,6 +54,7 @@ describe('LoginPage', () => {
     mockFetchRoutes({
       'GET /api/v1/me': ANONYMOUS,
       'POST /api/v1/sessions': { status: 201, body: SIGNED_IN_SESSION },
+      'GET /api/v1/notifications': { status: 200, body: NO_NOTIFICATIONS },
       'GET /api/v1/health': { status: 200, body: { status: 'ok', database: 'up' } },
     });
     const { router } = renderApp(`/connexion?retour=${encodeURIComponent('/profil')}`);
