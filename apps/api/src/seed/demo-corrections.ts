@@ -19,8 +19,8 @@ interface DemoCorrection {
   authorEmail: string;
   dayIndex: number;
   comment: string;
-  // Changes the stored day into the corrected one.
-  correct: (periods: DemoPeriod[]) => DemoPeriod[];
+  // Changes the stored day into the corrected one; null when this day cannot be corrected safely.
+  correct: (periods: DemoPeriod[]) => DemoPeriod[] | null;
   refusal: string | null;
 }
 
@@ -30,18 +30,15 @@ const DEMO_CORRECTIONS: readonly DemoCorrection[] = [
     authorEmail: 'sophie.dubois@example.com',
     dayIndex: TUESDAY_INDEX,
     comment: 'Réunion client oubliée',
-    // Tuesday is a closed day in the demo history, so the last period always has an end.
-    correct: (periods) =>
-      periods.map((period, index) =>
-        index === periods.length - 1
-          ? {
-              ...period,
-              endedAt: new Date(
-                Number(period.endedAt) + LEA_EXTENSION_MINUTES * MINUTES_IN_MILLISECONDS,
-              ),
-            }
-          : period,
-      ),
+    // Production data may differ from the demo history: an open last period cannot be extended.
+    correct: (periods) => {
+      const last = periods.at(-1);
+      if (!last?.endedAt) return null;
+      const endedAt = new Date(
+        last.endedAt.getTime() + LEA_EXTENSION_MINUTES * MINUTES_IN_MILLISECONDS,
+      );
+      return [...periods.slice(0, -1), { ...last, endedAt }];
+    },
     refusal: null,
   },
   {
@@ -49,17 +46,16 @@ const DEMO_CORRECTIONS: readonly DemoCorrection[] = [
     authorEmail: 'thomas.petit@example.com',
     dayIndex: MONDAY_INDEX,
     comment: 'Arrivée badgée en avance par erreur',
-    correct: (periods) =>
-      periods.map((period, index) =>
-        index === 0
-          ? {
-              ...period,
-              startedAt: new Date(
-                period.startedAt.getTime() + CAMILLE_SHORTENING_MINUTES * MINUTES_IN_MILLISECONDS,
-              ),
-            }
-          : period,
-      ),
+    // A first period of 15 minutes or less would be inverted by the shift (or nothing to shift).
+    correct: (periods) => {
+      const [first, ...others] = periods;
+      if (!first?.endedAt) return null;
+      const startedAt = new Date(
+        first.startedAt.getTime() + CAMILLE_SHORTENING_MINUTES * MINUTES_IN_MILLISECONDS,
+      );
+      if (startedAt >= first.endedAt) return null;
+      return [{ ...first, startedAt }, ...others];
+    },
     refusal: "J'étais en déplacement ce jour-là.",
   },
 ];
@@ -110,6 +106,7 @@ async function seedCorrectionIfMissing(
     .orderBy('startedAt')
     .execute();
   const after = correction.correct(before);
+  if (!after) return;
   const isRefused = correction.refusal !== null;
   await db.transaction().execute(async (trx) => {
     await trx.deleteFrom('clockPeriod').where('clockDayId', '=', day.id).execute();

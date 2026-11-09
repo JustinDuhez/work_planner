@@ -336,4 +336,75 @@ describe('seedDatabase', () => {
 
     expect(corrections).toEqual([]);
   });
+
+  describe('when the demo day cannot be corrected safely', () => {
+    const at = (time: string): Date => new Date(`2026-10-${time}Z`);
+    const ALL_DAY_CASES = [
+      {
+        name: 'Léa has an open last period',
+        email: 'lea.moreau@example.com',
+        date: '2026-10-27',
+        periods: [{ startedAt: at('27T07:00:00'), endedAt: null }],
+      },
+      {
+        name: 'Léa has no period',
+        email: 'lea.moreau@example.com',
+        date: '2026-10-27',
+        periods: [],
+      },
+      {
+        name: 'Camille has no period',
+        email: 'camille.simon@example.com',
+        date: '2026-10-26',
+        periods: [],
+      },
+      {
+        name: 'Camille has an open first period',
+        email: 'camille.simon@example.com',
+        date: '2026-10-26',
+        periods: [{ startedAt: at('26T07:00:00'), endedAt: null }],
+      },
+      {
+        name: 'Camille has a first period of 15 minutes',
+        email: 'camille.simon@example.com',
+        date: '2026-10-26',
+        periods: [{ startedAt: at('26T07:00:00'), endedAt: at('26T07:15:00') }],
+      },
+    ];
+
+    it.each(ALL_DAY_CASES)('skips the correction when $name', async ({ email, date, periods }) => {
+      const user = await db
+        .selectFrom('appUser')
+        .select('id')
+        .where('email', '=', email)
+        .executeTakeFirstOrThrow();
+      await db.deleteFrom('notification').where('userId', '=', user.id).execute();
+      await db.deleteFrom('clockCorrection').where('userId', '=', user.id).execute();
+      await db
+        .deleteFrom('clockDay')
+        .where('userId', '=', user.id)
+        .where('workDate', '=', date)
+        .execute();
+      const day = await db
+        .insertInto('clockDay')
+        .values({ userId: user.id, workDate: date, workMode: 'on_site' })
+        .returning('id')
+        .executeTakeFirstOrThrow();
+      if (periods.length > 0) {
+        await db
+          .insertInto('clockPeriod')
+          .values(periods.map((period) => ({ clockDayId: day.id, ...period })))
+          .execute();
+      }
+
+      await seedDemoCorrections(db, SEED_CLOCK);
+
+      const corrections = await db
+        .selectFrom('clockCorrection')
+        .select('id')
+        .where('userId', '=', user.id)
+        .execute();
+      expect(corrections).toEqual([]);
+    });
+  });
 });
