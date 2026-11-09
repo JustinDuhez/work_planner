@@ -12,8 +12,6 @@ import {
   type UpdateClockPeriodRequest,
   type WorkMode,
 } from '@work-planner/domain';
-import type { Kysely } from 'kysely';
-import type { Database } from '../db/database';
 import type { ClockDependencies, ClockViewer } from './clock-dependencies';
 import {
   ClockDayNotEditableError,
@@ -26,9 +24,9 @@ import {
   ensureClockDay,
   findPeriodsOfDay,
   findPeriodWithDay,
+  inClockTransaction,
   insertClockPeriod,
   toClockPeriodView,
-  translateClockConstraintError,
   updateClockPeriodTimes,
   upsertClockDayMode,
 } from './clock-repository';
@@ -63,17 +61,6 @@ function assertValidDay(
   if (violation) throw clockViolationError(violation);
 }
 
-async function inTransaction<T>(
-  db: Kysely<Database>,
-  work: (trx: Kysely<Database>) => Promise<T>,
-): Promise<T> {
-  try {
-    return await db.transaction().execute(work);
-  } catch (error) {
-    return translateClockConstraintError(error);
-  }
-}
-
 export function startClockPeriod(
   deps: ClockDependencies,
   command: { viewer: ClockViewer } & StartClockPeriodRequest,
@@ -81,7 +68,7 @@ export function startClockPeriod(
   const { now, today } = momentOf(deps);
   const startedAt = command.startedAt ? instantOn(deps, today, command.startedAt) : now;
   const endedAt = command.endedAt ? instantOn(deps, today, command.endedAt) : null;
-  return inTransaction(deps.db, async (trx) => {
+  return inClockTransaction(deps.db, async (trx) => {
     const day = await ensureClockDay(trx, {
       userId: command.viewer.id,
       workDate: today,
@@ -127,7 +114,7 @@ export function updateClockPeriod(
   command: { viewer: ClockViewer; periodId: number } & UpdateClockPeriodRequest,
 ): Promise<ClockPeriodView> {
   const { now, today } = momentOf(deps);
-  return inTransaction(deps.db, async (trx) => {
+  return inClockTransaction(deps.db, async (trx) => {
     const period = await findPeriodWithDay(trx, command.periodId, { shouldLock: true });
     if (!period) throw new ClockPeriodNotFoundError();
     const isToday = period.workDate === today;

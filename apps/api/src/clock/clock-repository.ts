@@ -78,6 +78,18 @@ export function translateClockConstraintError(error: unknown): never {
   throw error instanceof Error ? error : new Error('Unexpected database error', { cause: error });
 }
 
+/** A clock write: DB constraint violations (races) become the E3 API errors. */
+export async function inClockTransaction<T>(
+  db: Kysely<Database>,
+  work: (trx: Kysely<Database>) => Promise<T>,
+): Promise<T> {
+  try {
+    return await db.transaction().execute(work);
+  } catch (error) {
+    return translateClockConstraintError(error);
+  }
+}
+
 export function findPeriodsOfDay(
   db: Kysely<Database>,
   clockDayId: number,
