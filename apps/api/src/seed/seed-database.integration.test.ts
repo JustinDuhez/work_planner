@@ -353,6 +353,13 @@ describe('seedDatabase', () => {
         periods: [],
       },
       {
+        name: 'Léa last period ends at 23:45 so 30 more minutes pass midnight',
+        email: 'lea.moreau@example.com',
+        date: '2026-10-27',
+        // 22:45Z is 23:45 in Paris (CET): 30 more minutes would pass midnight.
+        periods: [{ startedAt: at('27T20:00:00'), endedAt: at('27T22:45:00') }],
+      },
+      {
         name: 'Camille has no period',
         email: 'camille.simon@example.com',
         date: '2026-10-26',
