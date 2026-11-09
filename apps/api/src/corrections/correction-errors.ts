@@ -13,6 +13,15 @@ export class ClockCorrectionForbiddenError extends ForbiddenError {
   }
 }
 
+export class ClockCorrectionsViewForbiddenError extends ForbiddenError {
+  constructor() {
+    super(
+      'CLOCK_CORRECTIONS_VIEW_FORBIDDEN',
+      'Vous ne pouvez pas consulter les corrections de cette personne.',
+    );
+  }
+}
+
 export class ClockCorrectionDayNotPastError extends ValidationError {
   constructor() {
     super('CLOCK_CORRECTION_DAY_NOT_PAST', 'Seule une journée passée peut être corrigée.');

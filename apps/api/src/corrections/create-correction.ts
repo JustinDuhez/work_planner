@@ -64,7 +64,12 @@ export async function createClockCorrection(
       userId: owner.id,
       workDate: command.date,
     });
-    if (supersededId !== undefined) await markCorrectionNotificationsRead(trx, supersededId, now);
+    if (supersededId !== undefined)
+      await markCorrectionNotificationsRead(trx, {
+        ownerId: owner.id,
+        correctionId: supersededId,
+        readAt: now,
+      });
     const id = await insertClockCorrectionRow(trx, {
       userId: owner.id,
       workDate: command.date,

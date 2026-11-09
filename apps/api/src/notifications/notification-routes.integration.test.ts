@@ -140,7 +140,7 @@ describe('notifications', () => {
       payload: payload('2026-11-04', 78),
     });
 
-    await markCorrectionNotificationsRead(db, 77, NOW);
+    await markCorrectionNotificationsRead(db, { ownerId: hugoId, correctionId: 77, readAt: NOW });
 
     const rows = await db
       .selectFrom('notification')

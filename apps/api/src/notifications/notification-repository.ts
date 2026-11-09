@@ -90,14 +90,14 @@ export async function markAllNotificationsRead(
 /** A superseded correction can no longer be answered: its "received" notification is done. */
 export async function markCorrectionNotificationsRead(
   db: Kysely<Database>,
-  correctionId: number,
-  readAt: Date,
+  query: { ownerId: number; correctionId: number; readAt: Date },
 ): Promise<void> {
   await db
     .updateTable('notification')
-    .set({ readAt })
+    .set({ readAt: query.readAt })
+    .where('userId', '=', query.ownerId)
     .where('type', '=', 'clock_correction_received')
-    .where(sql<boolean>`(payload ->> 'correctionId')::int = ${correctionId}`)
+    .where(sql<boolean>`(payload ->> 'correctionId')::int = ${query.correctionId}`)
     .where('readAt', 'is', null)
     .execute();
 }

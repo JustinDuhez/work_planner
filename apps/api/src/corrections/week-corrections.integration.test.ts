@@ -104,7 +104,18 @@ describe('corrections in the week', () => {
     ).toBe(true);
   });
 
-  it('never lets a colleague or the person correct', async () => {
+  it("shows a person their own week's corrections but never lets them correct", async () => {
+    const memberId = await newMember();
+    const pendingId = await correction(memberId, '2026-11-03', 'pending', '2026-11-04T09:00:00Z');
+
+    const ownView = await weekOf(`member${memberCount}.week@example.com`, memberId);
+
+    expect(ownView.counters.canViewCorrections).toBe(true);
+    expect(ownView.days[1]?.latestCorrection).toEqual({ id: pendingId, status: 'pending' });
+    expect(ownView.days.some((day) => day.canCorrect)).toBe(false);
+  });
+
+  it('never lets a colleague correct', async () => {
     const memberId = await newMember();
 
     expect(

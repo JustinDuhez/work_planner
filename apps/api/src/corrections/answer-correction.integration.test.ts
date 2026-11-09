@@ -97,6 +97,24 @@ describe('answering a correction', () => {
     expect(view.json<CorrectionBody>().canAnswer).toBe(true);
   });
 
+  it("marks the person's own received notification read when they answer", async () => {
+    const member = await newMember();
+    const correction = await correctionFor(member.id);
+
+    await send(member.email, 'PATCH', `/api/v1/clock-corrections/${correction.id}`, {
+      status: 'accepted',
+    });
+
+    const received = await db
+      .selectFrom('notification')
+      .select('readAt')
+      .where('userId', '=', member.id)
+      .where('type', '=', 'clock_correction_received')
+      .where(sql<boolean>`payload->>'correctionId' = ${String(correction.id)}`)
+      .executeTakeFirstOrThrow();
+    expect(received.readAt).toEqual(NOW);
+  });
+
   it('records a refusal with its comment and tells the author', async () => {
     const member = await newMember();
     const correction = await correctionFor(member.id);
@@ -117,19 +135,9 @@ describe('answering a correction', () => {
       responseComment: "J'étais en déplacement.",
       canAnswer: false,
     });
-    const { id: managerId } = await db
-      .selectFrom('appUser')
-      .select('id')
-      .where('email', '=', MANAGER)
-      .executeTakeFirstOrThrow();
-    const answered = await db
-      .selectFrom('notification')
-      .select(['type', 'payload'])
-      .where('userId', '=', managerId)
-      .execute();
+    const answered = await answeredNotifications(correction.id);
     expect(answered).toEqual([
       {
-        type: 'clock_correction_answered',
         payload: {
           correctionId: correction.id,
           ownerId: member.id,
@@ -341,6 +349,6 @@ describe('answering a correction', () => {
     );
 
     expect(response.statusCode).toBe(403);
-    expect(response.json<{ code: string }>().code).toBe('CLOCK_CORRECTION_FORBIDDEN');
+    expect(response.json<{ code: string }>().code).toBe('CLOCK_CORRECTIONS_VIEW_FORBIDDEN');
   });
 });

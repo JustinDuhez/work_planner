@@ -1,5 +1,10 @@
-import type { AnswerClockCorrectionRequest, ClockCorrectionView } from '@work-planner/domain';
+import {
+  truncateToMinute,
+  type AnswerClockCorrectionRequest,
+  type ClockCorrectionView,
+} from '@work-planner/domain';
 import type { ClockDependencies, ClockViewer } from '../clock/clock-dependencies';
+import { markCorrectionNotificationsRead } from '../notifications/notification-repository';
 import { notify } from '../notifications/notify';
 import {
   ClockCorrectionAnswerForbiddenError,
@@ -16,7 +21,7 @@ export async function answerClockCorrection(
 ): Promise<ClockCorrectionView> {
   const visible = await findVisibleCorrection(deps, command);
   if (visible.user.id !== command.viewer.id) throw new ClockCorrectionAnswerForbiddenError();
-  const respondedAt = deps.now();
+  const respondedAt = truncateToMinute(deps.now());
   await deps.db.transaction().execute(async (trx) => {
     const isAnswered = await answerPendingCorrection(trx, {
       correctionId: command.correctionId,
@@ -25,6 +30,11 @@ export async function answerClockCorrection(
       respondedAt,
     });
     if (!isAnswered) throw new ClockCorrectionNotPendingError();
+    await markCorrectionNotificationsRead(trx, {
+      ownerId: visible.user.id,
+      correctionId: visible.id,
+      readAt: respondedAt,
+    });
     await notify(trx, {
       userId: visible.author.id,
       type: 'clock_correction_answered',

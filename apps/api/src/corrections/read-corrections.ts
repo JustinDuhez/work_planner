@@ -6,7 +6,10 @@ import {
 import type { ClockDependencies, ClockViewer } from '../clock/clock-dependencies';
 import { UserNotFoundError } from '../users/user-errors';
 import { findActiveUserSummary } from '../users/user-repository';
-import { ClockCorrectionForbiddenError, ClockCorrectionNotFoundError } from './correction-errors';
+import {
+  ClockCorrectionNotFoundError,
+  ClockCorrectionsViewForbiddenError,
+} from './correction-errors';
 import { findClockCorrectionById, findClockCorrections } from './correction-repository';
 import { toClockCorrectionView } from './correction-view';
 
@@ -36,7 +39,7 @@ export async function listClockCorrections(
   const owner = await findActiveUserSummary(deps.db, query.ownerId);
   if (!owner) throw new UserNotFoundError();
   if (!(await canViewCorrectionsOf(query.viewer, owner.id)))
-    throw new ClockCorrectionForbiddenError();
+    throw new ClockCorrectionsViewForbiddenError();
   const corrections = await findClockCorrections(deps.db, {
     userId: owner.id,
     status: query.status,

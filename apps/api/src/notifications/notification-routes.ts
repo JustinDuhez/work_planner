@@ -1,4 +1,4 @@
-import { markNotificationReadRequestSchema } from '@work-planner/domain';
+import { markNotificationReadRequestSchema, truncateToMinute } from '@work-planner/domain';
 import type { FastifyInstance } from 'fastify';
 import type { Kysely } from 'kysely';
 import { z } from 'zod';
@@ -29,7 +29,7 @@ export function registerNotificationRoutes(
     const notification = await markNotificationRead(deps.db, {
       userId: requireSession(request).user.id,
       notificationId: id,
-      readAt: deps.now(),
+      readAt: truncateToMinute(deps.now()),
     });
     if (!notification) throw new NotificationNotFoundError();
     return notification;
@@ -39,7 +39,7 @@ export function registerNotificationRoutes(
     parseInput(markNotificationReadRequestSchema, request.body);
     await markAllNotificationsRead(deps.db, {
       userId: requireSession(request).user.id,
-      readAt: deps.now(),
+      readAt: truncateToMinute(deps.now()),
     });
     return reply.status(204).send();
   });
