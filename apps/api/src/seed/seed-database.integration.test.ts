@@ -52,6 +52,72 @@ describe('seedDatabase', () => {
     expect(await seedDatabase(db, SEED_CONFIG, SEED_CLOCK)).toEqual(firstRun);
   });
 
+  it('gives Léa a pending correction by Sophie and Camille a refused one by Thomas', async () => {
+    const corrections = await db
+      .selectFrom('clockCorrection')
+      .innerJoin('appUser as owner', 'owner.id', 'clockCorrection.userId')
+      .innerJoin('appUser as author', 'author.id', 'clockCorrection.authorId')
+      .select([
+        'owner.email as ownerEmail',
+        'author.email as authorEmail',
+        'clockCorrection.workDate',
+        'clockCorrection.status',
+        'clockCorrection.responseComment',
+      ])
+      .orderBy('owner.email')
+      .execute();
+
+    expect(corrections).toEqual([
+      {
+        ownerEmail: 'camille.simon@example.com',
+        authorEmail: 'thomas.petit@example.com',
+        workDate: '2026-10-26',
+        status: 'refused',
+        responseComment: "J'étais en déplacement ce jour-là.",
+      },
+      {
+        ownerEmail: 'lea.moreau@example.com',
+        authorEmail: 'sophie.dubois@example.com',
+        workDate: '2026-10-27',
+        status: 'pending',
+        responseComment: null,
+      },
+    ]);
+  });
+
+  it("applies Léa's correction to her day: the afternoon ends 30 minutes later", async () => {
+    const correction = await db
+      .selectFrom('clockCorrection')
+      .select(['beforePeriods', 'afterPeriods'])
+      .where('status', '=', 'pending')
+      .executeTakeFirstOrThrow();
+    const lastBefore = correction.beforePeriods.at(-1);
+    const lastAfter = correction.afterPeriods.at(-1);
+
+    expect(
+      new Date(lastAfter?.endedAt ?? 0).getTime() - new Date(lastBefore?.endedAt ?? 0).getTime(),
+    ).toBe(30 * 60_000);
+  });
+
+  it('notifies Léa (unread), Camille (read) and Thomas (unread)', async () => {
+    const notifications = await db
+      .selectFrom('notification')
+      .innerJoin('appUser', 'appUser.id', 'notification.userId')
+      .select([
+        'appUser.email',
+        'notification.type',
+        sql<boolean>`notification.read_at IS NOT NULL`.as('isRead'),
+      ])
+      .orderBy('appUser.email')
+      .execute();
+
+    expect(notifications).toEqual([
+      { email: 'camille.simon@example.com', type: 'clock_correction_received', isRead: true },
+      { email: 'lea.moreau@example.com', type: 'clock_correction_received', isRead: false },
+      { email: 'thomas.petit@example.com', type: 'clock_correction_answered', isRead: false },
+    ]);
+  });
+
   it("moves demo people's start date back to the start of their clock history", async () => {
     const lea = await db
       .selectFrom('appUser')
