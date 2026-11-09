@@ -18,10 +18,11 @@ export function clockWeekQueryKey(userId: number, isoWeek: string) {
 }
 
 export function hasRunningPeriod(week: ClockWeek | undefined): boolean {
+  if (!week) return false;
+  // The global counter runs on any week while today's period is open.
   return (
-    week?.days.some(
-      (day) => day.isToday && day.periods.some((period) => period.endedAt === null),
-    ) ?? false
+    week.counters.runningSince !== null ||
+    week.days.some((day) => day.isToday && day.periods.some((period) => period.endedAt === null))
   );
 }
 

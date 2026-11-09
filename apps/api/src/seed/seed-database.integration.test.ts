@@ -1,3 +1,4 @@
+import { toWorkDate } from '@work-planner/domain';
 import { sql, type Kysely } from 'kysely';
 import { verifyPassword } from '../auth/password-hasher';
 import type { Database } from '../db/database';
@@ -49,6 +50,89 @@ describe('seedDatabase', () => {
 
   it('changes nothing when it runs a second time', async () => {
     expect(await seedDatabase(db, SEED_CONFIG, SEED_CLOCK)).toEqual(firstRun);
+  });
+
+  it("moves demo people's start date back to the start of their clock history", async () => {
+    const lea = await db
+      .selectFrom('appUser')
+      .select('startDate')
+      .where('email', '=', 'lea.moreau@example.com')
+      .executeTakeFirstOrThrow();
+
+    expect(lea.startDate).toBe('2026-10-12');
+  });
+
+  it('never moves a start date an admin has already changed', async () => {
+    await db
+      .updateTable('appUser')
+      .set({ startDate: '2026-11-02' })
+      .where('email', '=', 'camille.simon@example.com')
+      .execute();
+
+    await seedDatabase(db, SEED_CONFIG, SEED_CLOCK);
+
+    const camille = await db
+      .selectFrom('appUser')
+      .select('startDate')
+      .where('email', '=', 'camille.simon@example.com')
+      .executeTakeFirstOrThrow();
+    expect(camille.startDate).toBe('2026-11-02');
+  });
+
+  it("moves an existing account's default start date back to its first clock day", async () => {
+    const thomas = await db
+      .selectFrom('appUser')
+      .select(['id', 'createdAt'])
+      .where('email', '=', 'thomas.petit@example.com')
+      .executeTakeFirstOrThrow();
+    const creationDay = toWorkDate(thomas.createdAt, 'Europe/Paris');
+    await db
+      .updateTable('appUser')
+      .set({ startDate: creationDay })
+      .where('id', '=', thomas.id)
+      .execute();
+
+    await seedDatabase(db, SEED_CONFIG, SEED_CLOCK);
+
+    const after = await db
+      .selectFrom('appUser')
+      .select('startDate')
+      .where('id', '=', thomas.id)
+      .executeTakeFirstOrThrow();
+    expect(after.startDate).toBe('2026-10-12');
+  });
+
+  it('gives Hugo one reset by his manager and Emma one daily-time change', async () => {
+    const resets = await db
+      .selectFrom('counterReset')
+      .innerJoin('appUser as owner', 'owner.id', 'counterReset.userId')
+      .innerJoin('appUser as author', 'author.id', 'counterReset.authorId')
+      .select([
+        'owner.email as ownerEmail',
+        'author.email as authorEmail',
+        'counterReset.resetDate',
+      ])
+      .execute();
+    const emma = await db
+      .selectFrom('appUser')
+      .select(['id', 'dailyMinutes'])
+      .where('email', '=', 'emma.lefebvre@example.com')
+      .executeTakeFirstOrThrow();
+    const changes = await db
+      .selectFrom('dailyMinutesChange')
+      .select(['effectiveDate', 'previousDailyMinutes'])
+      .where('userId', '=', emma.id)
+      .execute();
+
+    expect(resets).toEqual([
+      {
+        ownerEmail: 'hugo.laurent@example.com',
+        authorEmail: 'sophie.dubois@example.com',
+        resetDate: '2026-10-19',
+      },
+    ]);
+    expect(emma.dailyMinutes).toBe(360);
+    expect(changes).toEqual([{ effectiveDate: '2026-11-02', previousDailyMinutes: 420 }]);
   });
 
   it('never overwrites the admin password once the admin has changed it', async () => {
@@ -127,5 +211,28 @@ describe('seedDatabase', () => {
       .execute();
 
     expect(teams.map((team) => team.name)).toEqual(['Back', 'Front']);
+  });
+
+  it('gives nobody a reset dated before their start date', async () => {
+    const hugo = await db
+      .selectFrom('appUser')
+      .select('id')
+      .where('email', '=', 'hugo.laurent@example.com')
+      .executeTakeFirstOrThrow();
+    await db.deleteFrom('counterReset').where('userId', '=', hugo.id).execute();
+    await db
+      .updateTable('appUser')
+      .set({ startDate: toWorkDate(SEED_CLOCK.now, SEED_CLOCK.timeZone) })
+      .where('id', '=', hugo.id)
+      .execute();
+
+    await seedDatabase(db, SEED_CONFIG, SEED_CLOCK);
+
+    const resets = await db
+      .selectFrom('counterReset')
+      .select('id')
+      .where('userId', '=', hugo.id)
+      .execute();
+    expect(resets).toEqual([]);
   });
 });

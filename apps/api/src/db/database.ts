@@ -21,6 +21,7 @@ export interface AppUserTable {
   isBlocked: Generated<boolean>;
   archivedAt: NullableColumn<Date>;
   dailyMinutes: Generated<number>;
+  startDate: string;
   createdAt: Generated<Date>;
   updatedAt: Generated<Date>;
 }
@@ -70,6 +71,25 @@ export interface ClockPeriodTable {
   updatedAt: Generated<Date>;
 }
 
+export interface CounterResetTable {
+  id: Generated<number>;
+  userId: number;
+  resetDate: string;
+  authorId: number;
+  createdAt: Generated<Date>;
+  updatedAt: Generated<Date>;
+}
+
+export interface DailyMinutesChangeTable {
+  id: Generated<number>;
+  userId: number;
+  effectiveDate: string;
+  previousDailyMinutes: number;
+  authorId: number;
+  createdAt: Generated<Date>;
+  updatedAt: Generated<Date>;
+}
+
 export interface Database {
   setting: SettingTable;
   appUser: AppUserTable;
@@ -78,4 +98,6 @@ export interface Database {
   teamMember: TeamMemberTable;
   clockDay: ClockDayTable;
   clockPeriod: ClockPeriodTable;
+  counterReset: CounterResetTable;
+  dailyMinutesChange: DailyMinutesChangeTable;
 }

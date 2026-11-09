@@ -7,6 +7,7 @@ import {
 } from '@work-planner/domain';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
+import { databaseIdSchema } from '../http/database-id';
 import { parseInput } from '../http/parse-input';
 import {
   deleteClockPeriod,
@@ -17,25 +18,12 @@ import {
 import { clockViewerOf, type ClockDependencies } from './clock-dependencies';
 import { buildClockWeek } from './clock-week';
 
-// Postgres INTEGER ceiling: a larger id would crash the query instead of failing validation.
-const MAX_DATABASE_ID = 2_147_483_647;
-
 const clockWeekParamsSchema = z.object({
-  userId: z.coerce
-    .number()
-    .int()
-    .positive('Utilisateur invalide.')
-    .max(MAX_DATABASE_ID, 'Utilisateur invalide.'),
+  userId: databaseIdSchema('Utilisateur invalide.'),
   isoWeek: isoWeekSchema,
 });
 
-const periodParamsSchema = z.object({
-  id: z.coerce
-    .number()
-    .int()
-    .positive('Période invalide.')
-    .max(MAX_DATABASE_ID, 'Période invalide.'),
-});
+const periodParamsSchema = z.object({ id: databaseIdSchema('Période invalide.') });
 const dayParamsSchema = z.object({ date: workDateSchema });
 
 export function registerClockRoutes(scope: FastifyInstance, deps: ClockDependencies): void {

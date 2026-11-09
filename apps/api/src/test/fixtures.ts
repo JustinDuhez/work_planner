@@ -5,6 +5,9 @@ import type { Database } from '../db/database';
 
 export const DEFAULT_TEST_PASSWORD = 'correct horse battery staple';
 
+// The Monday of the test clock's week (createTestClock defaults to Friday 2026-11-06).
+const DEFAULT_TEST_START_DATE = '2026-11-02';
+
 export interface TestUser {
   email: string;
   firstName?: string;
@@ -14,6 +17,7 @@ export interface TestUser {
   isBlocked?: boolean;
   isArchived?: boolean;
   dailyMinutes?: number;
+  startDate?: string;
 }
 
 export interface TestTeam {
@@ -35,6 +39,7 @@ export async function insertUser(db: Kysely<Database>, user: TestUser): Promise<
       isBlocked: user.isBlocked ?? false,
       archivedAt: user.isArchived ? new Date() : null,
       dailyMinutes: user.dailyMinutes,
+      startDate: user.startDate ?? DEFAULT_TEST_START_DATE,
     })
     .returning('id')
     .executeTakeFirstOrThrow();
@@ -80,6 +85,35 @@ export async function insertClockPeriod(
       startedAt: period.startedAt,
       endedAt: period.endedAt ?? null,
     })
+    .returning('id')
+    .executeTakeFirstOrThrow();
+  return id;
+}
+
+export async function insertCounterReset(
+  db: Kysely<Database>,
+  reset: { userId: number; resetDate: string; authorId: number; createdAt?: Date },
+): Promise<number> {
+  const { id } = await db
+    .insertInto('counterReset')
+    .values({
+      userId: reset.userId,
+      resetDate: reset.resetDate,
+      authorId: reset.authorId,
+      createdAt: reset.createdAt,
+    })
+    .returning('id')
+    .executeTakeFirstOrThrow();
+  return id;
+}
+
+export async function insertDailyMinutesChange(
+  db: Kysely<Database>,
+  change: { userId: number; effectiveDate: string; previousDailyMinutes: number; authorId: number },
+): Promise<number> {
+  const { id } = await db
+    .insertInto('dailyMinutesChange')
+    .values(change)
     .returning('id')
     .executeTakeFirstOrThrow();
   return id;

@@ -1,4 +1,8 @@
 import { z } from 'zod';
+import { weekCountersSchema } from './counters';
+import { workDateSchema } from './work-date';
+
+export { workDateSchema } from './work-date';
 
 export const WORK_MODES = ['on_site', 'telework'] as const;
 export type WorkMode = (typeof WORK_MODES)[number];
@@ -10,7 +14,6 @@ export const localTimeSchema = z
   .string()
   .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Heure invalide (HH:MM).');
 export const isoWeekSchema = z.string().regex(/^\d{4}-W\d{2}$/, 'Semaine invalide.');
-export const workDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date invalide.');
 
 export const startClockPeriodRequestSchema = z
   .strictObject(
@@ -61,6 +64,7 @@ export const clockDaySchema = z.object({
   workMode: workModeSchema.nullable(),
   periods: z.array(clockPeriodSchema),
   workedMinutes: z.number().int(),
+  badgeableMinutes: z.number().int(),
   isToday: z.boolean(),
   isFuture: z.boolean(),
   isUnclosed: z.boolean(),
@@ -91,6 +95,7 @@ export const clockWeekSchema = z.object({
   serverNow: z.iso.datetime(),
   days: z.array(clockDaySchema).length(7),
   weekWorkedMinutes: z.number().int(),
+  counters: weekCountersSchema,
 });
 
 export type ClockWeek = z.infer<typeof clockWeekSchema>;

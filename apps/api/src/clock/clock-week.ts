@@ -7,6 +7,8 @@ import {
   type ClockDayView,
   type ClockWeek,
 } from '@work-planner/domain';
+import { findCounterProfile } from '../counters/counter-repository';
+import { buildWeekCounters } from '../counters/week-counters';
 import { UserNotFoundError } from '../users/user-errors';
 import { findActiveUserSummary } from '../users/user-repository';
 import type { ClockDependencies, ClockViewer } from './clock-dependencies';
@@ -28,8 +30,16 @@ export async function buildClockWeek(
   }
   const owner = await findActiveUserSummary(deps.db, query.ownerId);
   if (!owner) throw new UserNotFoundError();
+  const profile = await findCounterProfile(deps.db, owner.id);
+  if (!profile) throw new UserNotFoundError();
   const now = deps.now();
   const today = toWorkDate(now, deps.timeZone);
+  const { counters, targetMinutesByDate } = await buildWeekCounters(deps, {
+    owner: profile,
+    week: { fromDate: monday, toDate: sunday },
+    instant: { now, today },
+    viewer: query.viewer,
+  });
   const storedDays = await findClockDays(deps.db, owner.id, monday, sunday);
   const isOwner = query.viewer.id === owner.id;
   const hasUnclosedDay = [...storedDays.values()].some(
@@ -49,6 +59,7 @@ export async function buildClockWeek(
       workMode: stored?.workMode ?? null,
       periods: periods.map(toClockPeriodView),
       workedMinutes: dayWorkedMinutes(periods, { now, isToday }),
+      badgeableMinutes: targetMinutesByDate.get(date) ?? 0,
       isToday,
       isFuture: date > today,
       isUnclosed,
@@ -62,5 +73,6 @@ export async function buildClockWeek(
     serverNow: now.toISOString(),
     days,
     weekWorkedMinutes: days.reduce((totalMinutes, day) => totalMinutes + day.workedMinutes, 0),
+    counters,
   };
 }

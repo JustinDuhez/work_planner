@@ -12,6 +12,24 @@ const dayMonthFormat = new Intl.DateTimeFormat('fr-FR', {
 const yearFormat = new Intl.DateTimeFormat('fr-FR', { year: 'numeric', timeZone: 'UTC' });
 const weekdayFormat = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', timeZone: 'UTC' });
 
+const longDateFormat = new Intl.DateTimeFormat('fr-FR', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+const parisDateFormat = new Intl.DateTimeFormat('fr-FR', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  timeZone: APP_TIME_ZONE,
+});
+const parisTimeFormat = new Intl.DateTimeFormat('fr-FR', {
+  hour: '2-digit',
+  minute: '2-digit',
+  timeZone: APP_TIME_ZONE,
+});
+
 // Noon UTC: a calendar date never shifts to the neighboring day whatever the format time zone.
 function dateAtNoon(workDate: string): Date {
   return new Date(`${workDate}T12:00:00Z`);
@@ -53,4 +71,13 @@ export function dayLabel(date: string): { weekday: string; dayOfMonth: string } 
 export function clockWeekPath(userId: number | undefined, isoWeek: string): string {
   const query = `?semaine=${isoWeek}`;
   return userId === undefined ? `/${query}` : `/pointage/${userId}${query}`;
+}
+
+export function formatLongDate(date: string): string {
+  return longDateFormat.format(dateAtNoon(date));
+}
+
+export function formatDateTime(instant: string): string {
+  const date = new Date(instant);
+  return `${parisDateFormat.format(date)} à ${parisTimeFormat.format(date)}`;
 }

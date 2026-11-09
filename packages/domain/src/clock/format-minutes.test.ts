@@ -1,4 +1,4 @@
-import { formatMinutes } from './format-minutes';
+import { formatMinutes, formatSignedMinutes } from './format-minutes';
 
 describe('formatMinutes', () => {
   it.each([
@@ -10,5 +10,16 @@ describe('formatMinutes', () => {
     [-157, '-2:37'],
   ])('shows %i minutes as %s', (minutes, expected) => {
     expect(formatMinutes(minutes)).toBe(expected);
+  });
+});
+
+describe('formatSignedMinutes', () => {
+  it.each([
+    [90, '+1:30'],
+    [1231, '+20:31'],
+    [-29, '−0:29'],
+    [0, '0:00'],
+  ])('shows %i minutes as %s', (minutes, expected) => {
+    expect(formatSignedMinutes(minutes)).toBe(expected);
   });
 });

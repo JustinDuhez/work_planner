@@ -6,6 +6,7 @@ import { burnPasswordVerification } from './auth/password-hasher';
 import { registerMeRoutes } from './auth/me-routes';
 import { registerSessionRoutes } from './auth/session-routes';
 import { registerClockRoutes } from './clock/clock-routes';
+import { registerCounterRoutes } from './counters/counter-routes';
 import type { AppConfig } from './config/config';
 import type { Database } from './db/database';
 import { registerHealthRoutes } from './health/health-routes';
@@ -74,6 +75,7 @@ export async function buildApp({
     registerMeRoutes(scope, authDependencies);
     registerUserRoutes(scope, { db });
     registerClockRoutes(scope, clockDependencies);
+    registerCounterRoutes(scope, clockDependencies);
   });
   if (webDistDirectory !== undefined) {
     await registerSpa(app, webDistDirectory);

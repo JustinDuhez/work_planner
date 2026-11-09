@@ -8,6 +8,7 @@ const SUNDAY: ClockDayView = {
   workMode: null,
   periods: [],
   workedMinutes: 0,
+  badgeableMinutes: 0,
   isToday: false,
   isFuture: false,
   isUnclosed: false,
@@ -24,6 +25,31 @@ describe('DayRow', () => {
   it('never fades today, even on a weekend', () => {
     render(<DayRow day={{ ...SUNDAY, isToday: true }} index={6} now={new Date()} />);
     expect(screen.getByRole('listitem')).not.toHaveClass('opacity-60');
+  });
+
+  it("shows the day's badgeable time next to its total", () => {
+    const day = { ...SUNDAY, workedMinutes: 450, badgeableMinutes: 420 };
+
+    render(
+      <ol>
+        <DayRow day={day} index={0} now={new Date()} />
+      </ol>,
+    );
+
+    expect(screen.getByText('7:30')).toBeInTheDocument();
+    expect(screen.getByText('/ 7:00')).toBeInTheDocument();
+  });
+
+  it('shows the total alone on a day without badgeable time', () => {
+    const day = { ...SUNDAY, workedMinutes: 60, badgeableMinutes: 0 };
+
+    render(
+      <ol>
+        <DayRow day={day} index={5} now={new Date()} />
+      </ol>,
+    );
+
+    expect(screen.queryByText(/^\//)).not.toBeInTheDocument();
   });
 });
 
