@@ -17,6 +17,8 @@ describe('user administration', () => {
   let app: FastifyInstance;
   let adminId: number;
   let personCount = 0;
+  const clock = createTestClock(NOW);
+  const sessions = new Map<string, Awaited<ReturnType<typeof logIn>>>();
 
   async function send(
     email: string,
@@ -24,7 +26,13 @@ describe('user administration', () => {
     url: string,
     payload: Record<string, unknown>,
   ) {
-    const { cookie, csrfToken } = await logIn(app, email);
+    // One login per sender: the login route allows 30 attempts a minute per IP.
+    let session = sessions.get(email);
+    if (!session) {
+      session = await logIn(app, email);
+      sessions.set(email, session);
+    }
+    const { cookie, csrfToken } = session;
     return app.inject({
       method,
       url,
@@ -50,7 +58,7 @@ describe('user administration', () => {
     db = await createMigratedTestDb();
     adminId = await insertUser(db, { email: ADMIN, isAdmin: true });
     await insertUser(db, { email: 'colleague.cmd@example.com' });
-    app = await buildApp({ config: createTestConfig(), db, now: createTestClock(NOW).now });
+    app = await buildApp({ config: createTestConfig(), db, now: clock.now });
   });
 
   afterAll(async () => {
@@ -163,6 +171,37 @@ describe('user administration', () => {
       expect(restored.json<{ isArchived: boolean }>().isArchived).toBe(false);
     });
 
+    it('refuses an email another person already uses', async () => {
+      const person = await newPerson();
+
+      const response = await send(ADMIN, 'PATCH', `/api/v1/users/${person.id}`, {
+        email: 'colleague.cmd@example.com',
+      });
+
+      expect(response.statusCode).toBe(409);
+      expect(response.json<{ code: string }>().code).toBe('USER_EMAIL_TAKEN');
+    });
+
+    it('keeps the original archive date when archiving again later', async () => {
+      const person = await newPerson();
+      const archivedAt = async () =>
+        (
+          await db
+            .selectFrom('appUser')
+            .select('archivedAt')
+            .where('id', '=', person.id)
+            .executeTakeFirstOrThrow()
+        ).archivedAt;
+      await send(ADMIN, 'PATCH', `/api/v1/users/${person.id}`, { isArchived: true });
+      const first = await archivedAt();
+
+      clock.advanceBy(3_600_000);
+      await send(ADMIN, 'PATCH', `/api/v1/users/${person.id}`, { isArchived: true });
+
+      expect(first).not.toBeNull();
+      expect(await archivedAt()).toEqual(first);
+    });
+
     it.each([
       ['blocking yourself', { isBlocked: true }],
       ['archiving yourself', { isArchived: true }],
@@ -231,6 +270,47 @@ describe('user administration', () => {
         (await send(ADMIN, 'PATCH', '/api/v1/users/999999', { firstName: 'X' })).statusCode,
       ).toBe(404);
     });
+  });
+
+  describe('who may manage', () => {
+    it.each([
+      ['a colleague', false],
+      ['a team manager', true],
+    ])(
+      'refuses %s, for an edit and a password reset, leaving the person untouched',
+      async (_who, isManager) => {
+        const target = await newPerson();
+        const actor = await newPerson();
+        if (isManager) {
+          await insertTeam(db, {
+            name: `Managed by ${actor.email}`,
+            managerId: actor.id,
+            memberIds: [target.id],
+          });
+        }
+        const before = await db
+          .selectFrom('appUser')
+          .selectAll()
+          .where('id', '=', target.id)
+          .executeTakeFirstOrThrow();
+
+        const edit = await send(actor.email, 'PATCH', `/api/v1/users/${target.id}`, {
+          firstName: 'X',
+        });
+        const reset = await send(actor.email, 'PUT', `/api/v1/users/${target.id}/password`, {
+          newPassword: 'a fresh temporary one',
+        });
+
+        expect([edit.statusCode, reset.statusCode]).toEqual([403, 403]);
+        expect([edit.json<{ code: string }>().code, reset.json<{ code: string }>().code]).toEqual([
+          'USER_MANAGEMENT_FORBIDDEN',
+          'USER_MANAGEMENT_FORBIDDEN',
+        ]);
+        expect(
+          await db.selectFrom('appUser').selectAll().where('id', '=', target.id).executeTakeFirst(),
+        ).toEqual(before);
+      },
+    );
   });
 
   describe('resetting a password', () => {

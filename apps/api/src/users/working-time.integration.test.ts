@@ -157,6 +157,20 @@ describe('working time', () => {
     expect(response.json<{ code: string }>().code).toBe('WORKING_TIME_CHANGE_ORDER');
   });
 
+  it.each([
+    ['effectiveDate', { dailyMinutes: 360, effectiveDate: '2026-02-30' }],
+    ['startDate', { startDate: '2026-02-30' }],
+  ])('refuses an impossible calendar date in %s', async (field, payload) => {
+    const memberId = await newMember();
+
+    const response = await patch(ADMIN, memberId, payload);
+
+    expect(response.statusCode).toBe(400);
+    expect(
+      response.json<{ fieldErrors: Record<string, string> }>().fieldErrors[field],
+    ).toBeDefined();
+  });
+
   it('lets an admin move the start date, never a manager', async () => {
     const memberId = await newMember();
 

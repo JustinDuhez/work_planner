@@ -134,6 +134,8 @@ export async function updateUser(
   try {
     await deps.db.transaction().execute(async (trx) => {
       const activeAdminIds = await lockActiveAdminIds(trx);
+      // The early check ran outside this transaction: an admin demoted since then must not finish.
+      if (!activeAdminIds.includes(viewer.id)) throw new UserManagementForbiddenError();
       const target = await trx
         .selectFrom('appUser')
         .select(['id', 'email', 'isAdmin', 'isBlocked', 'archivedAt'])
@@ -166,9 +168,9 @@ export async function updateUser(
           email: changes.email,
           isAdmin: changes.isAdmin,
           isBlocked: changes.isBlocked,
-          ...(changes.isArchived === undefined
-            ? {}
-            : { archivedAt: changes.isArchived ? deps.now() : null }),
+          // Written only on a real change: archive data (and its date) is kept as is.
+          ...(isArchiving ? { archivedAt: deps.now() } : {}),
+          ...(changes.isArchived === false ? { archivedAt: null } : {}),
         })
         .where('id', '=', target.id)
         .execute();
