@@ -58,7 +58,7 @@ describe('session service', () => {
     expect(session).toEqual({
       sessionId: expect.any(Number) as number,
       csrfToken,
-      user: { id: userId, isAdmin: true },
+      user: { id: userId, isAdmin: true, mustChangePassword: false },
     });
   });
 

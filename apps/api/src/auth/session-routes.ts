@@ -9,7 +9,12 @@ import { TooManyAttemptsError } from './auth-errors';
 import { SESSION_COOKIE_NAME } from './auth-plugin';
 import { authenticate } from './authenticate';
 import type { LoginFailureLimiter } from './login-failure-limiter';
-import { createSession, deleteSession, type AuthDependencies } from './session-service';
+import {
+  createSession,
+  deleteSession,
+  purgeExpiredSessions,
+  type AuthDependencies,
+} from './session-service';
 
 const MILLISECONDS_PER_SECOND = 1000;
 const LOGIN_ATTEMPTS_PER_IP_PER_MINUTE = 30;
@@ -48,6 +53,7 @@ export function registerSessionRoutes(app: FastifyInstance, deps: SessionRouteDe
       deps.loginFailureLimiter.recordAttempt(attemptKey);
       const userId = await authenticate(deps.db, credentials);
       deps.loginFailureLimiter.clear(attemptKey);
+      await purgeExpiredSessions(deps);
       const { token, csrfToken } = await createSession(deps, userId);
       reply.setCookie(SESSION_COOKIE_NAME, token, {
         ...sessionCookieAttributes(deps.isProduction),

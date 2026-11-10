@@ -69,7 +69,7 @@ export function registerMeRoutes(app: FastifyInstance, deps: AuthDependencies): 
       await deps.db.transaction().execute(async (trx) => {
         await trx
           .updateTable('appUser')
-          .set({ passwordHash: newPasswordHash })
+          .set({ passwordHash: newPasswordHash, mustChangePassword: false })
           .where('id', '=', session.user.id)
           .execute();
         await deleteOtherSessions({ ...deps, db: trx }, session.user.id, session.sessionId);

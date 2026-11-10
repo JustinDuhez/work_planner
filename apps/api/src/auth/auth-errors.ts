@@ -54,3 +54,9 @@ export class CurrentPasswordInvalidError extends ValidationError {
     });
   }
 }
+
+export class PasswordChangeRequiredError extends ForbiddenError {
+  constructor() {
+    super('PASSWORD_CHANGE_REQUIRED', 'Vous devez choisir un nouveau mot de passe.');
+  }
+}

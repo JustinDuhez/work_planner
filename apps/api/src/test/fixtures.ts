@@ -21,6 +21,7 @@ export interface TestUser {
   isAdmin?: boolean;
   isBlocked?: boolean;
   isArchived?: boolean;
+  mustChangePassword?: boolean;
   dailyMinutes?: number;
   startDate?: string;
 }
@@ -42,6 +43,7 @@ export async function insertUser(db: Kysely<Database>, user: TestUser): Promise<
       passwordHash: await hashPassword(user.password ?? DEFAULT_TEST_PASSWORD),
       isAdmin: user.isAdmin ?? false,
       isBlocked: user.isBlocked ?? false,
+      mustChangePassword: user.mustChangePassword ?? false,
       archivedAt: user.isArchived ? new Date() : null,
       dailyMinutes: user.dailyMinutes,
       startDate: user.startDate ?? DEFAULT_TEST_START_DATE,

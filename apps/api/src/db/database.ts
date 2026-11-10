@@ -24,6 +24,7 @@ export interface AppUserTable {
   lastName: string;
   isAdmin: Generated<boolean>;
   isBlocked: Generated<boolean>;
+  mustChangePassword: Generated<boolean>;
   archivedAt: NullableColumn<Date>;
   dailyMinutes: Generated<number>;
   startDate: string;
