@@ -192,6 +192,11 @@ export const copy = {
     admin: 'Administrateur',
     separator: ' · ',
   },
+  forcedPassword: {
+    title: 'Choisissez votre mot de passe',
+    intro:
+      'Votre mot de passe a été défini par un administrateur. Choisissez-en un que vous seul connaissez.',
+  },
   profile: {
     title: 'Mon profil',
     infoTitle: 'Informations',

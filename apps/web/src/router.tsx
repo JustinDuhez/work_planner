@@ -3,6 +3,7 @@ import { ClockWeekPage } from './clock/clock-week-page';
 import { DirectoryAdminPage } from './directory/directory-admin-page';
 import { LoginPage } from './login/login-page';
 import { NotFoundPage } from './not-found/not-found-page';
+import { ForcedPasswordPage } from './password/forced-password-page';
 import { ProfilePage } from './profile/profile-page';
 import { RequireAuth } from './session/require-auth';
 import { AppShell } from './shell/app-shell';
@@ -12,6 +13,7 @@ export const routes: RouteObject[] = [
   {
     element: <RequireAuth />,
     children: [
+      { path: '/mot-de-passe', element: <ForcedPasswordPage /> },
       {
         path: '/',
         element: <AppShell />,
