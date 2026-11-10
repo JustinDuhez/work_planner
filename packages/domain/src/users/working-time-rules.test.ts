@@ -49,6 +49,22 @@ describe('planDailyMinutesChange', () => {
     ).toEqual({ kind: 'refused', reason: 'CHANGE_ORDER' });
   });
 
+  it('compares with the latest change even when the history is not in date order', () => {
+    const changes = [
+      { effectiveDate: '2026-11-23', previousDailyMinutes: 360 },
+      { effectiveDate: '2026-11-16', previousDailyMinutes: 420 },
+    ];
+
+    expect(
+      planDailyMinutesChange({
+        effectiveDate: '2026-11-18',
+        today: TODAY,
+        currentDailyMinutes: 300,
+        changes,
+      }),
+    ).toEqual({ kind: 'refused', reason: 'CHANGE_ORDER' });
+  });
+
   it('keeps the existing row when the date matches the latest change', () => {
     const changes = [{ effectiveDate: '2026-11-16', previousDailyMinutes: 420 }];
 
