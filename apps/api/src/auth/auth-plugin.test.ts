@@ -13,7 +13,7 @@ describe('requireSession', () => {
     const session: ResolvedSession = {
       sessionId: 1,
       csrfToken: 'token',
-      user: { id: 2, isAdmin: false },
+      user: { id: 2, isAdmin: false, mustChangePassword: false },
     };
 
     expect(requireSession({ authSession: session } as FastifyRequest)).toBe(session);
