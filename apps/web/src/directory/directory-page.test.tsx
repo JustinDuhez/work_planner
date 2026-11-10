@@ -86,6 +86,14 @@ describe('DirectoryPage', () => {
     expect(router.state.location.pathname).toBe('/pointage/9');
   });
 
+  it('opens your own week from your own name', async () => {
+    const { user, router } = renderDirectory();
+
+    await user.click(await screen.findByRole('link', { name: 'Léa Moreau' }));
+
+    expect(router.state.location.pathname).toBe('/');
+  });
+
   it('shows working time only when it is visible, with a planned change', async () => {
     renderDirectory([
       directoryEntry({
@@ -99,6 +107,7 @@ describe('DirectoryPage', () => {
     ]);
 
     expect(await screen.findByText('7:00 · 6:00 à partir du 16 nov. 2026')).toBeInTheDocument();
+    expect(screen.getByText('Arrivée le 12 oct. 2026')).toBeInTheDocument();
   });
 
   it('says when nobody matches', async () => {

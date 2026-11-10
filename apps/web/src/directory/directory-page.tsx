@@ -146,7 +146,14 @@ export function DirectoryPage({
                       .join(', ')}
                   </td>
                   <td className={CELL}>{roleLabel(entry)}</td>
-                  <td className={`${CELL} tabular-nums`}>{workingTimeLabel(entry)}</td>
+                  <td className={`${CELL} tabular-nums`}>
+                    {workingTimeLabel(entry)}
+                    {entry.workingTime ? (
+                      <span className="block text-xs text-zinc-500">
+                        {copy.directory.startDate} {formatLongDate(entry.workingTime.startDate)}
+                      </span>
+                    ) : null}
+                  </td>
                   <td className={`${CELL} text-right`}>{rowAction?.(entry)}</td>
                 </tr>
               );
