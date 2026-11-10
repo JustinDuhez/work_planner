@@ -1,6 +1,6 @@
 import { createBrowserRouter, type RouteObject } from 'react-router';
 import { ClockWeekPage } from './clock/clock-week-page';
-import { DirectoryPage } from './directory/directory-page';
+import { DirectoryAdminPage } from './directory/directory-admin-page';
 import { LoginPage } from './login/login-page';
 import { NotFoundPage } from './not-found/not-found-page';
 import { ProfilePage } from './profile/profile-page';
@@ -18,7 +18,7 @@ export const routes: RouteObject[] = [
         children: [
           { index: true, element: <ClockWeekPage /> },
           { path: 'pointage/:userId', element: <ClockWeekPage /> },
-          { path: 'annuaire', element: <DirectoryPage /> },
+          { path: 'annuaire', element: <DirectoryAdminPage /> },
           { path: 'profil', element: <ProfilePage /> },
           { path: '*', element: <NotFoundPage /> },
         ],
