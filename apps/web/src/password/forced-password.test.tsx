@@ -73,4 +73,23 @@ describe('forced password change', () => {
     expect(await screen.findByRole('link', { name: copy.nav.clock })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/');
   });
+
+  it('lets the person log out instead of choosing a password', async () => {
+    const fetchMock = mockFetchRoutes({
+      ...signedInHomeRoutes(),
+      'GET /api/v1/me': { status: 200, body: MUST_CHANGE },
+      'DELETE /api/v1/sessions/current': { status: 204 },
+    });
+    const { router } = renderApp('/mot-de-passe');
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('button', { name: copy.userMenu.logout }));
+
+    expect(await screen.findByRole('heading', { name: copy.login.title })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/connexion');
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/sessions/current',
+      expect.objectContaining({ method: 'DELETE' }),
+    );
+  });
 });

@@ -141,6 +141,9 @@ export const copy = {
     confirmResetPrefix: 'Réinitialiser le mot de passe de',
     confirmSuffix: '? Il ou elle ne pourra plus se connecter.',
     confirmResetSuffix: '? Toutes ses sessions seront fermées.',
+    confirmGrantAdminPrefix: "Donner les droits d'administrateur à",
+    confirmRevokeAdminPrefix: "Retirer les droits d'administrateur à",
+    confirmAdminSuffix: '? Ses sessions seront fermées.',
   },
   newUser: {
     title: 'Nouvel utilisateur',

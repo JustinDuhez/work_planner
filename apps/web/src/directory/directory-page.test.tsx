@@ -117,4 +117,12 @@ describe('DirectoryPage', () => {
 
     expect(screen.getByText(copy.directory.empty)).toBeInTheDocument();
   });
+
+  it('shows an archived person as plain text, without a link to their week', async () => {
+    renderDirectory([{ ...HUGO, isArchived: true }]);
+
+    const row = await screen.findByRole('row', { name: /Hugo Laurent/ });
+    expect(within(row).getByText('Hugo Laurent')).toBeInTheDocument();
+    expect(within(row).queryByRole('link', { name: 'Hugo Laurent' })).not.toBeInTheDocument();
+  });
 });

@@ -118,15 +118,19 @@ export function DirectoryPage({
                   className="block rounded-card border border-zinc-200 bg-white p-3 sm:table-row sm:rounded-none sm:border-0 sm:border-b sm:p-0"
                 >
                   <td className="block py-0.5 sm:table-cell sm:px-3 sm:py-2">
-                    <Link
-                      to={clockWeekPath(
-                        entry.id === session?.user.id ? undefined : entry.id,
-                        isoWeek,
-                      )}
-                      className="font-medium text-zinc-900 hover:text-primary-600"
-                    >
-                      {name}
-                    </Link>
+                    {entry.isArchived ? (
+                      <span className="font-medium text-zinc-900">{name}</span>
+                    ) : (
+                      <Link
+                        to={clockWeekPath(
+                          entry.id === session?.user.id ? undefined : entry.id,
+                          isoWeek,
+                        )}
+                        className="font-medium text-zinc-900 hover:text-primary-600"
+                      >
+                        {name}
+                      </Link>
+                    )}
                     {entry.isBlocked ? (
                       <span className="ml-2 rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600">
                         {copy.directory.blocked}

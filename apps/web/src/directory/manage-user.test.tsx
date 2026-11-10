@@ -333,4 +333,75 @@ describe('managing users', () => {
       within(dialog).queryByRole('button', { name: copy.manageUser.confirm }),
     ).not.toBeInTheDocument();
   });
+
+  it('asks before granting admin rights, then grants them', async () => {
+    const { user, fetchMock } = renderAsViewer([HUGO], {
+      'PATCH /api/v1/users/9': { status: 200, body: { ...HUGO, isAdmin: true } },
+    });
+    const dialog = await openManage(user, /Hugo Laurent/);
+
+    await user.click(within(dialog).getByLabelText(copy.manageUser.isAdmin));
+    expect(findCall(fetchMock, 'PATCH', '/api/v1/users/9')).toBeUndefined();
+    expect(
+      within(dialog).getByText(
+        "Donner les droits d'administrateur à Hugo Laurent ? Ses sessions seront fermées.",
+      ),
+    ).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: copy.manageUser.confirm }));
+
+    expect(await sentBody(fetchMock, 'PATCH', '/api/v1/users/9')).toEqual({ isAdmin: true });
+  });
+
+  it('asks before removing admin rights, then removes them', async () => {
+    const { user, fetchMock } = renderAsViewer([{ ...HUGO, isAdmin: true }], {
+      'PATCH /api/v1/users/9': { status: 200, body: HUGO },
+    });
+    const dialog = await openManage(user, /Hugo Laurent/);
+
+    await user.click(within(dialog).getByLabelText(copy.manageUser.isAdmin));
+    expect(findCall(fetchMock, 'PATCH', '/api/v1/users/9')).toBeUndefined();
+    expect(
+      within(dialog).getByText(
+        "Retirer les droits d'administrateur à Hugo Laurent ? Ses sessions seront fermées.",
+      ),
+    ).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: copy.manageUser.confirm }));
+
+    expect(await sentBody(fetchMock, 'PATCH', '/api/v1/users/9')).toEqual({ isAdmin: false });
+  });
+
+  it('offers an admin no access controls on their own row', async () => {
+    const self = directoryEntry({
+      id: 7,
+      canManage: true,
+      canEditWorkingTime: true,
+      workingTime: { dailyMinutes: 420, startDate: '2026-10-12', plannedChange: null },
+    });
+    const { user } = renderAsViewer([self], {
+      'GET /api/v1/me': { status: 200, body: ADMIN_SESSION },
+    });
+    const dialog = await openManage(user, /Léa Moreau/);
+
+    expect(
+      within(dialog).getByRole('heading', { name: copy.manageUser.identityTitle }),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole('heading', { name: copy.manageUser.workingTimeTitle }),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole('heading', { name: copy.manageUser.accessTitle }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('hides the working time of an archived person', async () => {
+    const { user } = renderAsViewer([{ ...HUGO, isArchived: true }]);
+    const dialog = await openManage(user, /Hugo Laurent/);
+
+    expect(
+      within(dialog).getByRole('heading', { name: copy.manageUser.accessTitle }),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole('heading', { name: copy.manageUser.workingTimeTitle }),
+    ).not.toBeInTheDocument();
+  });
 });

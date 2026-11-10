@@ -9,13 +9,14 @@ import { ApiError } from '../api/api-client';
 import { bannerMessageFor } from '../api/form-errors';
 import { APP_TIME_ZONE } from '../clock/clock-time';
 import { copy } from '../copy';
+import { useSession } from '../session/session-queries';
 import { Button } from '../ui/button';
 import { TextField } from '../ui/text-field';
 import { parseDuration } from './duration';
 import { useResetPassword, useUpdateUser, useUpdateWorkingTime } from './user-mutations';
 
 type WorkingTime = NonNullable<DirectoryEntry['workingTime']>;
-type RiskyAction = 'block' | 'archive' | 'reset';
+type RiskyAction = 'block' | 'archive' | 'reset' | 'grantAdmin' | 'revokeAdmin';
 
 export function fieldErrorsOf(error: unknown): Record<string, string> {
   return error instanceof ApiError ? error.fieldErrors : {};
@@ -96,12 +97,16 @@ function AccessSection({ entry }: { entry: DirectoryEntry }) {
   const confirmationText: Record<RiskyAction, string> = {
     block: `${copy.manageUser.confirmBlockPrefix} ${name} ${copy.manageUser.confirmSuffix}`,
     archive: `${copy.manageUser.confirmArchivePrefix} ${name} ${copy.manageUser.confirmSuffix}`,
+    grantAdmin: `${copy.manageUser.confirmGrantAdminPrefix} ${name} ${copy.manageUser.confirmAdminSuffix}`,
+    revokeAdmin: `${copy.manageUser.confirmRevokeAdminPrefix} ${name} ${copy.manageUser.confirmAdminSuffix}`,
     reset: `${copy.manageUser.confirmResetPrefix} ${name} ${copy.manageUser.confirmResetSuffix}`,
   };
 
   function confirmPendingAction() {
     if (pendingAction === 'block') update.mutate({ isBlocked: true });
     if (pendingAction === 'archive') update.mutate({ isArchived: true });
+    if (pendingAction === 'grantAdmin') update.mutate({ isAdmin: true });
+    if (pendingAction === 'revokeAdmin') update.mutate({ isAdmin: false });
     if (pendingAction === 'reset')
       reset.mutate(newPassword, { onSuccess: () => setNewPassword('') });
     setPendingAction(null);
@@ -114,7 +119,9 @@ function AccessSection({ entry }: { entry: DirectoryEntry }) {
         <input
           type="checkbox"
           checked={entry.isAdmin}
-          onChange={(event) => update.mutate({ isAdmin: event.target.checked })}
+          onChange={(event) =>
+            setPendingAction(event.target.checked ? 'grantAdmin' : 'revokeAdmin')
+          }
         />
         {copy.manageUser.isAdmin}
       </label>
@@ -266,6 +273,7 @@ export function ManageUserDialog({
   onClose: () => void;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const { data: session } = useSession();
 
   useEffect(() => {
     dialogRef.current?.showModal();
@@ -289,8 +297,9 @@ export function ManageUserDialog({
           </Button>
         </div>
         {entry.canManage ? <IdentitySection entry={entry} /> : null}
-        {entry.canManage ? <AccessSection entry={entry} /> : null}
-        {entry.canEditWorkingTime && entry.workingTime ? (
+        {/* The server refuses every access change on oneself, so the section is not offered. */}
+        {entry.canManage && entry.id !== session?.user.id ? <AccessSection entry={entry} /> : null}
+        {entry.canEditWorkingTime && entry.workingTime && !entry.isArchived ? (
           <WorkingTimeSection entry={entry} workingTime={entry.workingTime} />
         ) : null}
       </div>
