@@ -24,7 +24,7 @@ const STRENGTH_SEGMENT_CLASS: Record<PasswordStrength, string> = {
 };
 const STRENGTH_SEGMENTS = [1, 2, 3];
 
-export function PasswordForm() {
+export function PasswordForm({ onSuccess }: { onSuccess?: () => void } = {}) {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
@@ -36,6 +36,7 @@ export function PasswordForm() {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmation('');
+      onSuccess?.();
     },
   });
   const serverErrors = change.error instanceof ApiError ? change.error.fieldErrors : {};

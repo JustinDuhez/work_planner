@@ -38,11 +38,11 @@ export class TooManyAttemptsError extends TooManyRequestsError {
 }
 
 export class PasswordPolicyError extends ValidationError {
-  constructor(violation: PasswordPolicyViolation) {
+  constructor(violation: PasswordPolicyViolation, field = 'newPassword') {
     super(
       'PASSWORD_POLICY',
       "Le mot de passe doit contenir entre 12 et 128 caractères et être différent de l'actuel.",
-      { newPassword: PASSWORD_POLICY_MESSAGES[violation] },
+      { [field]: PASSWORD_POLICY_MESSAGES[violation] },
     );
   }
 }
@@ -52,5 +52,11 @@ export class CurrentPasswordInvalidError extends ValidationError {
     super('CURRENT_PASSWORD_INVALID', 'Le mot de passe actuel est incorrect.', {
       currentPassword: 'Le mot de passe actuel est incorrect.',
     });
+  }
+}
+
+export class PasswordChangeRequiredError extends ForbiddenError {
+  constructor() {
+    super('PASSWORD_CHANGE_REQUIRED', 'Vous devez choisir un nouveau mot de passe.');
   }
 }

@@ -6,7 +6,15 @@ import { findDirectManagerIds } from './scope-repository';
 export async function loadCurrentUser(db: Kysely<Database>, userId: number): Promise<CurrentUser> {
   const user = await db
     .selectFrom('appUser')
-    .select(['id', 'email', 'firstName', 'lastName', 'dailyMinutes', 'isAdmin'])
+    .select([
+      'id',
+      'email',
+      'firstName',
+      'lastName',
+      'dailyMinutes',
+      'isAdmin',
+      'mustChangePassword',
+    ])
     .where('id', '=', userId)
     .executeTakeFirstOrThrow();
   const teams = await db
@@ -50,5 +58,6 @@ export async function loadCurrentUser(db: Kysely<Database>, userId: number): Pro
     roles: { isAdmin: user.isAdmin, isManager: teams.some((team) => team.isManager) },
     teams,
     directManagers,
+    mustChangePassword: user.mustChangePassword,
   };
 }

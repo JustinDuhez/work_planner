@@ -75,7 +75,7 @@ export async function buildApp({
   });
   await registerProtectedRoutes(app, (scope) => {
     registerMeRoutes(scope, authDependencies);
-    registerUserRoutes(scope, { db });
+    registerUserRoutes(scope, clockDependencies);
     registerClockRoutes(scope, clockDependencies);
     registerCounterRoutes(scope, clockDependencies);
     registerCorrectionRoutes(scope, clockDependencies);

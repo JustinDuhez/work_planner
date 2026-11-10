@@ -11,5 +11,6 @@ export const SIGNED_IN_SESSION: SessionResponse = {
     roles: { isAdmin: false, isManager: false },
     teams: [{ id: 3, name: 'Front', isManager: false }],
     directManagers: [{ id: 2, firstName: 'Sophie', lastName: 'Dubois' }],
+    mustChangePassword: false,
   },
 };

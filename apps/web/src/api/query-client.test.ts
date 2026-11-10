@@ -17,6 +17,20 @@ describe('createQueryClient', () => {
     expect(queryClient.getQueryData(SESSION_QUERY_KEY)).toBeNull();
   });
 
+  it('refetches the session when a request says the password must change', async () => {
+    const queryClient = createQueryClient({ shouldRetry: false });
+    queryClient.setQueryData(SESSION_QUERY_KEY, { user: { id: 1 }, csrfToken: 'x' });
+
+    await queryClient
+      .fetchQuery({
+        queryKey: ['anything'],
+        queryFn: () => Promise.reject(new ApiError(403, 'PASSWORD_CHANGE_REQUIRED', 'Changez-le')),
+      })
+      .catch(() => undefined);
+
+    expect(queryClient.getQueryState(SESSION_QUERY_KEY)?.isInvalidated).toBe(true);
+  });
+
   it('keeps the session for other errors', async () => {
     const queryClient = createQueryClient({ shouldRetry: false });
     const session = { user: { id: 1 }, csrfToken: 'x' };

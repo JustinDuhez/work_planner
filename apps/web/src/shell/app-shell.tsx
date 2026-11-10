@@ -12,15 +12,25 @@ export function AppShell() {
           <Link to="/" className="text-sm font-semibold tracking-tight">
             {copy.appName}
           </Link>
-          <NavLink
-            to="/"
-            end
-            className={({ isActive }) =>
-              `text-sm ${isActive ? 'font-semibold text-zinc-900' : 'text-zinc-500'}`
-            }
-          >
-            {copy.nav.clock}
-          </NavLink>
+          <nav className="flex items-center gap-4">
+            <NavLink
+              to="/"
+              end
+              className={({ isActive }) =>
+                `text-sm ${isActive ? 'font-semibold text-zinc-900' : 'text-zinc-500'}`
+              }
+            >
+              {copy.nav.clock}
+            </NavLink>
+            <NavLink
+              to="/annuaire"
+              className={({ isActive }) =>
+                `text-sm ${isActive ? 'font-semibold text-zinc-900' : 'text-zinc-500'}`
+              }
+            >
+              {copy.nav.directory}
+            </NavLink>
+          </nav>
           <div className="flex items-center gap-1">
             <NotificationBell />
             <UserMenu />
