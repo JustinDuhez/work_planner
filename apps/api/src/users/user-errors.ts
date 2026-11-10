@@ -1,4 +1,9 @@
-import { ConflictError, ForbiddenError, NotFoundError } from '@work-planner/domain';
+import {
+  ConflictError,
+  ForbiddenError,
+  NotFoundError,
+  ValidationError,
+} from '@work-planner/domain';
 
 export class UserNotFoundError extends NotFoundError {
   constructor() {
@@ -39,5 +44,26 @@ export class UserManagesTeamError extends ConflictError {
       'USER_MANAGES_TEAM',
       `Cette personne gère l'équipe « ${teamName} ». Désignez d'abord un autre responsable.`,
     );
+  }
+}
+
+export class WorkingTimeForbiddenError extends ForbiddenError {
+  constructor() {
+    super(
+      'WORKING_TIME_FORBIDDEN',
+      'Vous ne pouvez pas modifier le temps de travail de cette personne.',
+    );
+  }
+}
+
+export class WorkingTimeDateInPastError extends ValidationError {
+  constructor() {
+    super('WORKING_TIME_DATE_IN_PAST', "La date d'effet ne peut pas être dans le passé.");
+  }
+}
+
+export class WorkingTimeChangeOrderError extends ConflictError {
+  constructor() {
+    super('WORKING_TIME_CHANGE_ORDER', 'Une modification plus récente existe déjà.');
   }
 }

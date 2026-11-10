@@ -2,6 +2,7 @@ import {
   createUserRequestSchema,
   resetPasswordRequestSchema,
   updateUserRequestSchema,
+  updateWorkingTimeRequestSchema,
 } from '@work-planner/domain';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
@@ -10,6 +11,7 @@ import { databaseIdSchema } from '../http/database-id';
 import { parseInput } from '../http/parse-input';
 import { loadDirectory } from './directory';
 import { createUser, resetUserPassword, updateUser } from './user-commands';
+import { updateWorkingTime } from './working-time';
 
 const directoryQuerySchema = z.object({ archived: z.enum(['true', 'false']).optional() });
 const userParamsSchema = z.object({ id: databaseIdSchema('Utilisateur invalide.') });
@@ -45,5 +47,15 @@ export function registerUserRoutes(scope: FastifyInstance, deps: ClockDependenci
       newPassword,
     });
     return reply.status(204).send();
+  });
+
+  scope.patch('/api/v1/users/:id/working-time', (request) => {
+    const { id } = parseInput(userParamsSchema, request.params);
+    const body = parseInput(updateWorkingTimeRequestSchema, request.body);
+    return updateWorkingTime(deps, {
+      viewer: clockViewerOf(request, deps.db),
+      userId: id,
+      ...body,
+    });
   });
 }
