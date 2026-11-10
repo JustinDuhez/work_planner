@@ -216,4 +216,121 @@ describe('managing users', () => {
     expect(screen.queryByRole('button', { name: copy.directory.newUser })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: copy.directory.manage })).not.toBeInTheDocument();
   });
+
+  it('does not reopen a dialog for someone who left the list when Archivés is ticked', async () => {
+    const archivedHugo = { ...HUGO, isArchived: true };
+    const routes = (activeList: unknown[]) => ({
+      ...signedInHomeRoutes(),
+      'GET /api/v1/me': { status: 200, body: ADMIN_SESSION },
+      'GET /api/v1/users': { status: 200, body: activeList },
+      'GET /api/v1/users?archived=true': { status: 200, body: [archivedHugo] },
+      'PATCH /api/v1/users/9': { status: 200, body: archivedHugo },
+    });
+    const fetchMock = mockFetchRoutes(routes([HUGO]));
+    const initialFetch = globalThis.fetch;
+    globalThis.fetch = jest.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      // Once the archive request is sent, the active list no longer holds Hugo.
+      if (init?.method === 'PATCH') mockFetchRoutes(routes([]));
+      return initialFetch(input, init);
+    }) as typeof fetch;
+    renderApp('/annuaire');
+    const user = userEvent.setup();
+    const dialog = await openManage(user, /Hugo Laurent/);
+    await user.click(within(dialog).getByRole('button', { name: copy.manageUser.archive }));
+    await user.click(within(dialog).getByRole('button', { name: copy.manageUser.confirm }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+    await user.click(screen.getByLabelText(copy.directory.archived));
+
+    expect(await screen.findByRole('row', { name: /Hugo Laurent/ })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalled();
+  });
+
+  it('sends nothing when the working time form is unchanged', async () => {
+    const { user, fetchMock } = renderAsViewer([HUGO]);
+    const dialog = await openManage(user, /Hugo Laurent/);
+
+    await user.click(within(dialog).getByRole('button', { name: copy.manageUser.saveWorkingTime }));
+
+    expect(findCall(fetchMock, 'PATCH', '/api/v1/users/9/working-time')).toBeUndefined();
+  });
+
+  it('plans the same daily time from a new date', async () => {
+    const { user, fetchMock } = renderAsViewer([HUGO], {
+      'PATCH /api/v1/users/9/working-time': { status: 200, body: HUGO },
+    });
+    const dialog = await openManage(user, /Hugo Laurent/);
+
+    await user.type(within(dialog).getByLabelText(copy.manageUser.effectiveDate), '2026-11-16');
+    await user.click(within(dialog).getByRole('button', { name: copy.manageUser.saveWorkingTime }));
+
+    expect(await sentBody(fetchMock, 'PATCH', '/api/v1/users/9/working-time')).toEqual({
+      dailyMinutes: 420,
+      effectiveDate: '2026-11-16',
+    });
+  });
+
+  it('lets an admin change only the start date', async () => {
+    const { user, fetchMock } = renderAsViewer([HUGO], {
+      'PATCH /api/v1/users/9/working-time': { status: 200, body: HUGO },
+    });
+    const dialog = await openManage(user, /Hugo Laurent/);
+
+    const startDate = within(dialog).getByLabelText(copy.manageUser.startDate);
+    await user.clear(startDate);
+    await user.type(startDate, '2026-10-05');
+    await user.click(within(dialog).getByRole('button', { name: copy.manageUser.saveWorkingTime }));
+
+    expect(await sentBody(fetchMock, 'PATCH', '/api/v1/users/9/working-time')).toEqual({
+      startDate: '2026-10-05',
+    });
+  });
+
+  it('blocks after a confirmation', async () => {
+    const { user, fetchMock } = renderAsViewer([HUGO], {
+      'PATCH /api/v1/users/9': { status: 200, body: { ...HUGO, isBlocked: true } },
+    });
+    const dialog = await openManage(user, /Hugo Laurent/);
+
+    await user.click(within(dialog).getByRole('button', { name: copy.manageUser.block }));
+    await user.click(within(dialog).getByRole('button', { name: copy.manageUser.confirm }));
+
+    expect(await sentBody(fetchMock, 'PATCH', '/api/v1/users/9')).toEqual({ isBlocked: true });
+  });
+
+  it('unblocks without asking', async () => {
+    const { user, fetchMock } = renderAsViewer([{ ...HUGO, isBlocked: true }], {
+      'PATCH /api/v1/users/9': { status: 200, body: HUGO },
+    });
+    const dialog = await openManage(user, /Hugo Laurent/);
+
+    await user.click(within(dialog).getByRole('button', { name: copy.manageUser.unblock }));
+
+    expect(await sentBody(fetchMock, 'PATCH', '/api/v1/users/9')).toEqual({ isBlocked: false });
+  });
+
+  it('restores an archived person without asking', async () => {
+    const { user, fetchMock } = renderAsViewer([{ ...HUGO, isArchived: true }], {
+      'PATCH /api/v1/users/9': { status: 200, body: HUGO },
+    });
+    const dialog = await openManage(user, /Hugo Laurent/);
+
+    await user.click(within(dialog).getByRole('button', { name: copy.manageUser.restore }));
+
+    expect(await sentBody(fetchMock, 'PATCH', '/api/v1/users/9')).toEqual({ isArchived: false });
+  });
+
+  it('sends nothing when a confirmation is cancelled', async () => {
+    const { user, fetchMock } = renderAsViewer([HUGO]);
+    const dialog = await openManage(user, /Hugo Laurent/);
+
+    await user.click(within(dialog).getByRole('button', { name: copy.manageUser.archive }));
+    await user.click(within(dialog).getByRole('button', { name: copy.manageUser.cancel }));
+
+    expect(findCall(fetchMock, 'PATCH', '/api/v1/users/9')).toBeUndefined();
+    expect(
+      within(dialog).queryByRole('button', { name: copy.manageUser.confirm }),
+    ).not.toBeInTheDocument();
+  });
 });

@@ -28,7 +28,10 @@ export function DirectoryAdminPage() {
                 <input
                   type="checkbox"
                   checked={isShowingArchived}
-                  onChange={(event) => setIsShowingArchived(event.target.checked)}
+                  onChange={(event) => {
+                    setIsShowingArchived(event.target.checked);
+                    setManagedUserId(null);
+                  }}
                 />
                 {copy.directory.archived}
               </label>
