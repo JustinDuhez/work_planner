@@ -50,5 +50,6 @@ export async function loadCurrentUser(db: Kysely<Database>, userId: number): Pro
     roles: { isAdmin: user.isAdmin, isManager: teams.some((team) => team.isManager) },
     teams,
     directManagers,
+    mustChangePassword: false,
   };
 }

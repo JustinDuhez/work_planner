@@ -17,6 +17,7 @@ export const currentUserSchema = z.object({
   directManagers: z.array(
     z.object({ id: z.number().int(), firstName: z.string(), lastName: z.string() }),
   ),
+  mustChangePassword: z.boolean(),
 });
 
 export type CurrentUser = z.infer<typeof currentUserSchema>;
@@ -28,13 +29,15 @@ export const sessionResponseSchema = z.object({
 
 export type SessionResponse = z.infer<typeof sessionResponseSchema>;
 
+export const emailSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .max(MAX_EMAIL_LENGTH, 'Adresse email invalide.')
+  .pipe(z.email('Adresse email invalide.'));
+
 export const loginRequestSchema = z.object({
-  email: z
-    .string()
-    .trim()
-    .toLowerCase()
-    .max(MAX_EMAIL_LENGTH, 'Adresse email invalide.')
-    .pipe(z.email('Adresse email invalide.')),
+  email: emailSchema,
   password: z
     .string()
     .min(1, 'Mot de passe requis.')
@@ -43,7 +46,7 @@ export const loginRequestSchema = z.object({
 
 export type LoginRequest = z.infer<typeof loginRequestSchema>;
 
-const personName = (requiredMessage: string) =>
+export const personNameSchema = (requiredMessage: string) =>
   z
     .string()
     .trim()
@@ -51,7 +54,7 @@ const personName = (requiredMessage: string) =>
     .max(MAX_NAME_LENGTH, `${MAX_NAME_LENGTH} caractères maximum.`);
 
 export const updateProfileRequestSchema = z.strictObject(
-  { firstName: personName('Prénom requis.'), lastName: personName('Nom requis.') },
+  { firstName: personNameSchema('Prénom requis.'), lastName: personNameSchema('Nom requis.') },
   { error: 'Champs non autorisés.' },
 );
 

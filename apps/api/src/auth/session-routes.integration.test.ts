@@ -89,6 +89,7 @@ describe('session routes', () => {
         roles: { isAdmin: false, isManager: false },
         teams: [{ id: expect.any(Number) as number, name: 'Front', isManager: false }],
         directManagers: [{ id: managerId, firstName: 'Marc', lastName: 'Durand' }],
+        mustChangePassword: false,
       },
     });
   });
