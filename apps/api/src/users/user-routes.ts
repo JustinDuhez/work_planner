@@ -1,9 +1,18 @@
 import type { FastifyInstance } from 'fastify';
-import type { Kysely } from 'kysely';
-import type { Database } from '../db/database';
-import { findActiveUserSummaries } from './user-repository';
+import { z } from 'zod';
+import { clockViewerOf, type ClockDependencies } from '../clock/clock-dependencies';
+import { parseInput } from '../http/parse-input';
+import { loadDirectory } from './directory';
 
-export function registerUserRoutes(scope: FastifyInstance, deps: { db: Kysely<Database> }): void {
-  // Everyone may see everyone (CDC); only names leave the server here.
-  scope.get('/api/v1/users', () => findActiveUserSummaries(deps.db));
+const directoryQuerySchema = z.object({ archived: z.enum(['true', 'false']).optional() });
+
+export function registerUserRoutes(scope: FastifyInstance, deps: ClockDependencies): void {
+  // Everyone may see everyone (CDC, F2.3); archived people only in the admin list.
+  scope.get('/api/v1/users', (request) => {
+    const { archived } = parseInput(directoryQuerySchema, request.query);
+    return loadDirectory(deps, {
+      viewer: clockViewerOf(request, deps.db),
+      includeArchived: archived === 'true',
+    });
+  });
 }

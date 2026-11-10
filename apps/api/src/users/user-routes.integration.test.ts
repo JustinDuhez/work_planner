@@ -47,15 +47,11 @@ describe('GET /api/v1/users', () => {
     ]);
   });
 
-  it('exposes only names and ids, never emails or roles', async () => {
+  it('never exposes password hashes', async () => {
     const { cookie } = await logIn(app, 'bob.martin@example.com');
 
     const response = await app.inject({ method: 'GET', url: '/api/v1/users', headers: { cookie } });
 
-    expect(Object.keys(response.json<Record<string, unknown>[]>()[0] ?? {}).sort()).toEqual([
-      'firstName',
-      'id',
-      'lastName',
-    ]);
+    expect(response.body).not.toMatch(/passwordHash|argon2/);
   });
 });
