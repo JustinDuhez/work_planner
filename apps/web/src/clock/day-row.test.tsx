@@ -9,6 +9,7 @@ const SUNDAY: ClockDayView = {
   periods: [],
   workedMinutes: 0,
   badgeableMinutes: 0,
+  holidayLabel: null,
   isToday: false,
   isFuture: false,
   isUnclosed: false,
@@ -40,6 +41,16 @@ describe('DayRow', () => {
 
     expect(screen.getByText('7:30')).toBeInTheDocument();
     expect(screen.getByText('/ 7:00')).toBeInTheDocument();
+  });
+
+  it('shows a public holiday badge, fades the row and shows no expected time', () => {
+    const holiday: ClockDayView = { ...SUNDAY, date: '2026-11-11', holidayLabel: 'Armistice 1918' };
+
+    render(<DayRow day={holiday} index={2} now={new Date()} />);
+
+    expect(screen.getByText('Férié · Armistice 1918')).toBeInTheDocument();
+    expect(screen.getByRole('listitem')).toHaveClass('opacity-60');
+    expect(screen.queryByText(/^\/ /)).not.toBeInTheDocument();
   });
 
   it('shows the total alone on a day without badgeable time', () => {

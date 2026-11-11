@@ -46,6 +46,7 @@ describe('seedDatabase', () => {
       .execute();
 
     expect(firstRun.clockDayCount).toBeGreaterThan(0);
+    expect(firstRun.publicHolidayCount).toBe(22);
     expect(chloeDays).toEqual([]);
   });
 

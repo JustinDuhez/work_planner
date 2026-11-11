@@ -8,6 +8,7 @@ import {
   insertClockPeriod,
   insertCounterReset,
   insertDailyMinutesChange,
+  insertPublicHoliday,
   insertTeam,
   insertUser,
 } from '../test/fixtures';
@@ -22,7 +23,12 @@ const NOW = new Date('2026-11-06T14:30:00Z');
 
 interface CountersBody {
   serverNow: string;
-  days: { date: string; badgeableMinutes: number; workedMinutes: number }[];
+  days: {
+    date: string;
+    badgeableMinutes: number;
+    workedMinutes: number;
+    holidayLabel: string | null;
+  }[];
   counters: {
     weekTargetMinutes: number;
     weekBadgeableMinutes: number;
@@ -93,6 +99,22 @@ describe('counters in the week', () => {
   afterAll(async () => {
     await app.close();
     await db.destroy();
+  });
+
+  it('lowers the week target for a public holiday and restores it when deleted', async () => {
+    const before = await getWeek('lea.counters@example.com', leaId, '2026-W46');
+    await insertPublicHoliday(db, { date: '2026-11-11', label: 'Armistice 1918' });
+    const withHoliday = await getWeek('lea.counters@example.com', leaId, '2026-W46');
+    await db.deleteFrom('publicHoliday').where('holidayDate', '=', '2026-11-11').execute();
+    const after = await getWeek('lea.counters@example.com', leaId, '2026-W46');
+
+    expect(withHoliday.counters.weekTargetMinutes).toBe(before.counters.weekTargetMinutes - 420);
+    expect(withHoliday.days[2]).toMatchObject({
+      badgeableMinutes: 0,
+      holidayLabel: 'Armistice 1918',
+    });
+    expect(after.counters.weekTargetMinutes).toBe(before.counters.weekTargetMinutes);
+    expect(after.days[2]?.holidayLabel).toBeNull();
   });
 
   it('gives each day of the week its badgeable time', async () => {

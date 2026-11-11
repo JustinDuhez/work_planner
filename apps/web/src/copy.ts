@@ -59,6 +59,7 @@ export const copy = {
   },
   clock: {
     title: 'Pointage',
+    holiday: 'Férié',
     previousWeek: 'Semaine précédente',
     nextWeek: 'Semaine suivante',
     today: "Aujourd'hui",

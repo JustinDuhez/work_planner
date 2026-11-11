@@ -66,6 +66,7 @@ export const clockDaySchema = z.object({
   periods: z.array(clockPeriodSchema),
   workedMinutes: z.number().int(),
   badgeableMinutes: z.number().int(),
+  holidayLabel: z.string().nullable(),
   isToday: z.boolean(),
   isFuture: z.boolean(),
   isUnclosed: z.boolean(),

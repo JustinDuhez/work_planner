@@ -16,6 +16,7 @@ const RULES: CountingRules = {
   now: at('2026-11-06T14:30:00Z'),
   currentDailyMinutes: 420,
   dailyMinutesChanges: [],
+  publicHolidayDates: new Set(),
 };
 const WEEK_45 = { fromDate: '2026-11-02', toDate: '2026-11-08' };
 
@@ -207,5 +208,20 @@ describe('counterTotals', () => {
       badgeableMinutes: 0,
       gapMinutes: 0,
     });
+  });
+
+  it('expects no time on a public holiday and still counts the time worked on it', () => {
+    // Wednesday 11 November 2026 (Armistice), counted the next day.
+    const rules = { ...RULES, today: '2026-11-12', publicHolidayDates: new Set(['2026-11-11']) };
+    const periods = new Map([
+      [
+        '2026-11-11',
+        [{ startedAt: at('2026-11-11T08:00:00Z'), endedAt: at('2026-11-11T10:00:00Z') }],
+      ],
+    ]);
+
+    const [holiday] = counterDays({ fromDate: '2026-11-11', toDate: '2026-11-11' }, periods, rules);
+
+    expect(holiday).toMatchObject({ targetMinutes: 0, badgeableMinutes: 0, workedMinutes: 120 });
   });
 });

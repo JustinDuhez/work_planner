@@ -10,6 +10,7 @@ const RUNNING_TODAY: ClockDayView = {
   ],
   workedMinutes: 240,
   badgeableMinutes: 0,
+  holidayLabel: null,
   isToday: true,
   isFuture: false,
   isUnclosed: false,
