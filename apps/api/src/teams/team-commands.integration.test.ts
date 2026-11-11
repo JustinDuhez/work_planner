@@ -171,6 +171,7 @@ describe('team administration', () => {
       });
 
       expect([underItself.statusCode, underGrandchild.statusCode]).toEqual([409, 409]);
+      expect(underItself.json<{ code: string }>().code).toBe('TEAM_CYCLE');
       expect(underGrandchild.json<{ code: string }>().code).toBe('TEAM_CYCLE');
     });
 
@@ -195,6 +196,15 @@ describe('team administration', () => {
       ]);
 
       expect(responses.map((response) => response.statusCode).sort()).toEqual([200, 409]);
+    });
+
+    it('removes every active member when sent an empty list, keeping archived ones', async () => {
+      const teamId = await insertTeam(db, { name: uniqueName(), memberIds: [leaId, archivedId] });
+
+      const response = await send(ADMIN, 'PATCH', `/api/v1/teams/${teamId}`, { memberIds: [] });
+
+      expect(response.json<{ members: unknown[] }>().members).toEqual([]);
+      expect(await memberIdsOf(teamId)).toEqual([archivedId]);
     });
 
     it('replaces the active members and keeps archived ones', async () => {
@@ -248,9 +258,10 @@ describe('team administration', () => {
     });
 
     it('answers 404 for an unknown team', async () => {
-      expect(
-        (await send(ADMIN, 'PATCH', '/api/v1/teams/999999', { name: uniqueName() })).statusCode,
-      ).toBe(404);
+      const response = await send(ADMIN, 'PATCH', '/api/v1/teams/999999', { name: uniqueName() });
+
+      expect(response.statusCode).toBe(404);
+      expect(response.json<{ code: string }>().code).toBe('TEAM_NOT_FOUND');
     });
   });
 
@@ -278,7 +289,10 @@ describe('team administration', () => {
     });
 
     it('answers 404 for an unknown team', async () => {
-      expect((await send(ADMIN, 'DELETE', '/api/v1/teams/999999')).statusCode).toBe(404);
+      const response = await send(ADMIN, 'DELETE', '/api/v1/teams/999999');
+
+      expect(response.statusCode).toBe(404);
+      expect(response.json<{ code: string }>().code).toBe('TEAM_NOT_FOUND');
     });
   });
 });

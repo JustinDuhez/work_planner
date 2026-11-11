@@ -148,7 +148,14 @@ export async function deleteTeam(
   await db.transaction().execute(async (trx) => {
     const tree = await lockTeamTree(trx);
     if (!tree.some((team) => team.id === command.teamId)) throw new TeamNotFoundError();
-    if (tree.some((team) => team.parentTeamId === command.teamId)) throw new TeamHasSubteamsError();
+    // Fresh query, not `tree`: a sub-team created while we waited for the lock is only visible now.
+    const subteam = await trx
+      .selectFrom('team')
+      .select('id')
+      .where('parentTeamId', '=', command.teamId)
+      .limit(1)
+      .executeTakeFirst();
+    if (subteam) throw new TeamHasSubteamsError();
     // team_member rows go with the team (ON DELETE CASCADE); the people are untouched (E2b-D1).
     await trx.deleteFrom('team').where('id', '=', command.teamId).execute();
   });
