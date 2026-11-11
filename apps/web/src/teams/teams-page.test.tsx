@@ -34,8 +34,8 @@ describe('TeamsPage', () => {
   it('shows the tree with managers and member counts', async () => {
     renderTeams();
 
-    const direction = await screen.findByRole('treeitem', { name: /Direction/ });
-    const front = within(direction).getByRole('treeitem', { name: /Front/ });
+    const direction = await screen.findByRole('listitem', { name: 'Direction' });
+    const front = within(direction).getByRole('listitem', { name: 'Front' });
 
     expect(within(direction).getByText('Responsable : Claire Martin')).toBeInTheDocument();
     expect(within(front).getByText('Responsable : Sophie Dubois')).toBeInTheDocument();
@@ -54,6 +54,28 @@ describe('TeamsPage', () => {
     await user.click(await screen.findByRole('link', { name: 'Hugo Laurent' }));
 
     expect(router.state.location.pathname).toBe('/pointage/9');
+  });
+
+  it('says when a team has one member or none', async () => {
+    renderTeams([
+      teamView({
+        id: 1,
+        name: 'Solo',
+        members: [{ id: 9, firstName: 'Hugo', lastName: 'Laurent' }],
+      }),
+      teamView({ id: 2, name: 'Vide' }),
+    ]);
+
+    expect(await screen.findByText('1 membre')).toBeInTheDocument();
+    expect(screen.getByText(copy.teams.noMembers)).toBeInTheDocument();
+  });
+
+  it('opens your own week from your own name', async () => {
+    const { user, router } = renderTeams();
+
+    await user.click(await screen.findByRole('link', { name: 'Léa Moreau' }));
+
+    expect(router.state.location.pathname).toBe('/');
   });
 
   it('says when there are no teams yet', async () => {

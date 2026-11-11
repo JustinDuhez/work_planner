@@ -1,5 +1,4 @@
-import type { UserSummary } from '@work-planner/domain';
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { clockWeekPath, currentIsoWeek } from '../clock/clock-time';
 import { copy } from '../copy';
@@ -16,27 +15,26 @@ function TeamItem({
   node,
   teamActions,
   ownUserId,
+  isoWeek,
 }: {
   node: TeamNode;
   teamActions?: (node: TeamNode) => ReactNode;
   ownUserId: number | undefined;
+  isoWeek: string;
 }) {
+  const nameId = useId();
   const { team, children } = node;
-  const isoWeek = currentIsoWeek(new Date());
   const managerLabel = team.manager
     ? `${copy.teams.manager} ${team.manager.firstName} ${team.manager.lastName}`
     : copy.teams.noManager;
   return (
-    <li
-      role="treeitem"
-      aria-label={team.name}
-      aria-expanded={children.length > 0 ? true : undefined}
-      className="space-y-2"
-    >
+    <li aria-labelledby={nameId} className="space-y-2">
       <div className="rounded-card border border-zinc-200 bg-white p-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <p className="font-medium text-zinc-900">{team.name}</p>
+            <p id={nameId} className="font-medium text-zinc-900">
+              {team.name}
+            </p>
             <p className="text-sm text-zinc-600">{managerLabel}</p>
           </div>
           <div className="flex gap-2">{teamActions?.(node)}</div>
@@ -46,7 +44,7 @@ function TeamItem({
             {memberCountLabel(team.members.length)}
           </summary>
           <ul className="mt-1 space-y-0.5">
-            {team.members.map((member: UserSummary) => (
+            {team.members.map((member) => (
               <li key={member.id}>
                 <Link
                   to={clockWeekPath(member.id === ownUserId ? undefined : member.id, isoWeek)}
@@ -60,13 +58,14 @@ function TeamItem({
         </details>
       </div>
       {children.length > 0 ? (
-        <ul role="group" className="space-y-2 border-l border-zinc-200 pl-4">
+        <ul className="space-y-2 border-l border-zinc-200 pl-4">
           {children.map((child) => (
             <TeamItem
               key={child.team.id}
               node={child}
               teamActions={teamActions}
               ownUserId={ownUserId}
+              isoWeek={isoWeek}
             />
           ))}
         </ul>
@@ -85,6 +84,7 @@ export function TeamsPage({
   const { data: session } = useSession();
   const teams = useTeams();
   const tree = buildTeamTree(teams.data ?? []);
+  const isoWeek = currentIsoWeek(new Date());
 
   return (
     <section className="space-y-4">
@@ -102,13 +102,14 @@ export function TeamsPage({
         <p className="text-sm text-zinc-500">{copy.teams.empty}</p>
       ) : null}
       {tree.length > 0 ? (
-        <ul role="tree" aria-label={copy.teams.title} className="space-y-2">
+        <ul aria-label={copy.teams.title} className="space-y-2">
           {tree.map((node) => (
             <TeamItem
               key={node.team.id}
               node={node}
               teamActions={teamActions}
               ownUserId={session?.user.id}
+              isoWeek={isoWeek}
             />
           ))}
         </ul>
