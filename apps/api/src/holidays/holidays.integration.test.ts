@@ -63,6 +63,18 @@ describe('public holidays', () => {
     );
   });
 
+  it.each([
+    ['missing', '/api/v1/public-holidays'],
+    ['not a number', '/api/v1/public-holidays?year=abc'],
+  ])('refuses a %s year with a French message', async (_name, url) => {
+    const response = await request(COLLEAGUE, 'GET', url);
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json<{ fieldErrors: Record<string, string> }>().fieldErrors.year).toBe(
+      'Choisissez une année entre 2000 et 2100.',
+    );
+  });
+
   it('imports the French holidays once, then adds nothing', async () => {
     const first = await request(ADMIN, 'POST', '/api/v1/public-holiday-imports', { year: 2026 });
     const second = await request(ADMIN, 'POST', '/api/v1/public-holiday-imports', { year: 2026 });

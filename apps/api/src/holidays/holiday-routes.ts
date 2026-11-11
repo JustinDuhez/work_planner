@@ -1,5 +1,6 @@
 import {
   createPublicHolidayRequestSchema,
+  HOLIDAY_YEAR_RANGE_MESSAGE,
   holidayYearSchema,
   publicHolidayImportRequestSchema,
   workDateSchema,
@@ -13,7 +14,9 @@ import { parseInput } from '../http/parse-input';
 import { addPublicHoliday, importFrenchHolidays, removePublicHoliday } from './holiday-commands';
 import { findPublicHolidays } from './holiday-repository';
 
-const holidayListQuerySchema = z.object({ year: z.coerce.number().pipe(holidayYearSchema) });
+const holidayListQuerySchema = z.object({
+  year: z.coerce.number({ error: HOLIDAY_YEAR_RANGE_MESSAGE }).pipe(holidayYearSchema),
+});
 const holidayParamsSchema = z.object({ date: workDateSchema });
 
 export function registerHolidayRoutes(

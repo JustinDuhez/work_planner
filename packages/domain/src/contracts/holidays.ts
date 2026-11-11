@@ -6,13 +6,13 @@ export const HOLIDAY_YEAR_MIN = 2000;
 export const HOLIDAY_YEAR_MAX = 2100;
 
 const UNKNOWN_FIELDS_MESSAGE = 'Champs non autorisés.';
-const YEAR_RANGE_MESSAGE = `Choisissez une année entre ${HOLIDAY_YEAR_MIN} et ${HOLIDAY_YEAR_MAX}.`;
+export const HOLIDAY_YEAR_RANGE_MESSAGE = `Choisissez une année entre ${HOLIDAY_YEAR_MIN} et ${HOLIDAY_YEAR_MAX}.`;
 
 export const holidayYearSchema = z
   .number()
-  .int(YEAR_RANGE_MESSAGE)
-  .min(HOLIDAY_YEAR_MIN, YEAR_RANGE_MESSAGE)
-  .max(HOLIDAY_YEAR_MAX, YEAR_RANGE_MESSAGE);
+  .int(HOLIDAY_YEAR_RANGE_MESSAGE)
+  .min(HOLIDAY_YEAR_MIN, HOLIDAY_YEAR_RANGE_MESSAGE)
+  .max(HOLIDAY_YEAR_MAX, HOLIDAY_YEAR_RANGE_MESSAGE);
 
 export const publicHolidaySchema = z.object({ date: workDateSchema, label: z.string() });
 
