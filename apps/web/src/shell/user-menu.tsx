@@ -1,4 +1,4 @@
-import { LogOut, UserRound } from 'lucide-react';
+import { LogOut, Settings, UserRound } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { copy } from '../copy';
 import { initialsOf } from '../session/role-label';
@@ -51,6 +51,15 @@ export function UserMenu() {
         >
           <UserRound size={16} aria-hidden /> {copy.userMenu.profile}
         </Link>
+        {session.user.roles.isAdmin ? (
+          <Link
+            to="/parametres"
+            onClick={closeMenu}
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100"
+          >
+            <Settings size={16} aria-hidden /> {copy.userMenu.settings}
+          </Link>
+        ) : null}
         <button
           type="button"
           onClick={handleLogout}

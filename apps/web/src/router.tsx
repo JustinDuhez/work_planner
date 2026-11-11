@@ -6,6 +6,7 @@ import { NotFoundPage } from './not-found/not-found-page';
 import { ForcedPasswordPage } from './password/forced-password-page';
 import { ProfilePage } from './profile/profile-page';
 import { RequireAuth } from './session/require-auth';
+import { SettingsPage } from './settings/settings-page';
 import { AppShell } from './shell/app-shell';
 import { TeamsAdminPage } from './teams/teams-admin-page';
 
@@ -24,6 +25,7 @@ export const routes: RouteObject[] = [
           { path: 'annuaire', element: <DirectoryAdminPage /> },
           { path: 'profil', element: <ProfilePage /> },
           { path: 'equipes', element: <TeamsAdminPage /> },
+          { path: 'parametres', element: <SettingsPage /> },
           { path: '*', element: <NotFoundPage /> },
         ],
       },
