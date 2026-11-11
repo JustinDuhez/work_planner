@@ -143,10 +143,17 @@ describe('correction detail', () => {
 
     await user.click(within(dialog).getByRole('button', { name: copy.corrections.accept }));
 
-    await waitFor(() => expect(router.state.location.search).toBe(`?semaine=${ISO_WEEK}`));
-    expect(
-      screen.queryByRole('dialog', { name: copy.corrections.detailTitle }),
-    ).not.toBeInTheDocument();
+    // The dialog closes only after four invalidations and refetches, which can outlast the 1 s default under load.
+    await waitFor(() => expect(router.state.location.search).toBe(`?semaine=${ISO_WEEK}`), {
+      timeout: 3000,
+    });
+    await waitFor(
+      () =>
+        expect(
+          screen.queryByRole('dialog', { name: copy.corrections.detailTitle }),
+        ).not.toBeInTheDocument(),
+      { timeout: 3000 },
+    );
   });
 
   it('shows the error and stays open when the answer fails', async () => {

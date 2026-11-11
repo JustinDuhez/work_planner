@@ -13,6 +13,7 @@ import { hashPassword } from '../auth/password-hasher';
 import { deleteAllSessions } from '../auth/session-service';
 import type { ClockDependencies, ClockViewer } from '../clock/clock-dependencies';
 import type { Database } from '../db/database';
+import { isUniqueViolation } from '../db/postgres-errors';
 import { loadDirectoryEntry } from './directory';
 import {
   UserEmailTakenError,
@@ -24,7 +25,6 @@ import {
 } from './user-errors';
 
 const DEFAULT_DAILY_MINUTES = 420;
-const UNIQUE_VIOLATION = '23505';
 
 async function assertCanManageUsers(viewer: ClockViewer): Promise<void> {
   if (!canManageUsers(await viewer.loadActor())) throw new UserManagementForbiddenError();
@@ -47,14 +47,7 @@ async function isEmailTaken(
 
 function translateEmailConflict(error: unknown): never {
   // Two admins creating the same email at once: the unique index decides.
-  if (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    error.code === UNIQUE_VIOLATION
-  ) {
-    throw new UserEmailTakenError();
-  }
+  if (isUniqueViolation(error)) throw new UserEmailTakenError();
   throw error instanceof Error ? error : new Error('Unexpected database error', { cause: error });
 }
 

@@ -7,6 +7,7 @@ import {
   type CreateClockCorrectionRequest,
 } from '@work-planner/domain';
 import { apiGet, apiSend } from '../api/api-client';
+import { CLOCK_WEEK_QUERY_PREFIX } from '../clock/clock-queries';
 import { NOTIFICATIONS_QUERY_KEY } from '../notifications/notification-queries';
 
 function correctionsQueryKey(ownerId: number) {
@@ -18,7 +19,7 @@ function useInvalidateCorrections(ownerId: number) {
   // The week shows the corrected day, the chips and the red flag; the bell shows the answers.
   return () =>
     Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['clock-week', ownerId] }),
+      queryClient.invalidateQueries({ queryKey: [...CLOCK_WEEK_QUERY_PREFIX, ownerId] }),
       queryClient.invalidateQueries({ queryKey: correctionsQueryKey(ownerId) }),
       queryClient.invalidateQueries({ queryKey: ['clock-correction'] }),
       queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_QUERY_KEY }),

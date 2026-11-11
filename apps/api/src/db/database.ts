@@ -132,6 +132,14 @@ export interface NotificationTable {
   updatedAt: Generated<Date>;
 }
 
+export interface PublicHolidayTable {
+  id: Generated<number>;
+  holidayDate: string;
+  label: string;
+  createdAt: Generated<Date>;
+  updatedAt: Generated<Date>;
+}
+
 export interface Database {
   setting: SettingTable;
   appUser: AppUserTable;
@@ -144,4 +152,5 @@ export interface Database {
   dailyMinutesChange: DailyMinutesChangeTable;
   clockCorrection: ClockCorrectionTable;
   notification: NotificationTable;
+  publicHoliday: PublicHolidayTable;
 }

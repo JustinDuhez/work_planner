@@ -1,5 +1,6 @@
 import { toWorkDate } from '@work-planner/domain';
 import type { Kysely } from 'kysely';
+import { insertFrenchHolidays } from '../holidays/holiday-repository';
 import { hashPassword } from '../auth/password-hasher';
 import type { Database } from '../db/database';
 import { buildDemoClockHistory, demoHistoryStartDate } from './demo-clock-history';
@@ -51,9 +52,19 @@ async function idOfTeam(db: Kysely<Database>, name: string): Promise<number> {
   return id;
 }
 
+// The demo weeks include 11 November 2026.
+const DEMO_HOLIDAY_YEARS = [2025, 2026];
+
 async function countRows(
   db: Kysely<Database>,
-  table: 'appUser' | 'team' | 'teamMember' | 'clockDay' | 'counterReset' | 'clockCorrection',
+  table:
+    | 'appUser'
+    | 'team'
+    | 'teamMember'
+    | 'clockDay'
+    | 'counterReset'
+    | 'clockCorrection'
+    | 'publicHoliday',
 ): Promise<number> {
   const { count } = await db
     .selectFrom(table)
@@ -73,6 +84,7 @@ export async function seedDatabase(
   clockDayCount: number;
   counterResetCount: number;
   correctionCount: number;
+  publicHolidayCount: number;
 }> {
   const today = toWorkDate(clock.now, clock.timeZone);
   await insertUserIfMissing(
@@ -132,6 +144,7 @@ export async function seedDatabase(
   }
   await seedDemoCounters(db, clock);
   await seedDemoCorrections(db, clock);
+  for (const year of DEMO_HOLIDAY_YEARS) await insertFrenchHolidays(db, year);
   return {
     userCount: await countRows(db, 'appUser'),
     teamCount: await countRows(db, 'team'),
@@ -139,5 +152,6 @@ export async function seedDatabase(
     clockDayCount: await countRows(db, 'clockDay'),
     counterResetCount: await countRows(db, 'counterReset'),
     correctionCount: await countRows(db, 'clockCorrection'),
+    publicHolidayCount: await countRows(db, 'publicHoliday'),
   };
 }

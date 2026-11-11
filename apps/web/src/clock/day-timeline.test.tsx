@@ -9,6 +9,7 @@ const DAY: ClockDayView = {
   periods: [{ id: 4, startedAt: '2026-11-06T08:00:00.000Z', endedAt: null }],
   workedMinutes: 0,
   badgeableMinutes: 0,
+  holidayLabel: null,
   isToday: false,
   isFuture: false,
   isUnclosed: true,

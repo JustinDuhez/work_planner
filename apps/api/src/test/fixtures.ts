@@ -187,3 +187,13 @@ export async function insertNotification(
     .executeTakeFirstOrThrow();
   return id;
 }
+
+export async function insertPublicHoliday(
+  db: Kysely<Database>,
+  holiday: { date: string; label?: string },
+): Promise<void> {
+  await db
+    .insertInto('publicHoliday')
+    .values({ holidayDate: holiday.date, label: holiday.label ?? 'Férié' })
+    .execute();
+}

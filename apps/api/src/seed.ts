@@ -21,9 +21,10 @@ try {
     clockDayCount,
     counterResetCount,
     correctionCount,
+    publicHolidayCount,
   } = await seedDatabase(db, seedConfig, { now: new Date(), timeZone: config.appTimezone });
   console.log(
-    `Seed done: ${userCount} users, ${teamCount} teams, ${membershipCount} memberships, ${clockDayCount} clock days, ${counterResetCount} counter resets, ${correctionCount} corrections.`,
+    `Seed done: ${userCount} users, ${teamCount} teams, ${membershipCount} memberships, ${clockDayCount} clock days, ${counterResetCount} counter resets, ${correctionCount} corrections, ${publicHolidayCount} public holidays.`,
   );
 } finally {
   await db.destroy();

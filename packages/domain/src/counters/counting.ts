@@ -16,6 +16,8 @@ export interface CountingRules {
   now: Date;
   currentDailyMinutes: number;
   dailyMinutesChanges: readonly DailyMinutesChange[];
+  /** Public holidays (E2b): no expected time, worked time still counts. */
+  publicHolidayDates: ReadonlySet<string>;
 }
 
 export interface CounterDay {
@@ -81,8 +83,9 @@ export function counterDays(
   const firstDate = range.fromDate > rules.countingStart ? range.fromDate : rules.countingStart;
   for (let date = firstDate; date <= range.toDate; date = addDays(date, 1)) {
     const dailyMinutes = dailyMinutesOn(date, rules.currentDailyMinutes, rules.dailyMinutesChanges);
-    // Public holidays (E2) and declared half-days (E6) will lower this; until then a weekday is whole.
-    const targetMinutes = badgeableMinutesOf(date, dailyMinutes, FULL_DAY_HALF_DAYS);
+    // Public holidays have no expected time (E2b-D3); declared half-days (E6) will lower it further.
+    const badgeableHalfDays = rules.publicHolidayDates.has(date) ? 0 : FULL_DAY_HALF_DAYS;
+    const targetMinutes = badgeableMinutesOf(date, dailyMinutes, badgeableHalfDays);
     const isPast = date < rules.today;
     const isToday = date === rules.today;
     const periods = periodsByDate.get(date) ?? [];

@@ -95,6 +95,7 @@ describe('identity schema', () => {
       'counter_reset',
       'daily_minutes_change',
       'notification',
+      'public_holiday',
       'session',
       'setting',
       'team',

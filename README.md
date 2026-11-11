@@ -32,7 +32,9 @@ npm run dev:web   # app on http://localhost:5173
 
 ## Demo data
 
-`npm run seed` creates the admin account (`ADMIN_EMAIL` / `ADMIN_PASSWORD`) and a fictional company. It can run any number of times: existing people, teams and passwords are never changed. It also adds three weeks of clock history (Léa has one unclosed day; Hugo is clocked in today when the seed runs on a weekday after 9:00). Demo people's counters start at their first clock day; Hugo has one counter reset (by Sophie Dubois) and Emma works 6:00 a day since this week's Monday (7:00 before). Léa has a correction by Sophie Dubois waiting for her answer (bell); Camille refused one by Thomas Petit, so her balance shows red.
+`npm run seed` creates the admin account (`ADMIN_EMAIL` / `ADMIN_PASSWORD`) and a fictional company, and imports the French public holidays of 2025 and 2026. It can run any number of times: existing people, teams and passwords are never changed. It also adds three weeks of clock history (Léa has one unclosed day; Hugo is clocked in today when the seed runs on a weekday after 9:00). Demo people's counters start at their first clock day; Hugo has one counter reset (by Sophie Dubois) and Emma works 6:00 a day since this week's Monday (7:00 before). Léa has a correction by Sophie Dubois waiting for her answer (bell); Camille refused one by Thomas Petit, so her balance shows red.
+
+In production, migration 0007 runs on deploy; re-run the seed, or click "Importer" in Paramètres (admin), to load the holidays of a year.
 
 | Account                                                                      | Role                                                   |
 | ---------------------------------------------------------------------------- | ------------------------------------------------------ |
