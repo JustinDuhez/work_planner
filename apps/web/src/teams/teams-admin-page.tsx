@@ -37,12 +37,15 @@ export function TeamsAdminPage() {
               <Button
                 variant="secondary"
                 isDisabled={children.length > 0}
+                describedBy={children.length > 0 ? `team-${team.id}-subteams-reason` : undefined}
                 onClick={() => setOpenDialog({ kind: 'delete', team })}
               >
                 {copy.teamDialog.delete}
               </Button>
               {children.length > 0 ? (
-                <span className="text-xs text-zinc-500">{copy.teamDialog.hasSubteams}</span>
+                <span id={`team-${team.id}-subteams-reason`} className="text-xs text-zinc-500">
+                  {copy.teamDialog.hasSubteams}
+                </span>
               ) : null}
             </>
           ) : null

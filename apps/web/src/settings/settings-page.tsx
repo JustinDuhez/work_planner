@@ -27,7 +27,7 @@ import {
 const YEAR_PARAM = 'annee';
 const MAX_DAY_OF_MONTH = 31;
 const YEAR_BUTTON_CLASS =
-  'flex size-9 items-center justify-center rounded-lg text-zinc-700 hover:bg-zinc-100';
+  'flex size-9 items-center justify-center rounded-lg text-zinc-700 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50';
 
 function yearFromUrl(value: string | null): number {
   const year = Number(value);
@@ -255,6 +255,7 @@ function AdminSettings() {
     <div className="space-y-6">
       <h1 className="text-xl font-semibold tracking-tight">{copy.settings.title}</h1>
       <HolidaysSection
+        key={year}
         year={year}
         onYearChange={(nextYear) => setSearchParams({ [YEAR_PARAM]: String(nextYear) })}
       />

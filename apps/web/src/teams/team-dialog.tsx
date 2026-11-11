@@ -130,7 +130,7 @@ export function TeamDialog({
           ) : null}
         </label>
         <fieldset className="space-y-2">
-          <legend className="text-sm font-medium">{`${copy.teamDialog.members} · ${memberIds.size} ${copy.teamDialog.selectedCount}`}</legend>
+          <legend className="text-sm font-medium">{`${copy.teamDialog.members} · ${memberIds.size} ${memberIds.size > 1 ? copy.teamDialog.selectedMany : copy.teamDialog.selectedOne}`}</legend>
           <input
             type="search"
             aria-label={copy.teamDialog.memberFilter}

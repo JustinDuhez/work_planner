@@ -98,6 +98,25 @@ describe('managing teams', () => {
     });
   });
 
+  it('sends no parent and no manager when none is chosen, then closes the dialog', async () => {
+    const { user, fetchMock } = renderAsAdmin({
+      'POST /api/v1/teams': { status: 201, body: SALES },
+    });
+
+    await user.click(await screen.findByRole('button', { name: copy.teamDialog.newTeam }));
+    const dialog = screen.getByRole('dialog', { name: copy.teamDialog.createTitle });
+    await user.type(within(dialog).getByLabelText(copy.teamDialog.name), 'Support');
+    await user.click(within(dialog).getByRole('button', { name: copy.teamDialog.save }));
+
+    expect(await sentBody(fetchMock, 'POST', '/api/v1/teams')).toEqual({
+      name: 'Support',
+      parentTeamId: null,
+      managerId: null,
+      memberIds: [],
+    });
+    await waitFor(() => expect(dialog).not.toBeInTheDocument());
+  });
+
   it('never offers a team or its sub-teams as its own parent', async () => {
     const { user } = renderAsAdmin();
     const dialog = await openEdit(user, 'Front');
@@ -190,6 +209,36 @@ describe('managing teams', () => {
 
     expect(deleteButton).toBeDisabled();
     expect(within(item).getAllByText(copy.teamDialog.hasSubteams)[0]).toBeInTheDocument();
+    expect(deleteButton).toHaveAccessibleDescription(copy.teamDialog.hasSubteams);
+  });
+
+  it.each([
+    [[], "Supprimer l'équipe « Commercial » ? Elle n'a aucun membre."],
+    [
+      [LEA],
+      "Supprimer l'équipe « Commercial » ? Son unique membre en sera retiré (son compte ne change pas).",
+    ],
+  ])('words the delete question for %j members', async (members, sentence) => {
+    const { user } = renderAsAdmin({}, [teamView({ ...SALES, members })]);
+    const item = await screen.findByRole('listitem', { name: 'Commercial' });
+
+    await user.click(within(item).getByRole('button', { name: copy.teamDialog.delete }));
+
+    const dialog = screen.getByRole('dialog', { name: copy.teamDialog.deleteTitle });
+    expect(within(dialog).getByText(sentence)).toBeInTheDocument();
+  });
+
+  it('counts the selected members in the singular for none and one', async () => {
+    const { user } = renderAsAdmin();
+    const dialog = await openEdit(user, 'Front');
+    expect(within(dialog).getByText('Membres · 1 sélectionné')).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Hugo Laurent' }));
+    expect(within(dialog).getByText('Membres · 2 sélectionnés')).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Hugo Laurent' }));
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Léa Moreau' }));
+    expect(within(dialog).getByText('Membres · 0 sélectionné')).toBeInTheDocument();
   });
 
   it('shows no management controls to a collaborator', async () => {

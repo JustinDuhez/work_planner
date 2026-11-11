@@ -22,12 +22,12 @@ const SUNDAY: ClockDayView = {
 describe('DayRow', () => {
   it('fades a weekend day', () => {
     render(<DayRow day={SUNDAY} index={6} now={new Date()} />);
-    expect(screen.getByRole('listitem')).toHaveClass('opacity-60');
+    expect(screen.getByRole('listitem').querySelector('.opacity-60')).not.toBeNull();
   });
 
   it('never fades today, even on a weekend', () => {
     render(<DayRow day={{ ...SUNDAY, isToday: true }} index={6} now={new Date()} />);
-    expect(screen.getByRole('listitem')).not.toHaveClass('opacity-60');
+    expect(screen.getByRole('listitem').querySelector('.opacity-60')).toBeNull();
   });
 
   it("shows the day's badgeable time next to its total", () => {
@@ -48,8 +48,9 @@ describe('DayRow', () => {
 
     render(<DayRow day={holiday} index={2} now={new Date()} />);
 
-    expect(screen.getByText('Férié · Armistice 1918')).toBeInTheDocument();
-    expect(screen.getByRole('listitem')).toHaveClass('opacity-60');
+    const badge = screen.getByText('Férié · Armistice 1918');
+    expect(badge.closest('.opacity-60')).toBeNull();
+    expect(screen.getByRole('listitem').querySelector('.opacity-60')).not.toBeNull();
     expect(screen.queryByText(/^\/ /)).not.toBeInTheDocument();
   });
 

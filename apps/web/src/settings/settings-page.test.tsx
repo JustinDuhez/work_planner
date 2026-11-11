@@ -79,6 +79,22 @@ describe('SettingsPage', () => {
     expect(await screen.findByText('9 jours ajoutés.')).toBeInTheDocument();
   });
 
+  it('forgets the import message when the year changes', async () => {
+    const { user } = renderSettings({
+      'POST /api/v1/public-holiday-imports': { status: 201, body: { addedCount: 9 } },
+      'GET /api/v1/public-holidays?year=2027': { status: 200, body: [] },
+    });
+    await user.click(
+      await screen.findByRole('button', { name: 'Importer les jours fériés français 2026' }),
+    );
+    await screen.findByText('9 jours ajoutés.');
+
+    await user.click(screen.getByRole('button', { name: copy.settings.nextYear }));
+
+    expect(await screen.findByText(copy.settings.noHolidays)).toBeInTheDocument();
+    expect(screen.queryByText('9 jours ajoutés.')).not.toBeInTheDocument();
+  });
+
   it('says when every holiday was already there', async () => {
     const { user } = renderSettings({
       'POST /api/v1/public-holiday-imports': { status: 201, body: { addedCount: 0 } },

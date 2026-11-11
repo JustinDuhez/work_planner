@@ -10,6 +10,11 @@ export function DeleteTeamDialog({ team, onClose }: { team: TeamView; onClose: (
   const dialogRef = useRef<HTMLDialogElement>(null);
   const remove = useDeleteTeam(team.id);
   const { confirmDeletePrefix, confirmDeleteMiddle, confirmDeleteSuffix } = copy.teamDialog;
+  const count = team.members.length;
+  const question = `${confirmDeletePrefix} ${team.name} `;
+  let sentence = `${question}${confirmDeleteMiddle} ${count} ${confirmDeleteSuffix}`;
+  if (count === 0) sentence = question + copy.teamDialog.confirmDeleteNone;
+  if (count === 1) sentence = question + copy.teamDialog.confirmDeleteSingle;
 
   useEffect(() => {
     dialogRef.current?.showModal();
@@ -24,9 +29,7 @@ export function DeleteTeamDialog({ team, onClose }: { team: TeamView; onClose: (
     >
       <div className="space-y-4">
         <h2 className="text-base font-semibold">{copy.teamDialog.deleteTitle}</h2>
-        <p className="text-sm text-zinc-700">
-          {`${confirmDeletePrefix} ${team.name} ${confirmDeleteMiddle} ${team.members.length} ${confirmDeleteSuffix}`}
-        </p>
+        <p className="text-sm text-zinc-700">{sentence}</p>
         <ErrorBanner message={bannerMessageFor(remove.error, [])} />
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={onClose}>
