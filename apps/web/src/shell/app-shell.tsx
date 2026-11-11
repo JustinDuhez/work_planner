@@ -30,6 +30,14 @@ export function AppShell() {
             >
               {copy.nav.directory}
             </NavLink>
+            <NavLink
+              to="/equipes"
+              className={({ isActive }) =>
+                `text-sm ${isActive ? 'font-semibold text-zinc-900' : 'text-zinc-500'}`
+              }
+            >
+              {copy.nav.teams}
+            </NavLink>
           </nav>
           <div className="flex items-center gap-1">
             <NotificationBell />

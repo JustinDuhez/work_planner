@@ -162,6 +162,18 @@ export const copy = {
   nav: {
     clock: 'Pointage',
     directory: 'Annuaire',
+    teams: 'Équipes',
+  },
+  teams: {
+    title: 'Équipes',
+    manager: 'Responsable :',
+    noManager: 'Aucun responsable',
+    memberCountOne: 'membre',
+    memberCountMany: 'membres',
+    noMembers: 'Aucun membre',
+    empty: 'Aucune équipe pour le moment.',
+    loading: 'Chargement des équipes…',
+    loadError: 'Impossible de charger les équipes.',
   },
   errors: {
     network: 'Connexion au serveur impossible. Vérifiez votre réseau et réessayez.',
