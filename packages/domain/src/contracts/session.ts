@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 /** Upper bound on what the server accepts, so a huge body cannot make argon2 hash megabytes. */
 export const MAX_SUBMITTED_PASSWORD_LENGTH = 1024;
-const MAX_NAME_LENGTH = 100;
+export const MAX_NAME_LENGTH = 100;
 // RFC 5321 maximum; also bounds the size of the login rate-limiter keys.
 const MAX_EMAIL_LENGTH = 254;
 
