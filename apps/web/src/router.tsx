@@ -7,7 +7,7 @@ import { ForcedPasswordPage } from './password/forced-password-page';
 import { ProfilePage } from './profile/profile-page';
 import { RequireAuth } from './session/require-auth';
 import { AppShell } from './shell/app-shell';
-import { TeamsPage } from './teams/teams-page';
+import { TeamsAdminPage } from './teams/teams-admin-page';
 
 export const routes: RouteObject[] = [
   { path: '/connexion', element: <LoginPage /> },
@@ -23,7 +23,7 @@ export const routes: RouteObject[] = [
           { path: 'pointage/:userId', element: <ClockWeekPage /> },
           { path: 'annuaire', element: <DirectoryAdminPage /> },
           { path: 'profil', element: <ProfilePage /> },
-          { path: 'equipes', element: <TeamsPage /> },
+          { path: 'equipes', element: <TeamsAdminPage /> },
           { path: '*', element: <NotFoundPage /> },
         ],
       },

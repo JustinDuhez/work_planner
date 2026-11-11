@@ -11,6 +11,7 @@ export interface ButtonProps {
   type?: 'button' | 'submit';
   variant?: keyof typeof VARIANT_CLASS;
   isPending?: boolean;
+  isDisabled?: boolean;
   onClick?: () => void;
 }
 
@@ -19,13 +20,14 @@ export function Button({
   type = 'button',
   variant = 'primary',
   isPending = false,
+  isDisabled = false,
   onClick,
 }: ButtonProps) {
   return (
     <button
       type={type}
       onClick={onClick}
-      disabled={isPending}
+      disabled={isPending || isDisabled}
       aria-busy={isPending}
       className={`inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500 ${VARIANT_CLASS[variant]}`}
     >
