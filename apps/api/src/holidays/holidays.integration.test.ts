@@ -3,13 +3,14 @@ import type { Kysely } from 'kysely';
 import { buildApp } from '../app';
 import type { Database } from '../db/database';
 import { logIn, TEST_ORIGIN } from '../test/auth-helpers';
-import { insertPublicHoliday, insertUser } from '../test/fixtures';
+import { insertPublicHoliday, insertTeam, insertUser } from '../test/fixtures';
 import { createTestClock } from '../test/test-clock';
 import { createTestConfig } from '../test/test-config';
 import { createMigratedTestDb } from '../test/test-database';
 
 const ADMIN = 'ines.hol@example.com';
 const COLLEAGUE = 'lea.hol@example.com';
+const MANAGER = 'marc.hol@example.com';
 
 describe('public holidays', () => {
   let db: Kysely<Database>;
@@ -36,6 +37,8 @@ describe('public holidays', () => {
     db = await createMigratedTestDb();
     await insertUser(db, { email: ADMIN, isAdmin: true });
     await insertUser(db, { email: COLLEAGUE });
+    const managerId = await insertUser(db, { email: MANAGER });
+    await insertTeam(db, { name: 'Holiday team', managerId });
     await insertPublicHoliday(db, { date: '2025-12-25', label: 'Noël' });
     app = await buildApp({ config: createTestConfig(), db, now: createTestClock().now });
   });
@@ -121,14 +124,23 @@ describe('public holidays', () => {
     );
   });
 
-  it('refuses every write to a non-admin', async () => {
+  it('refuses to delete a date that does not exist', async () => {
+    const response = await request(ADMIN, 'DELETE', '/api/v1/public-holidays/2026-02-30');
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json<{ fieldErrors: Record<string, string> }>().fieldErrors).toHaveProperty(
+      'date',
+    );
+  });
+
+  it.each([COLLEAGUE, MANAGER])('refuses every write to non-admin %s', async (email) => {
     const responses = [
-      await request(COLLEAGUE, 'POST', '/api/v1/public-holidays', {
+      await request(email, 'POST', '/api/v1/public-holidays', {
         date: '2032-01-02',
         label: 'X',
       }),
-      await request(COLLEAGUE, 'DELETE', '/api/v1/public-holidays/2025-12-25'),
-      await request(COLLEAGUE, 'POST', '/api/v1/public-holiday-imports', { year: 2032 }),
+      await request(email, 'DELETE', '/api/v1/public-holidays/2025-12-25'),
+      await request(email, 'POST', '/api/v1/public-holiday-imports', { year: 2032 }),
     ];
 
     expect(responses.map((response) => response.statusCode)).toEqual([403, 403, 403]);

@@ -117,6 +117,17 @@ describe('counters in the week', () => {
     expect(after.days[2]?.holidayLabel).toBeNull();
   });
 
+  it('a past holiday raises the overall balance by the day it no longer owes', async () => {
+    const before = await getWeek('lea.counters@example.com', leaId);
+    await insertPublicHoliday(db, { date: '2026-11-04', label: 'Pont' });
+    const withHoliday = await getWeek('lea.counters@example.com', leaId);
+    await db.deleteFrom('publicHoliday').where('holidayDate', '=', '2026-11-04').execute();
+    const after = await getWeek('lea.counters@example.com', leaId);
+
+    expect(withHoliday.counters.globalGapMinutes).toBe(before.counters.globalGapMinutes + 420);
+    expect(after.counters.globalGapMinutes).toBe(before.counters.globalGapMinutes);
+  });
+
   it('gives each day of the week its badgeable time', async () => {
     const body = await getWeek('colleague.counters@example.com', leaId);
 

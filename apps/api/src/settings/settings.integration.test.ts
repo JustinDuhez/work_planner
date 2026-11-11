@@ -3,7 +3,7 @@ import type { Kysely } from 'kysely';
 import { buildApp } from '../app';
 import type { Database } from '../db/database';
 import { logIn, TEST_ORIGIN } from '../test/auth-helpers';
-import { insertUser } from '../test/fixtures';
+import { insertTeam, insertUser } from '../test/fixtures';
 import { createTestClock } from '../test/test-clock';
 import { createTestConfig } from '../test/test-config';
 import { createMigratedTestDb } from '../test/test-database';
@@ -26,6 +26,8 @@ describe('settings', () => {
     db = await createMigratedTestDb();
     await insertUser(db, { email: 'ines.set@example.com', isAdmin: true });
     await insertUser(db, { email: 'lea.set@example.com' });
+    const managerId = await insertUser(db, { email: 'marc.set@example.com' });
+    await insertTeam(db, { name: 'Settings team', managerId });
     app = await buildApp({ config: createTestConfig(), db, now: createTestClock().now });
   });
 
@@ -61,10 +63,13 @@ describe('settings', () => {
     );
   });
 
-  it('refuses a non-admin', async () => {
-    const response = await patch('lea.set@example.com', { yearStart: '01-01' });
+  it.each(['lea.set@example.com', 'marc.set@example.com'])(
+    'refuses non-admin %s',
+    async (email) => {
+      const response = await patch(email, { yearStart: '01-01' });
 
-    expect(response.statusCode).toBe(403);
-    expect(response.json<{ code: string }>().code).toBe('SETTINGS_FORBIDDEN');
-  });
+      expect(response.statusCode).toBe(403);
+      expect(response.json<{ code: string }>().code).toBe('SETTINGS_FORBIDDEN');
+    },
+  );
 });
