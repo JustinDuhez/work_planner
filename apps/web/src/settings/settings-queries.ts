@@ -7,10 +7,10 @@ import {
   type CreatePublicHolidayRequest,
 } from '@work-planner/domain';
 import { apiGet, apiSend, apiSendNoContent } from '../api/api-client';
+import { CLOCK_WEEK_QUERY_PREFIX } from '../clock/clock-queries';
 
 export const PUBLIC_HOLIDAYS_QUERY_KEY = ['public-holidays'] as const;
 export const SETTINGS_QUERY_KEY = ['settings'] as const;
-const CLOCK_WEEK_QUERY_PREFIX = ['clock-week'] as const;
 
 function useInvalidateHolidays() {
   const queryClient = useQueryClient();

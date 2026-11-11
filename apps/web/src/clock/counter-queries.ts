@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { counterResetListSchema, counterResetSchema } from '@work-planner/domain';
 import { apiGet, apiSend } from '../api/api-client';
+import { CLOCK_WEEK_QUERY_PREFIX } from './clock-queries';
 
 function counterResetsQueryKey(ownerId: number) {
   return ['counter-resets', ownerId] as const;
@@ -14,7 +15,7 @@ export function useCreateCounterReset(ownerId: number) {
     // Every cached week of the person carries the global gap: refresh them all.
     onSuccess: () =>
       Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['clock-week', ownerId] }),
+        queryClient.invalidateQueries({ queryKey: [...CLOCK_WEEK_QUERY_PREFIX, ownerId] }),
         queryClient.invalidateQueries({ queryKey: counterResetsQueryKey(ownerId) }),
       ]),
   });

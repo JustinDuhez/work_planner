@@ -13,8 +13,10 @@ import { apiGet, apiSend, apiSendNoContent } from '../api/api-client';
 
 const RUNNING_WEEK_REFRESH_INTERVAL_IN_MILLISECONDS = 60_000;
 
+export const CLOCK_WEEK_QUERY_PREFIX = ['clock-week'] as const;
+
 export function clockWeekQueryKey(userId: number, isoWeek: string) {
-  return ['clock-week', userId, isoWeek] as const;
+  return [...CLOCK_WEEK_QUERY_PREFIX, userId, isoWeek] as const;
 }
 
 export function hasRunningPeriod(week: ClockWeek | undefined): boolean {

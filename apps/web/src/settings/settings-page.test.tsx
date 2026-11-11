@@ -134,6 +134,7 @@ describe('SettingsPage', () => {
     await user.click(screen.getByRole('button', { name: copy.settings.saveYearStart }));
 
     expect(await sentBody(fetchMock, 'PATCH', '/api/v1/settings')).toEqual({ yearStart: '09-01' });
+    expect(await screen.findByText(copy.settings.saved)).toBeInTheDocument();
   });
 
   it('shows the not-found page to a non-admin and no menu link', async () => {
@@ -155,5 +156,48 @@ describe('SettingsPage', () => {
       'href',
       '/parametres',
     );
+  });
+
+  it('cannot go before the first year', async () => {
+    renderSettings(
+      { 'GET /api/v1/public-holidays?year=2000': { status: 200, body: [] } },
+      '/parametres?annee=2000',
+    );
+
+    expect(await screen.findByRole('button', { name: copy.settings.previousYear })).toBeDisabled();
+  });
+
+  it('shows the server message when the year start is refused', async () => {
+    const { user } = renderSettings({
+      'PATCH /api/v1/settings': {
+        status: 400,
+        body: {
+          code: 'VALIDATION_ERROR',
+          message: 'Certains champs sont invalides.',
+          fieldErrors: { yearStart: 'Choisissez un jour qui existe chaque année.' },
+        },
+      },
+    });
+
+    await user.click(await screen.findByRole('button', { name: copy.settings.saveYearStart }));
+
+    expect(
+      await screen.findByText('Choisissez un jour qui existe chaque année.'),
+    ).toBeInTheDocument();
+  });
+
+  it('shows the server message when the holiday already exists', async () => {
+    const { user } = renderSettings({
+      'POST /api/v1/public-holidays': {
+        status: 409,
+        body: { code: 'HOLIDAY_EXISTS', message: 'Ce jour est déjà férié.' },
+      },
+    });
+
+    await user.type(await screen.findByLabelText(copy.settings.holidayDate), '2026-11-11');
+    await user.type(screen.getByLabelText(copy.settings.holidayLabel), 'Armistice');
+    await user.click(screen.getByRole('button', { name: copy.settings.addHoliday }));
+
+    expect(await screen.findByText('Ce jour est déjà férié.')).toBeInTheDocument();
   });
 });

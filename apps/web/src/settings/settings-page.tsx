@@ -113,6 +113,7 @@ function HolidaysSection({
           <button
             type="button"
             aria-label={copy.settings.previousYear}
+            disabled={year <= HOLIDAY_YEAR_MIN}
             onClick={() => onYearChange(year - 1)}
             className={YEAR_BUTTON_CLASS}
           >
@@ -122,6 +123,7 @@ function HolidaysSection({
           <button
             type="button"
             aria-label={copy.settings.nextYear}
+            disabled={year >= HOLIDAY_YEAR_MAX}
             onClick={() => onYearChange(year + 1)}
             className={YEAR_BUTTON_CLASS}
           >
@@ -256,9 +258,7 @@ function AdminSettings() {
         year={year}
         onYearChange={(nextYear) => setSearchParams({ [YEAR_PARAM]: String(nextYear) })}
       />
-      {settings.data ? (
-        <YearStartSection key={settings.data.yearStart} yearStart={settings.data.yearStart} />
-      ) : null}
+      {settings.data ? <YearStartSection yearStart={settings.data.yearStart} /> : null}
     </div>
   );
 }
