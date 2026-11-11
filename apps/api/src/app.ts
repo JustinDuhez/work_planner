@@ -10,12 +10,14 @@ import { registerCorrectionRoutes } from './corrections/correction-routes';
 import { registerCounterRoutes } from './counters/counter-routes';
 import type { AppConfig } from './config/config';
 import type { Database } from './db/database';
+import { registerHolidayRoutes } from './holidays/holiday-routes';
 import { registerHealthRoutes } from './health/health-routes';
 import { registerNotificationRoutes } from './notifications/notification-routes';
 import { registerErrorHandlers } from './http/error-handler';
 import { registerProtectedRoutes } from './http/protected-routes';
 import { registerSecurityHeaders } from './http/security-headers';
 import { registerSpa } from './http/spa';
+import { registerSettingsRoutes } from './settings/settings-routes';
 import { registerTeamRoutes } from './teams/team-routes';
 import { registerUserRoutes } from './users/user-routes';
 
@@ -78,6 +80,8 @@ export async function buildApp({
     registerMeRoutes(scope, authDependencies);
     registerUserRoutes(scope, clockDependencies);
     registerTeamRoutes(scope, { db });
+    registerHolidayRoutes(scope, { db });
+    registerSettingsRoutes(scope, { db });
     registerClockRoutes(scope, clockDependencies);
     registerCounterRoutes(scope, clockDependencies);
     registerCorrectionRoutes(scope, clockDependencies);
