@@ -52,7 +52,7 @@ describe('TodayControls work mode pre-fill', () => {
     await user.click(screen.getByRole('radio', { name: copy.clock.onSite }));
     await user.click(screen.getByRole('button', { name: copy.clock.start }));
 
-    const init = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(JSON.parse(init.body as string)).toEqual({ workMode: 'on_site' });
   });
 });
