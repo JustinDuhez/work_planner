@@ -23,6 +23,7 @@ describe('creating leave requests', () => {
   let db: Kysely<Database>;
   let app: FastifyInstance;
   let managerId: number;
+  let adminId: number;
   let teamId: number;
   let memberCount = 0;
   const sessions = new Map<string, { cookie: string; csrfToken: string }>();
@@ -61,7 +62,7 @@ describe('creating leave requests', () => {
     db = await createMigratedTestDb();
     managerId = await insertUser(db, { email: 'sophie.leave@example.com' });
     teamId = await insertTeam(db, { name: 'Leave team', managerId });
-    await insertUser(db, { email: 'ines.leave@example.com', isAdmin: true });
+    adminId = await insertUser(db, { email: 'ines.leave@example.com', isAdmin: true });
     await insertPublicHoliday(db, { date: '2026-12-25', label: 'Noël' });
     app = await buildApp({ config: createTestConfig(), db, now: createTestClock(NOW).now });
   });
@@ -87,7 +88,7 @@ describe('creating leave requests', () => {
       .select('userId')
       .where('type', '=', 'leave_request_received')
       .execute();
-    expect(notified.map((row) => row.userId)).toEqual(expect.arrayContaining([managerId]));
+    expect(notified.map((row) => row.userId).sort()).toEqual([managerId, adminId].sort());
   });
 
   it('approves telework at once while 3 days stay on site', async () => {

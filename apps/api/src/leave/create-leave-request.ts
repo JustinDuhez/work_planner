@@ -78,7 +78,9 @@ export async function createLeaveRequest(
         .selectFrom('appUser')
         .select('id')
         .where('id', '=', viewer.id)
-        .forUpdate()
+        // NO KEY UPDATE serializes this person without blocking other tables' FK key-share checks.
+
+        .forNoKeyUpdate()
         .executeTakeFirstOrThrow();
       const taken = await findTakenSlots(trx, { userId: viewer.id, ...weeks });
       const takenKeys = new Set(taken.map(slotKey));

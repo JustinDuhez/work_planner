@@ -6,7 +6,11 @@ import {
 } from '@work-planner/domain';
 import type { ClockDependencies, ClockViewer } from '../clock/clock-dependencies';
 import { LeaveNotFoundError, LeaveReviewForbiddenError } from './leave-errors';
-import { findLeaveRequestById, selectLeaveRequests } from './leave-repository';
+import {
+  findLeaveRequestById,
+  selectLeaveRequests,
+  type LeaveRequestRow,
+} from './leave-repository';
 import { toLeaveRequestView } from './leave-view';
 
 const RECENT_DECISIONS_DAYS = 30;
@@ -76,7 +80,7 @@ export async function listLeaveRequestsToReview(
 export async function findVisibleLeaveRequest(
   deps: ClockDependencies,
   query: { viewer: ClockViewer; requestId: number },
-) {
+): Promise<{ row: LeaveRequestRow; actor: Actor }> {
   const [row, actor] = await Promise.all([
     findLeaveRequestById(deps.db, query.requestId),
     query.viewer.loadActor(),
