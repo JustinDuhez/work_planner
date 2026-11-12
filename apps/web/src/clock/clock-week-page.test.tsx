@@ -7,6 +7,8 @@ import { renderApp } from '../test/render-app';
 import { shiftIsoWeek } from './clock-time';
 
 const WEEK = '2026-W45';
+// Tuesday of week 45: leave tests must not depend on the real date.
+const SERVER_NOW = '2026-11-03T10:00:00.000Z';
 const FULL_LEAVE = {
   am: { dayTypeCode: 'leave', status: 'approved' },
   pm: { dayTypeCode: 'leave', status: 'approved' },
@@ -122,6 +124,7 @@ describe('ClockWeekPage', () => {
   it('offers the owner to declare an absence on a future weekday and opens the dialog', async () => {
     const week = weekFixture({
       isoWeek: WEEK,
+      serverNow: SERVER_NOW,
       days: {
         '2026-11-04': { isFuture: true, isToday: false },
         '2026-11-05': { isFuture: true, isToday: false, holidayLabel: 'Férié' },
@@ -161,7 +164,7 @@ describe('ClockWeekPage', () => {
   });
 
   it('opens the request dialog from the week-level button', async () => {
-    mockFetchRoutes(signedInHomeRoutes(weekFixture({ isoWeek: WEEK })));
+    mockFetchRoutes(signedInHomeRoutes(weekFixture({ isoWeek: WEEK, serverNow: SERVER_NOW })));
     renderApp(`/?semaine=${WEEK}`);
 
     await userEvent
@@ -176,6 +179,7 @@ describe('ClockWeekPage', () => {
       isoWeek: WEEK,
       user: HUGO,
       isOwnWeek: false,
+      serverNow: SERVER_NOW,
       days: { '2026-11-04': { isFuture: true, isToday: false, halfDays: FULL_LEAVE } },
     });
     mockFetchRoutes({

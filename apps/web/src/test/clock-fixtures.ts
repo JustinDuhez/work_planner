@@ -21,12 +21,14 @@ export function weekFixture(
     isoWeek?: string;
     user?: UserSummary;
     isOwnWeek?: boolean;
+    serverNow?: string;
     days?: Partial<Record<string, Partial<ClockDayView>>>;
     counters?: Partial<WeekCounters>;
   } = {},
 ): ClockWeek {
   const isoWeek = options.isoWeek ?? currentIsoWeek(new Date());
-  const today = toWorkDate(new Date(), APP_TIME_ZONE);
+  const serverNow = options.serverNow ?? new Date().toISOString();
+  const today = toWorkDate(new Date(serverNow), APP_TIME_ZONE);
   const isOwnWeek = options.isOwnWeek ?? true;
   const days = (datesOfIsoWeek(isoWeek) ?? []).map((date): ClockDayView => ({
     date,
@@ -48,7 +50,7 @@ export function weekFixture(
   return {
     user: options.user ?? LEA,
     isoWeek,
-    serverNow: new Date().toISOString(),
+    serverNow,
     days,
     weekWorkedMinutes: days.reduce((total, day) => total + day.workedMinutes, 0),
     counters: {

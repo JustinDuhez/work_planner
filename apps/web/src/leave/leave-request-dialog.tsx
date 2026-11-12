@@ -16,6 +16,7 @@ import { useCreateLeaveRequest, useDayTypes } from './leave-queries';
 
 const EARLY_DEPARTURE = 'early_departure';
 const RENDERED_FIELDS = ['dayTypeCode', 'startDate', 'endDate', 'reason'];
+const EARLY_DEPARTURE_RENDERED_FIELDS = ['dayTypeCode', 'startDate', 'reason'];
 const SELECT_CLASS = 'h-10 w-full rounded-lg border border-zinc-200 px-2';
 
 function shortDay(date: string): string {
@@ -56,6 +57,7 @@ export function LeaveRequestDialog({
   const [endHalf, setEndHalf] = useState<Half>('pm');
   const [reason, setReason] = useState('');
   const [reasonError, setReasonError] = useState<string>();
+  const [typeError, setTypeError] = useState<string>();
   const isEarlyDeparture = dayTypeCode === EARLY_DEPARTURE;
   // An early departure is exactly one half-day (F6.3): the range collapses to the start half.
   const range = isEarlyDeparture
@@ -73,6 +75,7 @@ export function LeaveRequestDialog({
   const fieldErrors: Record<string, string | undefined> = {
     ...fieldErrorsOf(create.error),
     ...(reasonError ? { reason: reasonError } : {}),
+    ...(typeError ? { dayTypeCode: typeError } : {}),
   };
 
   useEffect(() => {
@@ -95,6 +98,11 @@ export function LeaveRequestDialog({
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     create.reset();
+    if (dayTypeCode === '') {
+      setTypeError(copy.leave.typeRequired);
+      return;
+    }
+    setTypeError(undefined);
     if (isEarlyDeparture && reason.trim() === '') {
       setReasonError(copy.leave.reasonRequired);
       return;
@@ -103,7 +111,7 @@ export function LeaveRequestDialog({
     create.mutate({
       dayTypeCode,
       ...range,
-      ...(reason.trim() === '' ? {} : { reason: reason.trim() }),
+      ...(isEarlyDeparture ? { reason: reason.trim() } : {}),
     });
   }
 
@@ -133,6 +141,9 @@ export function LeaveRequestDialog({
               </option>
             ))}
           </select>
+          {fieldErrors.dayTypeCode ? (
+            <span className="block text-xs text-rose-700">{fieldErrors.dayTypeCode}</span>
+          ) : null}
         </label>
         <div className="grid grid-cols-2 gap-3">
           <label className="space-y-1 text-sm font-medium">
@@ -201,7 +212,12 @@ export function LeaveRequestDialog({
           />
         ) : null}
         <p className="text-sm text-zinc-600">{summary()}</p>
-        <ErrorBanner message={bannerMessageFor(create.error, RENDERED_FIELDS)} />
+        <ErrorBanner
+          message={bannerMessageFor(
+            create.error,
+            isEarlyDeparture ? EARLY_DEPARTURE_RENDERED_FIELDS : RENDERED_FIELDS,
+          )}
+        />
         {create.data ? (
           <p role="status" className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
             {outcomeMessage(create.data)}

@@ -181,4 +181,29 @@ describe('LeaveRequestDialog', () => {
       'Le 23 nov. (matin) est déjà déclaré.',
     );
   });
+
+  it('asks for a type without sending anything when none is chosen', async () => {
+    const { user, dialog, fetchMock } = renderDialog();
+
+    await within(dialog).findByLabelText(copy.leave.type);
+    await user.click(within(dialog).getByRole('button', { name: copy.leave.submit }));
+
+    expect(within(dialog).getByText(copy.leave.typeRequired)).toBeInTheDocument();
+    expect(
+      fetchMock.mock.calls.some(([, init]) => (init as RequestInit | undefined)?.method === 'POST'),
+    ).toBe(false);
+  });
+
+  it('does not send a reason typed for an early departure after switching type', async () => {
+    const { user, dialog, fetchMock } = renderDialog({
+      'POST /api/v1/leave-requests': { status: 201, body: CREATED },
+    });
+
+    await chooseType(user, dialog, 'early_departure');
+    await user.type(within(dialog).getByLabelText(copy.leave.reason), 'Rendez-vous');
+    await chooseType(user, dialog, 'leave');
+    await user.click(within(dialog).getByRole('button', { name: copy.leave.submit }));
+
+    expect(await sentBody(fetchMock)).not.toHaveProperty('reason');
+  });
 });

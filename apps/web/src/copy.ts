@@ -334,6 +334,7 @@ export const copy = {
     dialogTitle: 'Demander une absence',
     type: 'Type',
     chooseType: 'Choisissez un type',
+    typeRequired: 'Choisissez un type.',
     startDate: 'Du',
     startHalf: 'Début',
     endDate: 'Au',
