@@ -134,6 +134,7 @@ export async function updateUser(
         .selectFrom('appUser')
         .select(['id', 'email', 'isAdmin', 'isBlocked', 'archivedAt'])
         .where('id', '=', userId)
+        // Locks the target row so concurrent edits of one person serialize.
         .forNoKeyUpdate()
         .executeTakeFirst();
       if (!target) throw new UserNotFoundError();

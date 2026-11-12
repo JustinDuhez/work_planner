@@ -39,7 +39,8 @@ export async function updateWorkingTime(
       .select(['id', 'dailyMinutes'])
       .where('id', '=', command.userId)
       .where('archivedAt', 'is', null)
-      .forUpdate()
+      // NO KEY UPDATE: id never changes, and FOR UPDATE would block the FK key-share checks of notification inserts.
+      .forNoKeyUpdate()
       .executeTakeFirst();
     if (!target) throw new UserNotFoundError();
     if (command.dailyMinutes !== undefined) {

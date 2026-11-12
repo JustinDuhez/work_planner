@@ -108,6 +108,24 @@ describe('reading leave requests', () => {
     expect(inbox.pending[0]?.canReview).toBe(true);
   });
 
+  it('leaves the requests of archived people out of an admin inbox', async () => {
+    const goneId = await insertUser(db, {
+      email: 'gone.read@example.com',
+      firstName: 'Gabin',
+      isArchived: true,
+    });
+    await insertLeaveRequest(db, {
+      userId: goneId,
+      dayTypeCode: 'leave',
+      startDate: '2026-11-24',
+      status: 'pending',
+    });
+
+    const inbox = (await get('ines.read@example.com', 'to-review')).json<{ pending: View[] }>();
+
+    expect(inbox.pending.map((request) => request.user.firstName)).toEqual(['Léa']);
+  });
+
   it('refuses the inbox to a collaborator', async () => {
     const response = await get('hugo.read@example.com', 'to-review');
 

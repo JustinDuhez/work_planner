@@ -46,10 +46,10 @@ export async function listLeaveRequestsToReview(
   const now = deps.now();
   const today = toWorkDate(now, deps.timeZone);
   const scopedIds = [...actor.managedUserIds];
-  // Admins see everyone; managers their whole scope (direct reports decide, the rest only see).
+  // Admins see every active person; managers their whole scope (direct reports decide, the rest only see).
   const scoped = () => {
     const query = selectLeaveRequests(deps.db).where('leaveRequest.userId', '<>', viewer.id);
-    if (actor.isAdmin) return query;
+    if (actor.isAdmin) return query.where('requester.archivedAt', 'is', null);
     return scopedIds.length > 0 ? query.where('leaveRequest.userId', 'in', scopedIds) : null;
   };
   const pendingQuery = scoped();

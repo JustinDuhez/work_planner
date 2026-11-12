@@ -42,6 +42,7 @@ describe('leave in the week', () => {
   beforeAll(async () => {
     db = await createMigratedTestDb();
     leaId = await insertUser(db, { email: 'lea.week@example.com', startDate: '2026-10-19' });
+    await insertUser(db, { email: 'ines.week@example.com', isAdmin: true });
     app = await buildApp({ config: createTestConfig(), db, now: createTestClock(NOW).now });
   });
 
@@ -141,12 +142,13 @@ describe('leave in the week', () => {
     });
     const { cookie, csrfToken } = await logIn(app, person.email);
 
-    await app.inject({
+    const response = await app.inject({
       method: 'POST',
       url: '/api/v1/clock-periods',
       headers: { cookie, origin: TEST_ORIGIN, 'x-csrf-token': csrfToken },
       payload: {},
     });
+    expect(response.statusCode).toBe(201);
     const day = await db
       .selectFrom('clockDay')
       .select('workMode')
@@ -154,5 +156,79 @@ describe('leave in the week', () => {
       .executeTakeFirstOrThrow();
 
     expect(day.workMode).toBe('telework');
+  });
+
+  it('lets an explicit on-site start win over an approved telework day', async () => {
+    const person = await newPerson();
+    await insertLeaveRequest(db, {
+      userId: person.id,
+      dayTypeCode: 'telework',
+      startDate: '2026-11-12',
+      status: 'approved',
+    });
+    const { cookie, csrfToken } = await logIn(app, person.email);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/clock-periods',
+      headers: { cookie, origin: TEST_ORIGIN, 'x-csrf-token': csrfToken },
+      payload: { workMode: 'on_site' },
+    });
+    const day = await db
+      .selectFrom('clockDay')
+      .select('workMode')
+      .where('userId', '=', person.id)
+      .executeTakeFirstOrThrow();
+
+    expect(response.statusCode).toBe(201);
+    expect(day.workMode).toBe('on_site');
+  });
+
+  it('keeps the target when a pending absence is refused', async () => {
+    const person = await newPerson();
+    const requestId = await insertLeaveRequest(db, {
+      userId: person.id,
+      dayTypeCode: 'leave',
+      startDate: '2026-11-16',
+      status: 'pending',
+    });
+    const before = await getWeek(person.email, person.id, '2026-W47');
+    const admin = await logIn(app, 'ines.week@example.com');
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: `/api/v1/leave-requests/${requestId}/review`,
+      headers: { cookie: admin.cookie, origin: TEST_ORIGIN, 'x-csrf-token': admin.csrfToken },
+      payload: { decision: 'refused', comment: 'Période chargée' },
+    });
+    const after = await getWeek(person.email, person.id, '2026-W47');
+
+    expect(response.statusCode).toBe(200);
+    expect(after.counters.weekTargetMinutes).toBe(before.counters.weekTargetMinutes);
+  });
+
+  it('restores the target when an approved absence is cancelled before it starts', async () => {
+    const person = await newPerson();
+    const before = await getWeek(person.email, person.id, '2026-W47');
+    const requestId = await insertLeaveRequest(db, {
+      userId: person.id,
+      dayTypeCode: 'leave',
+      startDate: '2026-11-16',
+      status: 'approved',
+    });
+    const lowered = await getWeek(person.email, person.id, '2026-W47');
+    const owner = await logIn(app, person.email);
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: `/api/v1/leave-requests/${requestId}/cancellation`,
+      headers: { cookie: owner.cookie, origin: TEST_ORIGIN, 'x-csrf-token': owner.csrfToken },
+      payload: {},
+    });
+    const after = await getWeek(person.email, person.id, '2026-W47');
+
+    expect(response.statusCode).toBe(200);
+    expect(lowered.counters.weekTargetMinutes).toBe(before.counters.weekTargetMinutes - 420);
+    expect(after.counters.weekTargetMinutes).toBe(before.counters.weekTargetMinutes);
   });
 });

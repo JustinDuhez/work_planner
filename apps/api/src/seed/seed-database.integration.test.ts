@@ -467,3 +467,43 @@ describe('seedDatabase', () => {
     });
   });
 });
+
+describe('seedDatabase on a database that already holds clocked history', () => {
+  it('skips an approved absence on a day the person already clocked', async () => {
+    const db = await createMigratedTestDb();
+    try {
+      await seedDatabase(db, SEED_CONFIG, SEED_CLOCK);
+      const emma = await db
+        .selectFrom('appUser')
+        .select('id')
+        .where('email', '=', 'emma.lefebvre@example.com')
+        .executeTakeFirstOrThrow();
+      const sick = await db
+        .selectFrom('leaveRequest')
+        .select(['id', 'startDate'])
+        .where('userId', '=', emma.id)
+        .where('status', '=', 'approved')
+        .executeTakeFirstOrThrow();
+      // Earlier seed runs predate leave: undo the sick day and clock that day instead.
+      await db.deleteFrom('halfDay').where('leaveRequestId', '=', sick.id).execute();
+      await db.deleteFrom('leaveRequest').where('id', '=', sick.id).execute();
+      await db
+        .insertInto('clockDay')
+        .values({ userId: emma.id, workDate: sick.startDate })
+        .onConflict((conflict) => conflict.doNothing())
+        .execute();
+
+      await seedDatabase(db, SEED_CONFIG, SEED_CLOCK);
+
+      const approved = await db
+        .selectFrom('leaveRequest')
+        .select('id')
+        .where('userId', '=', emma.id)
+        .where('status', '=', 'approved')
+        .execute();
+      expect(approved).toEqual([]);
+    } finally {
+      await db.destroy();
+    }
+  });
+});

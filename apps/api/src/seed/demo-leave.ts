@@ -107,7 +107,7 @@ export async function seedDemoLeave(
         .executeTakeFirstOrThrow();
       const dayType = await trx
         .selectFrom('dayType')
-        .select('id')
+        .select(['id', 'isBadgeable'])
         .where('code', '=', demo.dayTypeCode)
         .executeTakeFirstOrThrow();
       // Idempotent: the same request on the same start date is created once.
@@ -132,6 +132,21 @@ export async function seedDemoLeave(
           )
           .executeTakeFirst();
         if (taken) return;
+      }
+      // Earlier seed runs left clocked history: an approved absence on a clocked day would show a
+      // phantom surplus, so the request is skipped, like a taken slot.
+      if (demo.status === 'approved' && !dayType.isBadgeable) {
+        const clocked = await trx
+          .selectFrom('clockDay')
+          .select('id')
+          .where('userId', '=', user.id)
+          .where(
+            'workDate',
+            'in',
+            slots.map((slot) => slot.date),
+          )
+          .executeTakeFirst();
+        if (clocked) return;
       }
       const reviewer = demo.reviewerEmail
         ? await trx

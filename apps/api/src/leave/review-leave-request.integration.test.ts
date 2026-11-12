@@ -180,15 +180,34 @@ describe('reviewing leave requests', () => {
       })
       .execute();
 
+    const otherId = await pendingLeave();
+    await db
+      .insertInto('notification')
+      .values({
+        userId: sophieId,
+        type: 'leave_request_received',
+        payload: JSON.stringify({
+          leaveRequestId: otherId,
+          actorName: 'Léa',
+          dayTypeLabel: 'Congé',
+          startDate: '2026-11-25',
+          endDate: '2026-11-25',
+        }),
+      })
+      .execute();
+
     await review('ines.rev@example.com', requestId, { decision: 'approved' });
 
     const unread = await db
       .selectFrom('notification')
-      .select('id')
+      .select('payload')
       .where('userId', '=', sophieId)
       .where('readAt', 'is', null)
       .where('type', '=', 'leave_request_received')
       .execute();
-    expect(unread).toEqual([]);
+    // Only the decided request is read: another request's notification stays unread.
+    expect(
+      unread.map((row) => ('leaveRequestId' in row.payload ? row.payload.leaveRequestId : null)),
+    ).toEqual([otherId]);
   });
 });
