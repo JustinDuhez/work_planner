@@ -18,6 +18,7 @@ import {
 
 const TAB_PARAM = 'onglet';
 const MINE_TAB = 'mes-demandes';
+const PANEL_ID = 'leave-requests-panel';
 const TO_REVIEW_TAB = 'a-valider';
 
 function CancelAction({ request }: { request: LeaveRequestView }) {
@@ -55,18 +56,6 @@ function ReviewActions({ request }: { request: LeaveRequestView }) {
     return <p className="text-xs text-zinc-500">{copy.leaveRequests.decidedByDirectManager}</p>;
   }
 
-  function confirm() {
-    if (decision === 'refused' && comment.trim() === '') {
-      setCommentError(copy.leaveRequests.commentRequired);
-      return;
-    }
-    setCommentError(undefined);
-    review.mutate({
-      decision: decision ?? 'approved',
-      ...(comment.trim() === '' ? {} : { comment: comment.trim() }),
-    });
-  }
-
   if (decision === null) {
     return (
       <div className="flex gap-2">
@@ -77,13 +66,34 @@ function ReviewActions({ request }: { request: LeaveRequestView }) {
       </div>
     );
   }
+  function cancelDecision() {
+    setComment('');
+    setCommentError(undefined);
+    review.reset();
+    setDecision(null);
+  }
+
+  const confirm = () => {
+    if (decision === 'refused' && comment.trim() === '') {
+      setCommentError(copy.leaveRequests.commentRequired);
+      return;
+    }
+    review.mutate({
+      decision,
+      ...(comment.trim() === '' ? {} : { comment: comment.trim() }),
+    });
+  };
+
   return (
     <div className="space-y-2">
       <TextField
         label={copy.leaveRequests.comment}
         name="comment"
         value={comment}
-        onChange={setComment}
+        onChange={(value) => {
+          setComment(value);
+          setCommentError(undefined);
+        }}
         error={commentError ?? fieldErrorsOf(review.error).comment}
       />
       <div className="flex gap-2">
@@ -92,7 +102,7 @@ function ReviewActions({ request }: { request: LeaveRequestView }) {
             ? copy.leaveRequests.confirmApprove
             : copy.leaveRequests.confirmRefuse}
         </Button>
-        <Button variant="secondary" onClick={() => setDecision(null)}>
+        <Button variant="secondary" onClick={cancelDecision}>
           {copy.leaveRequests.keep}
         </Button>
       </div>
@@ -177,6 +187,8 @@ export function LeaveRequestsPage() {
         <button
           type="button"
           role="tab"
+          id={`tab-${MINE_TAB}`}
+          aria-controls={PANEL_ID}
           aria-selected={tab === MINE_TAB}
           onClick={() => setSearchParams({ [TAB_PARAM]: MINE_TAB })}
           className={tabClass(tab === MINE_TAB)}
@@ -187,6 +199,8 @@ export function LeaveRequestsPage() {
           <button
             type="button"
             role="tab"
+            id={`tab-${TO_REVIEW_TAB}`}
+            aria-controls={PANEL_ID}
             aria-selected={tab === TO_REVIEW_TAB}
             onClick={() => setSearchParams({ [TAB_PARAM]: TO_REVIEW_TAB })}
             className={tabClass(tab === TO_REVIEW_TAB)}
@@ -200,7 +214,7 @@ export function LeaveRequestsPage() {
           </button>
         ) : null}
       </div>
-      <div role="tabpanel">
+      <div role="tabpanel" id={PANEL_ID} aria-labelledby={`tab-${tab}`}>
         {tab === MINE_TAB ? (
           <MineTab dayTypes={dayTypes.data ?? []} />
         ) : (

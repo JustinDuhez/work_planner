@@ -2,8 +2,9 @@ import { formatDayCount, type DayTypeView, type LeaveRequestView } from '@work-p
 import type { ReactNode } from 'react';
 import { formatLongDate } from '../clock/clock-time';
 import { copy } from '../copy';
+import { DAY_TYPE_CHIP_CLASSES, FALLBACK_CHIP_CLASSES } from './half-day-chips';
 
-const STATUS_CLASS: Record<string, string> = {
+const STATUS_CLASS: Record<LeaveRequestView['status'], string> = {
   pending: 'bg-amber-50 text-amber-800',
   approved: 'bg-emerald-50 text-emerald-800',
   refused: 'bg-rose-50 text-rose-800',
@@ -17,14 +18,22 @@ function statusLabel(request: LeaveRequestView): string {
   return copy.leaveRequests.status[request.status];
 }
 
-export function periodText(request: LeaveRequestView, dayTypes: readonly DayTypeView[]): string {
-  const label =
-    dayTypes.find((type) => type.code === request.dayTypeCode)?.label ?? request.dayTypeCode;
+function typeLabel(request: LeaveRequestView, dayTypes: readonly DayTypeView[]): string {
+  return dayTypes.find((type) => type.code === request.dayTypeCode)?.label ?? request.dayTypeCode;
+}
+
+function typeChipClass(request: LeaveRequestView): string {
+  const classes = DAY_TYPE_CHIP_CLASSES[request.dayTypeCode] ?? FALLBACK_CHIP_CLASSES;
+  if (request.status === 'approved') return classes.approved;
+  return request.status === 'pending' ? classes.pending : 'bg-zinc-100 text-zinc-600';
+}
+
+function periodText(request: LeaveRequestView): string {
   const period =
     request.startDate === request.endDate
       ? `${copy.leaveRequests.on} ${formatLongDate(request.startDate)}`
       : `${copy.leaveRequests.from} ${formatLongDate(request.startDate)} ${copy.leaveRequests.to} ${formatLongDate(request.endDate)}`;
-  return `${label} · ${formatDayCount(request.halfDayCount)} · ${period}`;
+  return `${formatDayCount(request.halfDayCount)} · ${period}`;
 }
 
 export function LeaveRequestCard({
@@ -45,10 +54,17 @@ export function LeaveRequestCard({
           {showPerson ? (
             <p className="font-medium text-zinc-900">{`${request.user.firstName} ${request.user.lastName}`}</p>
           ) : null}
-          <p className="text-sm text-zinc-700">{periodText(request, dayTypes)}</p>
+          <p className="flex flex-wrap items-center gap-2 text-sm text-zinc-700">
+            <span
+              className={`rounded-full px-2 py-0.5 text-xs font-medium ${typeChipClass(request)}`}
+            >
+              {typeLabel(request, dayTypes)}
+            </span>
+            <span>{periodText(request)}</span>
+          </p>
         </div>
         <span
-          className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_CLASS[request.status] ?? ''}`}
+          className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_CLASS[request.status]}`}
         >
           {statusLabel(request)}
         </span>

@@ -59,11 +59,10 @@ describe('LeaveRequestsPage', () => {
       within(cards[0] as HTMLElement).getByText(copy.leaveRequests.status.pending),
     ).toBeInTheDocument();
     expect(
-      within(cards[0] as HTMLElement).getByText(
-        'Congé · 3 jours · du 23 nov. 2026 au 25 nov. 2026',
-      ),
+      within(cards[0] as HTMLElement).getByText('3 jours · du 23 nov. 2026 au 25 nov. 2026'),
     ).toBeInTheDocument();
     expect(within(cards[1] as HTMLElement).getByText('Période chargée')).toBeInTheDocument();
+    expect(within(cards[0] as HTMLElement).getByText('Congé')).toBeInTheDocument();
     expect(
       within(cards[1] as HTMLElement).queryByRole('button', { name: copy.leaveRequests.cancel }),
     ).not.toBeInTheDocument();
@@ -183,6 +182,124 @@ describe('LeaveRequestsPage', () => {
     });
 
     expect(await screen.findByText(note)).toBeInTheDocument();
+  });
+
+  it('keeps a collaborator on their own requests whatever the tab in the address', async () => {
+    const { fetchMock } = renderPage('/demandes?onglet=a-valider');
+
+    expect(await screen.findByText(copy.leaveRequests.noRequests)).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: copy.leaveRequests.mineTab })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('view=to-review'))).toBe(
+      false,
+    );
+  });
+
+  it('forgets the refusal comment when the manager steps back', async () => {
+    const pending = leaveRequestView({ id: 9, canReview: true, canCancel: false });
+    const { user, fetchMock } = renderPage('/demandes?onglet=a-valider', {
+      'GET /api/v1/me': { status: 200, body: MANAGER_SESSION },
+      'GET /api/v1/leave-requests?view=to-review': {
+        status: 200,
+        body: { pending: [pending], recent: [] },
+      },
+      'PUT /api/v1/leave-requests/9/review': {
+        status: 200,
+        body: { ...pending, status: 'approved', canReview: false },
+      },
+    });
+
+    await user.click(await screen.findByRole('button', { name: copy.leaveRequests.refuse }));
+    await user.type(screen.getByLabelText(copy.leaveRequests.comment), 'Période chargée');
+    await user.click(screen.getByRole('button', { name: copy.leaveRequests.keep }));
+    await user.click(screen.getByRole('button', { name: copy.leaveRequests.approve }));
+    await user.click(screen.getByRole('button', { name: copy.leaveRequests.confirmApprove }));
+
+    await waitFor(() => {
+      const call = findCall(fetchMock, 'PUT', '/api/v1/leave-requests/9/review');
+      expect(JSON.parse(call?.[1].body as string)).toEqual({ decision: 'approved' });
+    });
+  });
+
+  it('shows the server comment error under the comment field', async () => {
+    const pending = leaveRequestView({ id: 10, canReview: true, canCancel: false });
+    const { user } = renderPage('/demandes?onglet=a-valider', {
+      'GET /api/v1/me': { status: 200, body: MANAGER_SESSION },
+      'GET /api/v1/leave-requests?view=to-review': {
+        status: 200,
+        body: { pending: [pending], recent: [] },
+      },
+      'PUT /api/v1/leave-requests/10/review': {
+        status: 400,
+        body: {
+          code: 'VALIDATION_ERROR',
+          message: 'Certains champs sont invalides.',
+          fieldErrors: { comment: 'Commentaire trop long.' },
+        },
+      },
+    });
+
+    await user.click(await screen.findByRole('button', { name: copy.leaveRequests.refuse }));
+    await user.type(screen.getByLabelText(copy.leaveRequests.comment), 'x');
+    await user.click(screen.getByRole('button', { name: copy.leaveRequests.confirmRefuse }));
+
+    expect(await screen.findByText('Commentaire trop long.')).toBeInTheDocument();
+  });
+
+  it('lists recent decisions under the pending requests', async () => {
+    renderPage('/demandes?onglet=a-valider', {
+      'GET /api/v1/me': { status: 200, body: MANAGER_SESSION },
+      'GET /api/v1/leave-requests?view=to-review': {
+        status: 200,
+        body: {
+          pending: [],
+          recent: [
+            leaveRequestView({
+              id: 11,
+              status: 'refused',
+              reviewer: { id: 2, firstName: 'Sophie', lastName: 'Dubois' },
+              reviewComment: 'Période chargée',
+              canCancel: false,
+            }),
+          ],
+        },
+      },
+    });
+
+    expect(await screen.findByText(copy.leaveRequests.recentTitle)).toBeInTheDocument();
+    expect(screen.getByText(copy.leaveRequests.noPending)).toBeInTheDocument();
+    expect(screen.getByText('Période chargée')).toBeInTheDocument();
+  });
+
+  it('says when a request was approved automatically', async () => {
+    renderPage('/demandes', {
+      'GET /api/v1/leave-requests?view=mine': {
+        status: 200,
+        body: [leaveRequestView({ id: 12, status: 'approved', isAutoApproved: true })],
+      },
+    });
+
+    expect(await screen.findByText(copy.leaveRequests.status.autoApproved)).toBeInTheDocument();
+  });
+
+  it('puts the chosen tab in the address', async () => {
+    const { user, router } = renderPage('/demandes', {
+      'GET /api/v1/me': { status: 200, body: MANAGER_SESSION },
+      'GET /api/v1/leave-requests?view=to-review': {
+        status: 200,
+        body: { pending: [], recent: [] },
+      },
+    });
+
+    await user.click(
+      await screen.findByRole('tab', { name: new RegExp(copy.leaveRequests.toReviewTab) }),
+    );
+    expect(router.state.location.search).toBe('?onglet=a-valider');
+
+    await user.click(screen.getByRole('tab', { name: copy.leaveRequests.mineTab }));
+    expect(router.state.location.search).toBe('?onglet=mes-demandes');
   });
 
   it('has a Demandes link in the header', async () => {

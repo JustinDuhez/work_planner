@@ -3,7 +3,7 @@ import { copy } from '../copy';
 
 // F6.1: pastel = pending, solid = approved. Literal class strings so Tailwind picks them up
 // (the CSP forbids inline styles, so the stored hex color is not used here).
-const DAY_TYPE_CHIP_CLASSES: Record<string, { approved: string; pending: string }> = {
+export const DAY_TYPE_CHIP_CLASSES: Record<string, { approved: string; pending: string }> = {
   telework: { approved: 'bg-sky-600 text-white', pending: 'bg-sky-100 text-sky-900' },
   recovery: { approved: 'bg-violet-600 text-white', pending: 'bg-violet-100 text-violet-900' },
   sick: { approved: 'bg-red-600 text-white', pending: 'bg-red-100 text-red-900' },
@@ -11,7 +11,7 @@ const DAY_TYPE_CHIP_CLASSES: Record<string, { approved: string; pending: string 
   training_travel: { approved: 'bg-amber-600 text-white', pending: 'bg-amber-100 text-amber-900' },
   early_departure: { approved: 'bg-pink-600 text-white', pending: 'bg-pink-100 text-pink-900' },
 };
-const FALLBACK_CHIP_CLASSES = {
+export const FALLBACK_CHIP_CLASSES = {
   approved: 'bg-zinc-600 text-white',
   pending: 'bg-zinc-100 text-zinc-800',
 };
