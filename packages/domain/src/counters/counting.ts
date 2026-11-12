@@ -58,7 +58,7 @@ export function dailyMinutesOn(
   return nextChange?.previousDailyMinutes ?? currentDailyMinutes;
 }
 
-function isWeekend(date: string): boolean {
+export function isWeekendDate(date: string): boolean {
   // Noon UTC: the calendar date never shifts, whatever the process time zone.
   const dayIndex = new Date(`${date}T12:00:00Z`).getUTCDay();
   return dayIndex === SATURDAY_INDEX || dayIndex === SUNDAY_INDEX;
@@ -69,7 +69,7 @@ export function badgeableMinutesOf(
   dailyMinutes: number,
   badgeableHalfDays: number,
 ): number {
-  if (isWeekend(date)) return 0;
+  if (isWeekendDate(date)) return 0;
   // Half of an odd daily time rounds down: nobody owes a minute they cannot split.
   return Math.floor((dailyMinutes * badgeableHalfDays) / FULL_DAY_HALF_DAYS);
 }

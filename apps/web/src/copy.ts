@@ -277,6 +277,13 @@ export const copy = {
     correctedYourDay: 'a corrigé votre journée du',
     acceptedYourCorrection: 'a accepté votre correction du',
     refusedYourCorrection: 'a refusé votre correction du',
+    leaveRequested: 'demande :',
+    leaveApproved: 'a validé votre demande :',
+    leaveRefused: 'a refusé votre demande :',
+    leaveCancelled: 'a annulé sa demande validée :',
+    onDate: 'le',
+    fromDate: 'du',
+    toDate: 'au',
   },
   settings: {
     title: 'Paramètres',
