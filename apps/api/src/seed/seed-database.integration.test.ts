@@ -50,6 +50,57 @@ describe('seedDatabase', () => {
     expect(chloeDays).toEqual([]);
   });
 
+  it('creates the demo leave requests once, on workable days only', async () => {
+    const statuses = await db
+      .selectFrom('leaveRequest')
+      .innerJoin('appUser', 'appUser.id', 'leaveRequest.userId')
+      .select(['appUser.email', 'leaveRequest.status'])
+      .orderBy('appUser.email')
+      .execute();
+
+    expect(firstRun.leaveRequestCount).toBe(5);
+    expect(statuses).toEqual(
+      expect.arrayContaining([
+        { email: 'lea.moreau@example.com', status: 'approved' },
+        { email: 'hugo.laurent@example.com', status: 'pending' },
+        { email: 'camille.simon@example.com', status: 'refused' },
+        { email: 'emma.lefebvre@example.com', status: 'approved' },
+        { email: 'emma.lefebvre@example.com', status: 'cancelled' },
+      ]),
+    );
+  });
+
+  it('never clocks demo hours on a day of approved absence', async () => {
+    const emmaSickDay = await db
+      .selectFrom('leaveRequest')
+      .innerJoin('appUser', 'appUser.id', 'leaveRequest.userId')
+      .innerJoin('dayType', 'dayType.id', 'leaveRequest.dayTypeId')
+      .select('leaveRequest.startDate')
+      .where('appUser.email', '=', 'emma.lefebvre@example.com')
+      .where('dayType.code', '=', 'sick')
+      .executeTakeFirstOrThrow();
+
+    const clocked = await db
+      .selectFrom('clockDay')
+      .innerJoin('appUser', 'appUser.id', 'clockDay.userId')
+      .select('clockDay.id')
+      .where('appUser.email', '=', 'emma.lefebvre@example.com')
+      .where('clockDay.workDate', '=', emmaSickDay.startDate)
+      .execute();
+
+    expect(clocked).toEqual([]);
+  });
+
+  it('never clocks demo hours on a public holiday', async () => {
+    const clocked = await db
+      .selectFrom('clockDay')
+      .innerJoin('publicHoliday', 'publicHoliday.holidayDate', 'clockDay.workDate')
+      .select('clockDay.id')
+      .execute();
+
+    expect(clocked).toEqual([]);
+  });
+
   it('changes nothing when it runs a second time', async () => {
     expect(await seedDatabase(db, SEED_CONFIG, SEED_CLOCK)).toEqual(firstRun);
   });
