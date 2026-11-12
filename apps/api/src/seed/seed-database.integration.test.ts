@@ -50,6 +50,57 @@ describe('seedDatabase', () => {
     expect(chloeDays).toEqual([]);
   });
 
+  it('creates the demo leave requests once, on workable days only', async () => {
+    const statuses = await db
+      .selectFrom('leaveRequest')
+      .innerJoin('appUser', 'appUser.id', 'leaveRequest.userId')
+      .select(['appUser.email', 'leaveRequest.status'])
+      .orderBy('appUser.email')
+      .execute();
+
+    expect(firstRun.leaveRequestCount).toBe(5);
+    expect(statuses).toEqual(
+      expect.arrayContaining([
+        { email: 'lea.moreau@example.com', status: 'approved' },
+        { email: 'hugo.laurent@example.com', status: 'pending' },
+        { email: 'camille.simon@example.com', status: 'refused' },
+        { email: 'emma.lefebvre@example.com', status: 'approved' },
+        { email: 'emma.lefebvre@example.com', status: 'cancelled' },
+      ]),
+    );
+  });
+
+  it('never clocks demo hours on a day of approved absence', async () => {
+    const emmaSickDay = await db
+      .selectFrom('leaveRequest')
+      .innerJoin('appUser', 'appUser.id', 'leaveRequest.userId')
+      .innerJoin('dayType', 'dayType.id', 'leaveRequest.dayTypeId')
+      .select('leaveRequest.startDate')
+      .where('appUser.email', '=', 'emma.lefebvre@example.com')
+      .where('dayType.code', '=', 'sick')
+      .executeTakeFirstOrThrow();
+
+    const clocked = await db
+      .selectFrom('clockDay')
+      .innerJoin('appUser', 'appUser.id', 'clockDay.userId')
+      .select('clockDay.id')
+      .where('appUser.email', '=', 'emma.lefebvre@example.com')
+      .where('clockDay.workDate', '=', emmaSickDay.startDate)
+      .execute();
+
+    expect(clocked).toEqual([]);
+  });
+
+  it('never clocks demo hours on a public holiday', async () => {
+    const clocked = await db
+      .selectFrom('clockDay')
+      .innerJoin('publicHoliday', 'publicHoliday.holidayDate', 'clockDay.workDate')
+      .select('clockDay.id')
+      .execute();
+
+    expect(clocked).toEqual([]);
+  });
+
   it('changes nothing when it runs a second time', async () => {
     expect(await seedDatabase(db, SEED_CONFIG, SEED_CLOCK)).toEqual(firstRun);
   });
@@ -414,5 +465,45 @@ describe('seedDatabase', () => {
         .execute();
       expect(corrections).toEqual([]);
     });
+  });
+});
+
+describe('seedDatabase on a database that already holds clocked history', () => {
+  it('skips an approved absence on a day the person already clocked', async () => {
+    const db = await createMigratedTestDb();
+    try {
+      await seedDatabase(db, SEED_CONFIG, SEED_CLOCK);
+      const emma = await db
+        .selectFrom('appUser')
+        .select('id')
+        .where('email', '=', 'emma.lefebvre@example.com')
+        .executeTakeFirstOrThrow();
+      const sick = await db
+        .selectFrom('leaveRequest')
+        .select(['id', 'startDate'])
+        .where('userId', '=', emma.id)
+        .where('status', '=', 'approved')
+        .executeTakeFirstOrThrow();
+      // Earlier seed runs predate leave: undo the sick day and clock that day instead.
+      await db.deleteFrom('halfDay').where('leaveRequestId', '=', sick.id).execute();
+      await db.deleteFrom('leaveRequest').where('id', '=', sick.id).execute();
+      await db
+        .insertInto('clockDay')
+        .values({ userId: emma.id, workDate: sick.startDate })
+        .onConflict((conflict) => conflict.doNothing())
+        .execute();
+
+      await seedDatabase(db, SEED_CONFIG, SEED_CLOCK);
+
+      const approved = await db
+        .selectFrom('leaveRequest')
+        .select('id')
+        .where('userId', '=', emma.id)
+        .where('status', '=', 'approved')
+        .execute();
+      expect(approved).toEqual([]);
+    } finally {
+      await db.destroy();
+    }
   });
 });

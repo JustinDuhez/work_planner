@@ -94,7 +94,8 @@ async function lockActiveAdminIds(trx: Kysely<Database>): Promise<number[]> {
     .where('isBlocked', '=', false)
     .where('archivedAt', 'is', null)
     .orderBy('id')
-    .forUpdate()
+    // NO KEY UPDATE: id never changes, and FOR UPDATE would block the FK key-share checks of notification inserts.
+    .forNoKeyUpdate()
     .execute();
   return rows.map((row) => row.id);
 }
@@ -133,7 +134,8 @@ export async function updateUser(
         .selectFrom('appUser')
         .select(['id', 'email', 'isAdmin', 'isBlocked', 'archivedAt'])
         .where('id', '=', userId)
-        .forUpdate()
+        // Locks the target row so concurrent edits of one person serialize.
+        .forNoKeyUpdate()
         .executeTakeFirst();
       if (!target) throw new UserNotFoundError();
       const violation = findUserAccessViolation({

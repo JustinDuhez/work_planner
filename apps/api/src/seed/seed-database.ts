@@ -1,11 +1,12 @@
 import { toWorkDate } from '@work-planner/domain';
 import type { Kysely } from 'kysely';
-import { insertFrenchHolidays } from '../holidays/holiday-repository';
+import { findPublicHolidays, insertFrenchHolidays } from '../holidays/holiday-repository';
 import { hashPassword } from '../auth/password-hasher';
 import type { Database } from '../db/database';
 import { buildDemoClockHistory, demoHistoryStartDate } from './demo-clock-history';
 import { seedDemoCounters } from './demo-counters';
 import { seedDemoCorrections } from './demo-corrections';
+import { seedDemoLeave } from './demo-leave';
 import { DEMO_TEAMS, DEMO_USERS, type DemoUser } from './demo-company';
 import type { SeedConfig } from './seed-config';
 
@@ -64,7 +65,8 @@ async function countRows(
     | 'clockDay'
     | 'counterReset'
     | 'clockCorrection'
-    | 'publicHoliday',
+    | 'publicHoliday'
+    | 'leaveRequest',
 ): Promise<number> {
   const { count } = await db
     .selectFrom(table)
@@ -85,6 +87,7 @@ export async function seedDatabase(
   counterResetCount: number;
   correctionCount: number;
   publicHolidayCount: number;
+  leaveRequestCount: number;
 }> {
   const today = toWorkDate(clock.now, clock.timeZone);
   await insertUserIfMissing(
@@ -116,12 +119,38 @@ export async function seedDatabase(
         .execute();
     }
   }
+  // Holidays first: demo leave and the clock history both depend on them.
+  for (const year of DEMO_HOLIDAY_YEARS) await insertFrenchHolidays(db, year);
+  await seedDemoLeave(db, clock);
   const activeEmails = DEMO_USERS.filter((user) => !user.isArchived).map((user) => user.email);
+  // A demo person never "works" on a public holiday or on a day of approved absence.
+  const historyStart = demoHistoryStartDate(clock);
+  const holidayDates = new Set(
+    (await findPublicHolidays(db, { fromDate: historyStart, toDate: today })).map(
+      (holiday) => holiday.date,
+    ),
+  );
+  const absentDays = new Set(
+    (
+      await db
+        .selectFrom('halfDay')
+        .innerJoin('leaveRequest', 'leaveRequest.id', 'halfDay.leaveRequestId')
+        .innerJoin('dayType', 'dayType.id', 'halfDay.dayTypeId')
+        .innerJoin('appUser', 'appUser.id', 'halfDay.userId')
+        .select(['appUser.email', 'halfDay.workDate'])
+        .where('leaveRequest.status', '=', 'approved')
+        .where('dayType.isBadgeable', '=', false)
+        .where('halfDay.workDate', '>=', historyStart)
+        .where('halfDay.workDate', '<=', today)
+        .execute()
+    ).map((row) => `${row.email}:${row.workDate}`),
+  );
   for (const day of buildDemoClockHistory({
     now: clock.now,
     timeZone: clock.timeZone,
     emails: activeEmails,
   })) {
+    if (holidayDates.has(day.workDate) || absentDays.has(`${day.email}:${day.workDate}`)) continue;
     const userId = await idOfUser(db, day.email);
     // One transaction per day: a crash must not leave a day without periods, which the
     // DO NOTHING below would never repair.
@@ -144,7 +173,6 @@ export async function seedDatabase(
   }
   await seedDemoCounters(db, clock);
   await seedDemoCorrections(db, clock);
-  for (const year of DEMO_HOLIDAY_YEARS) await insertFrenchHolidays(db, year);
   return {
     userCount: await countRows(db, 'appUser'),
     teamCount: await countRows(db, 'team'),
@@ -153,5 +181,6 @@ export async function seedDatabase(
     counterResetCount: await countRows(db, 'counterReset'),
     correctionCount: await countRows(db, 'clockCorrection'),
     publicHolidayCount: await countRows(db, 'publicHoliday'),
+    leaveRequestCount: await countRows(db, 'leaveRequest'),
   };
 }

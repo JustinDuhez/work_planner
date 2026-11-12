@@ -8,6 +8,7 @@ import {
 } from '@work-planner/domain';
 import { APP_TIME_ZONE, currentIsoWeek } from '../clock/clock-time';
 import type { MockResponse } from './mock-fetch';
+import { DAY_TYPES } from './leave-fixtures';
 import { SIGNED_IN_SESSION } from './sessions';
 
 export const LEA: UserSummary = { id: 7, firstName: 'Léa', lastName: 'Moreau' };
@@ -20,12 +21,14 @@ export function weekFixture(
     isoWeek?: string;
     user?: UserSummary;
     isOwnWeek?: boolean;
+    serverNow?: string;
     days?: Partial<Record<string, Partial<ClockDayView>>>;
     counters?: Partial<WeekCounters>;
   } = {},
 ): ClockWeek {
   const isoWeek = options.isoWeek ?? currentIsoWeek(new Date());
-  const today = toWorkDate(new Date(), APP_TIME_ZONE);
+  const serverNow = options.serverNow ?? new Date().toISOString();
+  const today = toWorkDate(new Date(serverNow), APP_TIME_ZONE);
   const isOwnWeek = options.isOwnWeek ?? true;
   const days = (datesOfIsoWeek(isoWeek) ?? []).map((date): ClockDayView => ({
     date,
@@ -34,6 +37,7 @@ export function weekFixture(
     workedMinutes: 0,
     badgeableMinutes: 0,
     holidayLabel: null,
+    halfDays: { am: null, pm: null },
     isToday: date === today,
     isFuture: date > today,
     isUnclosed: false,
@@ -46,7 +50,7 @@ export function weekFixture(
   return {
     user: options.user ?? LEA,
     isoWeek,
-    serverNow: new Date().toISOString(),
+    serverNow,
     days,
     weekWorkedMinutes: days.reduce((total, day) => total + day.workedMinutes, 0),
     counters: {
@@ -74,6 +78,8 @@ export function signedInHomeRoutes(week: ClockWeek = weekFixture()): Record<stri
     'GET /api/v1/health': { status: 200, body: { status: 'ok', database: 'up' } },
     'GET /api/v1/notifications': { status: 200, body: NO_NOTIFICATIONS },
     'GET /api/v1/users': { status: 200, body: [HUGO, LEA] },
+    'GET /api/v1/day-types': { status: 200, body: DAY_TYPES },
+    'GET /api/v1/public-holidays?year=2026': { status: 200, body: [] },
     [`GET /api/v1/users/${LEA.id}/clock-weeks/${week.isoWeek}`]: { status: 200, body: week },
   };
 }

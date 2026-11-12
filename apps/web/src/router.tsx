@@ -1,6 +1,7 @@
 import { createBrowserRouter, type RouteObject } from 'react-router';
 import { ClockWeekPage } from './clock/clock-week-page';
 import { DirectoryAdminPage } from './directory/directory-admin-page';
+import { LeaveRequestsPage } from './leave/leave-requests-page';
 import { LoginPage } from './login/login-page';
 import { NotFoundPage } from './not-found/not-found-page';
 import { ForcedPasswordPage } from './password/forced-password-page';
@@ -26,6 +27,7 @@ export const routes: RouteObject[] = [
           { path: 'profil', element: <ProfilePage /> },
           { path: 'equipes', element: <TeamsAdminPage /> },
           { path: 'parametres', element: <SettingsPage /> },
+          { path: 'demandes', element: <LeaveRequestsPage /> },
           { path: '*', element: <NotFoundPage /> },
         ],
       },

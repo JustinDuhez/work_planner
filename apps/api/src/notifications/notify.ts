@@ -1,4 +1,4 @@
-import type { NotificationPayload, NotificationType } from '@work-planner/domain';
+import type { NotificationInput } from '@work-planner/domain';
 import type { Kysely } from 'kysely';
 import type { Database } from '../db/database';
 import { insertNotification } from './notification-repository';
@@ -9,7 +9,7 @@ import { insertNotification } from './notification-repository';
  */
 export function notify(
   db: Kysely<Database>,
-  notification: { userId: number; type: NotificationType; payload: NotificationPayload },
+  notification: { userId: number } & NotificationInput,
 ): Promise<void> {
   return insertNotification(db, notification);
 }

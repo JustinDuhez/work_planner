@@ -120,6 +120,12 @@ describe('clocking from the week view', () => {
     expect(bodyOf(fetchMock, 'POST', '/api/v1/clock-periods')).toEqual({ startedAt: '09:00' });
   });
 
+  it('pre-selects telework when the day is planned as approved telework', async () => {
+    renderHome({}, { halfDays: { am: { dayTypeCode: 'telework', status: 'approved' }, pm: null } });
+
+    expect(await screen.findByRole('radio', { name: copy.clock.telework })).toBeChecked();
+  });
+
   it('switches the work mode once the day has started', async () => {
     const { fetchMock, user } = renderHome(
       {

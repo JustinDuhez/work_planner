@@ -11,6 +11,7 @@ import { registerCounterRoutes } from './counters/counter-routes';
 import type { AppConfig } from './config/config';
 import type { Database } from './db/database';
 import { registerHolidayRoutes } from './holidays/holiday-routes';
+import { registerLeaveRoutes } from './leave/leave-routes';
 import { registerHealthRoutes } from './health/health-routes';
 import { registerNotificationRoutes } from './notifications/notification-routes';
 import { registerErrorHandlers } from './http/error-handler';
@@ -84,6 +85,7 @@ export async function buildApp({
     registerSettingsRoutes(scope, { db });
     registerClockRoutes(scope, clockDependencies);
     registerCounterRoutes(scope, clockDependencies);
+    registerLeaveRoutes(scope, clockDependencies);
     registerCorrectionRoutes(scope, clockDependencies);
     registerNotificationRoutes(scope, { db, now });
   });

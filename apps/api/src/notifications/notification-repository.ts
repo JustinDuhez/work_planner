@@ -1,8 +1,9 @@
-import type {
-  NotificationList,
-  NotificationPayload,
-  NotificationType,
-  NotificationView,
+import {
+  notificationSchema,
+  type NotificationInput,
+  type NotificationList,
+  type NotificationType,
+  type NotificationView,
 } from '@work-planner/domain';
 import { sql, type Kysely } from 'kysely';
 import type { Database } from '../db/database';
@@ -12,24 +13,25 @@ const NOTIFICATION_LIST_LIMIT = 20;
 interface StoredNotification {
   id: number;
   type: NotificationType;
-  payload: NotificationPayload;
+  payload: unknown;
   readAt: Date | null;
   createdAt: Date;
 }
 
 function toNotificationView(notification: StoredNotification): NotificationView {
-  return {
+  // Parsing also guards rows written before a payload shape changed.
+  return notificationSchema.parse({
     id: notification.id,
     type: notification.type,
     payload: notification.payload,
     readAt: notification.readAt?.toISOString() ?? null,
     createdAt: notification.createdAt.toISOString(),
-  };
+  });
 }
 
 export async function insertNotification(
   db: Kysely<Database>,
-  notification: { userId: number; type: NotificationType; payload: NotificationPayload },
+  notification: { userId: number } & NotificationInput,
 ): Promise<void> {
   await db
     .insertInto('notification')
@@ -83,6 +85,20 @@ export async function markAllNotificationsRead(
     .updateTable('notification')
     .set({ readAt: query.readAt })
     .where('userId', '=', query.userId)
+    .where('readAt', 'is', null)
+    .execute();
+}
+
+/** Once a request is decided or cancelled, "X demande…" no longer needs anyone's attention. */
+export async function markLeaveNotificationsRead(
+  db: Kysely<Database>,
+  query: { leaveRequestId: number; readAt: Date },
+): Promise<void> {
+  await db
+    .updateTable('notification')
+    .set({ readAt: query.readAt })
+    .where('type', '=', 'leave_request_received')
+    .where(sql<boolean>`(payload ->> 'leaveRequestId')::int = ${query.leaveRequestId}`)
     .where('readAt', 'is', null)
     .execute();
 }

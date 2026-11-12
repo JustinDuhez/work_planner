@@ -7,6 +7,12 @@ import { renderApp } from '../test/render-app';
 import { shiftIsoWeek } from './clock-time';
 
 const WEEK = '2026-W45';
+// Tuesday of week 45: leave tests must not depend on the real date.
+const SERVER_NOW = '2026-11-03T10:00:00.000Z';
+const FULL_LEAVE = {
+  am: { dayTypeCode: 'leave', status: 'approved' },
+  pm: { dayTypeCode: 'leave', status: 'approved' },
+} as const;
 
 describe('ClockWeekPage', () => {
   it('shows my current week on the home screen', async () => {
@@ -113,5 +119,79 @@ describe('ClockWeekPage', () => {
     renderApp(`/?semaine=${WEEK}`);
 
     expect(await screen.findByRole('alert')).toHaveTextContent(copy.clock.loadError);
+  });
+
+  it('offers the owner to declare an absence on a future weekday and opens the dialog', async () => {
+    const week = weekFixture({
+      isoWeek: WEEK,
+      serverNow: SERVER_NOW,
+      days: {
+        '2026-11-04': { isFuture: true, isToday: false },
+        '2026-11-05': { isFuture: true, isToday: false, holidayLabel: 'Férié' },
+        '2026-11-06': { isFuture: true, isToday: false, halfDays: FULL_LEAVE },
+        '2026-11-07': { isFuture: true, isToday: false },
+        '2026-11-03': { isFuture: false, isToday: false },
+      },
+    });
+    mockFetchRoutes(signedInHomeRoutes(week));
+    renderApp(`/?semaine=${WEEK}`);
+    const user = userEvent.setup();
+
+    const wednesday = await screen.findByRole('listitem', { name: /^MER 4/ });
+    expect(
+      within(screen.getByRole('listitem', { name: /^MAR 3/ })).queryByRole('button', {
+        name: copy.leave.declareDay,
+      }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(screen.getByRole('listitem', { name: /^JEU 5/ })).queryByRole('button', {
+        name: copy.leave.declareDay,
+      }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(screen.getByRole('listitem', { name: /^VEN 6/ })).queryByRole('button', {
+        name: copy.leave.declareDay,
+      }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(screen.getByRole('listitem', { name: /^SAM 7/ })).queryByRole('button', {
+        name: copy.leave.declareDay,
+      }),
+    ).not.toBeInTheDocument();
+    await user.click(within(wednesday).getByRole('button', { name: copy.leave.declareDay }));
+
+    expect(await screen.findByRole('dialog', { name: copy.leave.dialogTitle })).toBeInTheDocument();
+  });
+
+  it('opens the request dialog from the week-level button', async () => {
+    mockFetchRoutes(signedInHomeRoutes(weekFixture({ isoWeek: WEEK, serverNow: SERVER_NOW })));
+    renderApp(`/?semaine=${WEEK}`);
+
+    await userEvent
+      .setup()
+      .click(await screen.findByRole('button', { name: copy.leave.requestButton }));
+
+    expect(await screen.findByRole('dialog', { name: copy.leave.dialogTitle })).toBeInTheDocument();
+  });
+
+  it("shows a colleague's planned half-days but no request buttons", async () => {
+    const other = weekFixture({
+      isoWeek: WEEK,
+      user: HUGO,
+      isOwnWeek: false,
+      serverNow: SERVER_NOW,
+      days: { '2026-11-04': { isFuture: true, isToday: false, halfDays: FULL_LEAVE } },
+    });
+    mockFetchRoutes({
+      ...signedInHomeRoutes(),
+      [`GET /api/v1/users/${HUGO.id}/clock-weeks/${WEEK}`]: { status: 200, body: other },
+    });
+    renderApp(`/pointage/${HUGO.id}?semaine=${WEEK}`);
+
+    expect(await screen.findByText('Congé')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: copy.leave.declareDay })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: copy.leave.requestButton }),
+    ).not.toBeInTheDocument();
   });
 });
