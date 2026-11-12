@@ -89,6 +89,20 @@ export async function markAllNotificationsRead(
     .execute();
 }
 
+/** Once a request is decided or cancelled, "X demande…" no longer needs anyone's attention. */
+export async function markLeaveNotificationsRead(
+  db: Kysely<Database>,
+  query: { leaveRequestId: number; readAt: Date },
+): Promise<void> {
+  await db
+    .updateTable('notification')
+    .set({ readAt: query.readAt })
+    .where('type', '=', 'leave_request_received')
+    .where(sql<boolean>`(payload ->> 'leaveRequestId')::int = ${query.leaveRequestId}`)
+    .where('readAt', 'is', null)
+    .execute();
+}
+
 /** A superseded correction can no longer be answered: its "received" notification is done. */
 export async function markCorrectionNotificationsRead(
   db: Kysely<Database>,
