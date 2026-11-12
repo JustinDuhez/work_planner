@@ -17,6 +17,7 @@ const RULES: CountingRules = {
   currentDailyMinutes: 420,
   dailyMinutesChanges: [],
   publicHolidayDates: new Set(),
+  absentHalfDaysByDate: new Map(),
 };
 const WEEK_45 = { fromDate: '2026-11-02', toDate: '2026-11-08' };
 
@@ -181,6 +182,20 @@ describe('counterDays', () => {
     expect(counterDays(WEEK_45, periodsByDate, { ...RULES, countingStart: '2026-11-09' })).toEqual(
       [],
     );
+  });
+
+  it('expects half the daily time for an approved absent half-day and none for a full day', () => {
+    const rules = {
+      ...RULES,
+      absentHalfDaysByDate: new Map([
+        ['2026-11-04', 1],
+        ['2026-11-05', 2],
+      ]),
+    };
+
+    const days = counterDays({ fromDate: '2026-11-04', toDate: '2026-11-05' }, new Map(), rules);
+
+    expect(days.map((day) => day.targetMinutes)).toEqual([210, 0]);
   });
 });
 

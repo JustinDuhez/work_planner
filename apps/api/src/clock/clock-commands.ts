@@ -29,6 +29,7 @@ import {
   updateClockPeriodTimes,
   upsertClockDayMode,
 } from './clock-repository';
+import { hasApprovedTelework } from '../leave/leave-repository';
 
 const DEFAULT_WORK_MODE: WorkMode = 'on_site';
 
@@ -68,11 +69,11 @@ export function startClockPeriod(
   const startedAt = command.startedAt ? instantOn(deps, today, command.startedAt) : now;
   const endedAt = command.endedAt ? instantOn(deps, today, command.endedAt) : null;
   return inClockTransaction(deps.db, async (trx) => {
-    const day = await ensureClockDay(trx, {
-      userId: command.viewer.id,
-      workDate: today,
-      workMode: command.workMode ?? DEFAULT_WORK_MODE,
-    });
+    // E3-D3 hook: an approved telework day starts in telework unless the person chose otherwise.
+    const workMode =
+      command.workMode ??
+      ((await hasApprovedTelework(trx, command.viewer.id, today)) ? 'telework' : DEFAULT_WORK_MODE);
+    const day = await ensureClockDay(trx, { userId: command.viewer.id, workDate: today, workMode });
     const existing = await findPeriodsOfDay(trx, day.id);
     assertValidDay(deps, { workDate: today, periods: [...existing, { startedAt, endedAt }], now });
     return toClockPeriodView(

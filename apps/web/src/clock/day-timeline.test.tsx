@@ -10,6 +10,7 @@ const DAY: ClockDayView = {
   workedMinutes: 0,
   badgeableMinutes: 0,
   holidayLabel: null,
+  halfDays: { am: null, pm: null },
   isToday: false,
   isFuture: false,
   isUnclosed: true,

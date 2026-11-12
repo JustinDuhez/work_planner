@@ -1,9 +1,12 @@
 import type {
   ClockCorrectionStatus,
+  Half,
+  LeaveStatus,
   NotificationPayload,
   NotificationType,
   WorkMode,
 } from '@work-planner/domain';
+import { expandWorkableHalfDays } from '@work-planner/domain';
 import type { Kysely } from 'kysely';
 import { hashPassword } from '../auth/password-hasher';
 import type { Database, SnapshotPeriod } from '../db/database';
@@ -196,4 +199,60 @@ export async function insertPublicHoliday(
     .insertInto('publicHoliday')
     .values({ holidayDate: holiday.date, label: holiday.label ?? 'Férié' })
     .execute();
+}
+
+export async function insertLeaveRequest(
+  db: Kysely<Database>,
+  request: {
+    userId: number;
+    dayTypeCode: string;
+    startDate: string;
+    startHalf?: Half;
+    endDate?: string;
+    endHalf?: Half;
+    status?: LeaveStatus;
+    reviewerId?: number;
+  },
+): Promise<number> {
+  const range = {
+    startDate: request.startDate,
+    startHalf: request.startHalf ?? 'am',
+    endDate: request.endDate ?? request.startDate,
+    endHalf: request.endHalf ?? 'pm',
+  };
+  // Tests choose their dates: holidays are not skipped here, only weekends.
+  const slots = expandWorkableHalfDays(range, new Set());
+  const status = request.status ?? 'pending';
+  const { id: dayTypeId } = await db
+    .selectFrom('dayType')
+    .select('id')
+    .where('code', '=', request.dayTypeCode)
+    .executeTakeFirstOrThrow();
+  const { id } = await db
+    .insertInto('leaveRequest')
+    .values({
+      userId: request.userId,
+      dayTypeId,
+      ...range,
+      halfDayCount: slots.length,
+      status,
+      reviewerId: request.reviewerId ?? null,
+    })
+    .returning('id')
+    .executeTakeFirstOrThrow();
+  if (status === 'pending' || status === 'approved') {
+    await db
+      .insertInto('halfDay')
+      .values(
+        slots.map((slot) => ({
+          userId: request.userId,
+          workDate: slot.date,
+          half: slot.half,
+          dayTypeId,
+          leaveRequestId: id,
+        })),
+      )
+      .execute();
+  }
+  return id;
 }

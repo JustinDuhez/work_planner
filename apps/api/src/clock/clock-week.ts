@@ -34,13 +34,18 @@ export async function buildClockWeek(
   if (!profile) throw new UserNotFoundError();
   const now = deps.now();
   const today = toWorkDate(now, deps.timeZone);
-  const { counters, targetMinutesByDate, holidayLabelByDate, latestCorrectionByDate } =
-    await buildWeekCounters(deps, {
-      owner: profile,
-      week: { fromDate: monday, toDate: sunday },
-      instant: { now, today },
-      viewer: query.viewer,
-    });
+  const {
+    counters,
+    targetMinutesByDate,
+    holidayLabelByDate,
+    latestCorrectionByDate,
+    halfDaysByDate,
+  } = await buildWeekCounters(deps, {
+    owner: profile,
+    week: { fromDate: monday, toDate: sunday },
+    instant: { now, today },
+    viewer: query.viewer,
+  });
   const storedDays = await findClockDays(deps.db, owner.id, monday, sunday);
   const isOwner = query.viewer.id === owner.id;
   const canCorrectOwner = canEditPastClock(await query.viewer.loadActor(), owner.id);
@@ -57,6 +62,7 @@ export async function buildClockWeek(
       workedMinutes: dayWorkedMinutes(periods, { now, isToday }),
       badgeableMinutes: targetMinutesByDate.get(date) ?? 0,
       holidayLabel: holidayLabelByDate.get(date) ?? null,
+      halfDays: halfDaysByDate.get(date) ?? { am: null, pm: null },
       isToday,
       isFuture: date > today,
       isUnclosed,

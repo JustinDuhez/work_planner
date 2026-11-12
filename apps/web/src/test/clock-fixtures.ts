@@ -34,6 +34,7 @@ export function weekFixture(
     workedMinutes: 0,
     badgeableMinutes: 0,
     holidayLabel: null,
+    halfDays: { am: null, pm: null },
     isToday: date === today,
     isFuture: date > today,
     isUnclosed: false,

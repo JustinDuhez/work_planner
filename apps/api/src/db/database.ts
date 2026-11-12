@@ -1,5 +1,7 @@
 import type {
   ClockCorrectionStatus,
+  Half,
+  LeaveStatus,
   NotificationPayload,
   NotificationType,
   WorkMode,
@@ -140,6 +142,50 @@ export interface PublicHolidayTable {
   updatedAt: Generated<Date>;
 }
 
+export interface DayTypeTable {
+  id: Generated<number>;
+  code: string;
+  label: string;
+  color: string;
+  requiresApproval: boolean;
+  isBadgeable: boolean;
+  isRequestable: boolean;
+  createdAt: Generated<Date>;
+  updatedAt: Generated<Date>;
+}
+
+export interface LeaveRequestTable {
+  id: Generated<number>;
+  userId: number;
+  dayTypeId: number;
+  startDate: string;
+  startHalf: Half;
+  endDate: string;
+  endHalf: Half;
+  halfDayCount: number;
+  status: LeaveStatus;
+  reason: NullableColumn<string>;
+  ruleNote: NullableColumn<string>;
+  isAutoApproved: Generated<boolean>;
+  reviewerId: NullableColumn<number>;
+  reviewComment: NullableColumn<string>;
+  reviewedAt: NullableColumn<Date>;
+  cancelledAt: NullableColumn<Date>;
+  createdAt: Generated<Date>;
+  updatedAt: Generated<Date>;
+}
+
+export interface HalfDayTable {
+  id: Generated<number>;
+  userId: number;
+  workDate: string;
+  half: Half;
+  dayTypeId: number;
+  leaveRequestId: number;
+  createdAt: Generated<Date>;
+  updatedAt: Generated<Date>;
+}
+
 export interface Database {
   setting: SettingTable;
   appUser: AppUserTable;
@@ -153,4 +199,7 @@ export interface Database {
   clockCorrection: ClockCorrectionTable;
   notification: NotificationTable;
   publicHoliday: PublicHolidayTable;
+  dayType: DayTypeTable;
+  leaveRequest: LeaveRequestTable;
+  halfDay: HalfDayTable;
 }

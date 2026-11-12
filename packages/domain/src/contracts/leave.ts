@@ -76,14 +76,3 @@ export const leaveReviewInboxSchema = z.object({
   recent: z.array(leaveRequestSchema),
 });
 export type LeaveReviewInbox = z.infer<typeof leaveReviewInboxSchema>;
-
-export const plannedHalfDaySchema = z.object({
-  dayTypeCode: z.string(),
-  status: z.enum(['pending', 'approved']),
-});
-export type PlannedHalfDay = z.infer<typeof plannedHalfDaySchema>;
-export const dayHalfDaysSchema = z.object({
-  am: plannedHalfDaySchema.nullable(),
-  pm: plannedHalfDaySchema.nullable(),
-});
-export type DayHalfDays = z.infer<typeof dayHalfDaysSchema>;

@@ -60,6 +60,18 @@ export const clockPeriodSchema = z.object({
 
 export type ClockPeriodView = z.infer<typeof clockPeriodSchema>;
 
+// Lives here, not in leave.ts, because leave.ts already imports this file.
+export const plannedHalfDaySchema = z.object({
+  dayTypeCode: z.string(),
+  status: z.enum(['pending', 'approved']),
+});
+export type PlannedHalfDay = z.infer<typeof plannedHalfDaySchema>;
+export const dayHalfDaysSchema = z.object({
+  am: plannedHalfDaySchema.nullable(),
+  pm: plannedHalfDaySchema.nullable(),
+});
+export type DayHalfDays = z.infer<typeof dayHalfDaysSchema>;
+
 export const clockDaySchema = z.object({
   date: workDateSchema,
   workMode: workModeSchema.nullable(),
@@ -67,6 +79,7 @@ export const clockDaySchema = z.object({
   workedMinutes: z.number().int(),
   badgeableMinutes: z.number().int(),
   holidayLabel: z.string().nullable(),
+  halfDays: dayHalfDaysSchema,
   isToday: z.boolean(),
   isFuture: z.boolean(),
   isUnclosed: z.boolean(),
