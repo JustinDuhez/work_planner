@@ -23,14 +23,13 @@ export function TodayControls({
   isoWeek: string;
   onAddPeriod: () => void;
 }) {
-  const [chosenMode, setChosenMode] = useState<WorkMode>(
-    isPlannedTelework(day.halfDays) ? 'telework' : 'on_site',
-  );
+  const [chosenMode, setChosenMode] = useState<WorkMode | null>(null);
   const start = useStartClockPeriod(ownerId, isoWeek);
   const update = useUpdateClockPeriod(ownerId, isoWeek);
   const setDayMode = useSetDayMode(ownerId, isoWeek);
   const runningPeriod = day.periods.find((period) => period.endedAt === null);
-  const workMode = day.workMode ?? chosenMode;
+  const workMode =
+    day.workMode ?? chosenMode ?? (isPlannedTelework(day.halfDays) ? 'telework' : 'on_site');
   const errorMessage = bannerMessageFor(start.error ?? update.error ?? setDayMode.error, []);
 
   // Only the latest outcome is worth showing: a stale failure must not outlive a later success.

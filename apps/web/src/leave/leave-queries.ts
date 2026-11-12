@@ -63,7 +63,8 @@ export function useReviewLeaveRequest(requestId: number) {
   return useMutation({
     mutationFn: (body: ReviewLeaveRequestRequest) =>
       apiSend('PUT', `/api/v1/leave-requests/${requestId}/review`, body, leaveRequestSchema),
-    onSuccess: invalidate,
+    // Also on error: a refused decision (already decided) means the lists are stale.
+    onSettled: invalidate,
   });
 }
 
@@ -72,6 +73,6 @@ export function useCancelLeaveRequest(requestId: number) {
   return useMutation({
     mutationFn: () =>
       apiSend('PUT', `/api/v1/leave-requests/${requestId}/cancellation`, {}, leaveRequestSchema),
-    onSuccess: invalidate,
+    onSettled: invalidate,
   });
 }

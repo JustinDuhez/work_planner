@@ -194,7 +194,7 @@ export const copy = {
     commentRequired: 'Indiquez la raison du refus.',
     confirmApprove: "Confirmer l'approbation",
     confirmRefuse: 'Confirmer le refus',
-    decidedByDirectManager: 'Validée par son responsable direct',
+    decidedByDirectManager: 'À valider par son responsable direct',
   },
   teamDialog: {
     newTeam: 'Nouvelle équipe',

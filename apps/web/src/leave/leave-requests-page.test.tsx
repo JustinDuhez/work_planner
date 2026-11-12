@@ -85,6 +85,26 @@ describe('LeaveRequestsPage', () => {
     );
   });
 
+  it('reloads the lists when a cancellation is refused by the server', async () => {
+    const { user, fetchMock } = renderPage('/demandes', {
+      'GET /api/v1/leave-requests?view=mine': { status: 200, body: [leaveRequestView({ id: 4 })] },
+      'PUT /api/v1/leave-requests/4/cancellation': {
+        status: 409,
+        body: {
+          code: 'LEAVE_NOT_CANCELLABLE',
+          message: 'Cette demande ne peut plus être annulée.',
+        },
+      },
+    });
+    const mineLoads = () =>
+      fetchMock.mock.calls.filter(([url]) => url === '/api/v1/leave-requests?view=mine').length;
+
+    await user.click(await screen.findByRole('button', { name: copy.leaveRequests.cancel }));
+    await user.click(screen.getByRole('button', { name: copy.leaveRequests.confirmCancel }));
+
+    await waitFor(() => expect(mineLoads()).toBe(2));
+  });
+
   it('hides the inbox tab from a collaborator', async () => {
     renderPage('/demandes');
 

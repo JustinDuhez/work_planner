@@ -166,6 +166,23 @@ describe('LeaveRequestDialog', () => {
     );
   });
 
+  it('says telework is approved when nobody could be asked to hold it', async () => {
+    const note = 'Il ne resterait que 2,5 jours sur site la semaine du 23 nov.';
+    const { user, dialog } = renderDialog({
+      'POST /api/v1/leave-requests': {
+        status: 201,
+        body: { ...CREATED, dayTypeCode: 'telework', status: 'approved', ruleNote: note },
+      },
+    });
+
+    await chooseType(user, dialog, 'telework');
+    await user.click(within(dialog).getByRole('button', { name: copy.leave.submit }));
+
+    expect(await within(dialog).findByRole('status')).toHaveTextContent(
+      copy.leave.teleworkApproved,
+    );
+  });
+
   it('shows an overlap refusal from the server', async () => {
     const { user, dialog } = renderDialog({
       'POST /api/v1/leave-requests': {
@@ -192,6 +209,17 @@ describe('LeaveRequestDialog', () => {
     expect(
       fetchMock.mock.calls.some(([, init]) => (init as RequestInit | undefined)?.method === 'POST'),
     ).toBe(false);
+  });
+
+  it('clears the missing-type error once a type is chosen', async () => {
+    const { user, dialog } = renderDialog();
+
+    await within(dialog).findByLabelText(copy.leave.type);
+    await user.click(within(dialog).getByRole('button', { name: copy.leave.submit }));
+    expect(within(dialog).getByText(copy.leave.typeRequired)).toBeInTheDocument();
+    await user.selectOptions(within(dialog).getByRole('combobox', { name: /Type/ }), 'leave');
+
+    expect(within(dialog).queryByText(copy.leave.typeRequired)).not.toBeInTheDocument();
   });
 
   it('does not send a reason typed for an early departure after switching type', async () => {

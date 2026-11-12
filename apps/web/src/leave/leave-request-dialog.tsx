@@ -28,7 +28,8 @@ function shortDay(date: string): string {
 }
 
 function outcomeMessage(request: LeaveRequestView): string {
-  if (request.ruleNote) return `${copy.leave.needsApproval} ${request.ruleNote}`;
+  if (request.status === 'pending' && request.ruleNote)
+    return `${copy.leave.needsApproval} ${request.ruleNote}`;
   if (request.status === 'approved') {
     return request.dayTypeCode === 'telework'
       ? copy.leave.teleworkApproved
@@ -47,7 +48,6 @@ export function LeaveRequestDialog({
   onClose: () => void;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  // A range across two years only loads the start year holidays: summary only, the server decides.
   const dayTypes = useDayTypes();
   const create = useCreateLeaveRequest();
   const [dayTypeCode, setDayTypeCode] = useState('');
@@ -66,9 +66,11 @@ export function LeaveRequestDialog({
 
   function chooseDayType(code: string) {
     setDayTypeCode(code);
+    setTypeError(undefined);
     // People usually leave early in the afternoon: start there, they can still pick the morning.
     if (code === EARLY_DEPARTURE) setStartHalf('pm');
   }
+  // A range across two years only loads the start year holidays: summary only, the server decides.
   const holidays = usePublicHolidays(Number(range.startDate.slice(0, 4)));
   const holidayDates = new Set((holidays.data ?? []).map((holiday) => holiday.date));
   const slots = range.startDate && range.endDate ? expandWorkableHalfDays(range, holidayDates) : [];
