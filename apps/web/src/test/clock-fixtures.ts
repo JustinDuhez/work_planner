@@ -8,6 +8,7 @@ import {
 } from '@work-planner/domain';
 import { APP_TIME_ZONE, currentIsoWeek } from '../clock/clock-time';
 import type { MockResponse } from './mock-fetch';
+import { DAY_TYPES } from './leave-fixtures';
 import { SIGNED_IN_SESSION } from './sessions';
 
 export const LEA: UserSummary = { id: 7, firstName: 'Léa', lastName: 'Moreau' };
@@ -75,6 +76,8 @@ export function signedInHomeRoutes(week: ClockWeek = weekFixture()): Record<stri
     'GET /api/v1/health': { status: 200, body: { status: 'ok', database: 'up' } },
     'GET /api/v1/notifications': { status: 200, body: NO_NOTIFICATIONS },
     'GET /api/v1/users': { status: 200, body: [HUGO, LEA] },
+    'GET /api/v1/day-types': { status: 200, body: DAY_TYPES },
+    'GET /api/v1/public-holidays?year=2026': { status: 200, body: [] },
     [`GET /api/v1/users/${LEA.id}/clock-weeks/${week.isoWeek}`]: { status: 200, body: week },
   };
 }

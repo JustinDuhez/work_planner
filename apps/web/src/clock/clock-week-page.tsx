@@ -1,4 +1,4 @@
-import { datesOfIsoWeek } from '@work-planner/domain';
+import { datesOfIsoWeek, toWorkDate, type ClockDayView } from '@work-planner/domain';
 import { useState } from 'react';
 import { useParams, useSearchParams } from 'react-router';
 import { copy } from '../copy';
@@ -7,9 +7,12 @@ import { CorrectionDialog } from '../corrections/correction-dialog';
 import { CorrectionStatusChip } from '../corrections/correction-status-chip';
 import { RefusedCorrectionsDialog } from '../corrections/refused-corrections-dialog';
 import { NotFoundPage } from '../not-found/not-found-page';
+import { HalfDayChips } from '../leave/half-day-chips';
+import { LeaveRequestDialog } from '../leave/leave-request-dialog';
+import { useDayTypes } from '../leave/leave-queries';
 import { useSession } from '../session/session-queries';
 import { Button } from '../ui/button';
-import { currentIsoWeek } from './clock-time';
+import { APP_TIME_ZONE, currentIsoWeek } from './clock-time';
 import { useClockWeek } from './clock-queries';
 import { CountersCard } from './counters-card';
 import { CloseDayDialog } from './close-day-dialog';
@@ -46,6 +49,13 @@ export function ClockWeekPage() {
   );
 }
 
+function canDeclareAbsence(day: ClockDayView): boolean {
+  const weekday = new Date(`${day.date}T12:00:00Z`).getUTCDay();
+  const isWeekend = weekday === 0 || weekday === 6;
+  const hasFreeHalf = day.halfDays.am === null || day.halfDays.pm === null;
+  return (day.isToday || day.isFuture) && !isWeekend && day.holidayLabel === null && hasFreeHalf;
+}
+
 function ClockWeekView({
   ownerId,
   pathUserId,
@@ -64,6 +74,13 @@ function ClockWeekView({
   const week = useClockWeek(ownerId, isoWeek);
   const now = useServerClock(week.data?.serverNow);
   const isOwnWeek = ownerId === viewerId;
+  const dayTypes = useDayTypes();
+  const [leaveDialogDate, setLeaveDialogDate] = useState<string | null>(null);
+  const serverToday = week.data ? toWorkDate(new Date(week.data.serverNow), APP_TIME_ZONE) : '';
+  const requestDate = week.data
+    ? ((week.data.days.find((day) => day.isToday) ?? week.data.days.find((day) => day.isFuture))
+        ?.date ?? serverToday)
+    : serverToday;
   const [dialog, setDialog] = useState<
     | { kind: 'add'; date: string }
     | { kind: 'edit'; date: string; periodId: number }
@@ -104,6 +121,11 @@ function ClockWeekView({
               {copy.clock.readOnlySuffix}
             </p>
           ) : null}
+          {isOwnWeek ? (
+            <Button variant="secondary" onClick={() => setLeaveDialogDate(requestDate)}>
+              {copy.leave.requestButton}
+            </Button>
+          ) : null}
           <ol className="space-y-2">
             {week.data.days.map((day, index) => (
               <DayRow
@@ -118,6 +140,16 @@ function ClockWeekView({
                 }
                 actions={
                   <>
+                    <HalfDayChips halfDays={day.halfDays} dayTypes={dayTypes.data ?? []} />
+                    {isOwnWeek && canDeclareAbsence(day) ? (
+                      <button
+                        type="button"
+                        onClick={() => setLeaveDialogDate(day.date)}
+                        className="text-sm font-medium text-primary-600 hover:text-primary-700"
+                      >
+                        {copy.leave.declareDay}
+                      </button>
+                    ) : null}
                     {day.latestCorrection ? (
                       <CorrectionStatusChip
                         status={day.latestCorrection.status}
@@ -204,6 +236,13 @@ function ClockWeekView({
       ) : null}
       {dialog?.kind === 'correct' && dialogDay ? (
         <CorrectionDialog day={dialogDay} ownerId={ownerId} onClose={() => setDialog(null)} />
+      ) : null}
+      {leaveDialogDate ? (
+        <LeaveRequestDialog
+          initialDate={leaveDialogDate}
+          minDate={serverToday}
+          onClose={() => setLeaveDialogDate(null)}
+        />
       ) : null}
       {counterDialog === 'reset' && week.data ? (
         <CounterResetDialog week={week.data} onClose={() => setCounterDialog(null)} />
