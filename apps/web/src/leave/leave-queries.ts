@@ -8,6 +8,7 @@ import {
   type ReviewLeaveRequestRequest,
 } from '@work-planner/domain';
 import { apiGet, apiSend } from '../api/api-client';
+import { YEAR_CALENDAR_QUERY_KEY } from '../calendar/calendar-queries';
 import { CLOCK_WEEK_QUERY_PREFIX } from '../clock/clock-queries';
 import { NOTIFICATIONS_QUERY_KEY } from '../notifications/notification-queries';
 
@@ -25,12 +26,13 @@ export function useDayTypes() {
 
 export function useInvalidateLeave() {
   const queryClient = useQueryClient();
-  // A request changes the requests lists and the weeks (chips, counters).
+  // A request changes the requests lists, the weeks (chips, counters) and the year calendars.
   return () =>
     Promise.all([
       queryClient.invalidateQueries({ queryKey: LEAVE_REQUESTS_QUERY_KEY }),
       queryClient.invalidateQueries({ queryKey: CLOCK_WEEK_QUERY_PREFIX }),
       queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_QUERY_KEY }),
+      queryClient.invalidateQueries({ queryKey: YEAR_CALENDAR_QUERY_KEY }),
     ]);
 }
 
@@ -74,5 +76,14 @@ export function useCancelLeaveRequest(requestId: number) {
     mutationFn: () =>
       apiSend('PUT', `/api/v1/leave-requests/${requestId}/cancellation`, {}, leaveRequestSchema),
     onSettled: invalidate,
+  });
+}
+
+export function useDeclareLeaveRequest(userId: number) {
+  const invalidate = useInvalidateLeave();
+  return useMutation({
+    mutationFn: (body: CreateLeaveRequestRequest) =>
+      apiSend('POST', `/api/v1/users/${userId}/leave-requests`, body, leaveRequestSchema),
+    onSuccess: invalidate,
   });
 }

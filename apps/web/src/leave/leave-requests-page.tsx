@@ -149,6 +149,7 @@ function ToReviewTab({ dayTypes }: { dayTypes: readonly DayTypeView[] }) {
         {(inbox.data?.pending ?? []).map((request) => (
           <LeaveRequestCard key={request.id} request={request} dayTypes={dayTypes} showPerson>
             <ReviewActions request={request} />
+            <CancelAction request={request} />
           </LeaveRequestCard>
         ))}
       </ul>
@@ -157,7 +158,9 @@ function ToReviewTab({ dayTypes }: { dayTypes: readonly DayTypeView[] }) {
           <h2 className="text-sm font-semibold text-zinc-700">{copy.leaveRequests.recentTitle}</h2>
           <ul className="space-y-2">
             {recent.map((request) => (
-              <LeaveRequestCard key={request.id} request={request} dayTypes={dayTypes} showPerson />
+              <LeaveRequestCard key={request.id} request={request} dayTypes={dayTypes} showPerson>
+                <CancelAction request={request} />
+              </LeaveRequestCard>
             ))}
           </ul>
         </section>

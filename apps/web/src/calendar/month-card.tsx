@@ -24,18 +24,27 @@ export function halfKey(date: string, half: HalfName): string {
   return `${date}:${half}`;
 }
 
+// Returns the click handler of a half-day, or nothing when it is not actionable.
+export type HalfAction = (
+  date: string,
+  half: HalfName,
+  declared: CalendarHalfDay | undefined,
+) => (() => void) | undefined;
+
 function HalfCell({
   date,
   half,
   declared,
   holidayLabel,
   dayTypes,
+  onClick,
 }: {
   date: string;
   half: HalfName;
   declared: CalendarHalfDay | undefined;
   holidayLabel: string | undefined;
   dayTypes: readonly DayTypeView[];
+  onClick: (() => void) | undefined;
 }) {
   let background = isWeekendDate(date) ? 'bg-zinc-100' : '';
   let text: string | null = null;
@@ -53,6 +62,19 @@ function HalfCell({
     if (half === 'am')
       text = `${formatDayMonth(date)} : ${copy.calendar.holiday} · ${holidayLabel}`;
   }
+  if (onClick) {
+    // A free half has no label yet: name it by its date and half, like a declared one does.
+    const halfWord = half === 'am' ? copy.calendar.morning : copy.calendar.afternoon;
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={`block h-3 w-full cursor-pointer hover:bg-primary-100 ${background}`}
+      >
+        <span className="sr-only">{text ?? `${formatDayMonth(date)} : ${halfWord}`}</span>
+      </button>
+    );
+  }
   return (
     <span className={`block h-3 ${background}`}>
       {text ? <span className="sr-only">{text}</span> : null}
@@ -68,6 +90,7 @@ function DayCell({
   halfDaysByKey,
   holidaysByDate,
   dayTypes,
+  halfAction,
 }: {
   date: string;
   day: number;
@@ -76,6 +99,7 @@ function DayCell({
   halfDaysByKey: ReadonlyMap<string, CalendarHalfDay>;
   holidaysByDate: ReadonlyMap<string, string>;
   dayTypes: readonly DayTypeView[];
+  halfAction: HalfAction | undefined;
 }) {
   const holidayLabel = holidaysByDate.get(date);
   return (
@@ -84,16 +108,20 @@ function DayCell({
         <span aria-hidden className="block px-0.5 text-[10px] leading-4 text-zinc-600">
           {day}
         </span>
-        {HALVES.map((half) => (
-          <HalfCell
-            key={half}
-            date={date}
-            half={half}
-            declared={halfDaysByKey.get(halfKey(date, half))}
-            holidayLabel={holidayLabel}
-            dayTypes={dayTypes}
-          />
-        ))}
+        {HALVES.map((half) => {
+          const declared = halfDaysByKey.get(halfKey(date, half));
+          return (
+            <HalfCell
+              key={half}
+              date={date}
+              half={half}
+              declared={declared}
+              holidayLabel={holidayLabel}
+              dayTypes={dayTypes}
+              onClick={isInPeriod ? halfAction?.(date, half, declared) : undefined}
+            />
+          );
+        })}
       </div>
     </td>
   );
@@ -107,6 +135,7 @@ export function MonthCard({
   holidaysByDate,
   dayTypes,
   today,
+  halfAction,
 }: {
   year: number;
   month: number;
@@ -115,6 +144,7 @@ export function MonthCard({
   holidaysByDate: ReadonlyMap<string, string>;
   dayTypes: readonly DayTypeView[];
   today: string;
+  halfAction?: HalfAction;
 }) {
   const leadingBlanks = (new Date(Date.UTC(year, month - 1, 1)).getUTCDay() + 6) % DAYS_PER_WEEK;
   const dayCount = new Date(Date.UTC(year, month, 0)).getUTCDate();
@@ -156,6 +186,7 @@ export function MonthCard({
                   halfDaysByKey={halfDaysByKey}
                   holidaysByDate={holidaysByDate}
                   dayTypes={dayTypes}
+                  halfAction={halfAction}
                 />
               );
             })}

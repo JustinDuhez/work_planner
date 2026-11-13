@@ -1,16 +1,28 @@
-import { monthsOfPeriod, periodStartYearContaining, toWorkDate } from '@work-planner/domain';
+import {
+  formatDayMonth,
+  isWeekendDate,
+  monthsOfPeriod,
+  periodStartYearContaining,
+  toWorkDate,
+  type CalendarHalfDay,
+  type Half,
+} from '@work-planner/domain';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useMemo, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
+import { bannerMessageFor } from '../api/form-errors';
 import { APP_TIME_ZONE } from '../clock/clock-time';
 import { PersonPicker } from '../clock/person-picker';
 import { copy } from '../copy';
-import { useDayTypes } from '../leave/leave-queries';
+import { ErrorBanner } from '../directory/manage-user-dialog';
+import { LeaveRequestDialog } from '../leave/leave-request-dialog';
+import { useCancelLeaveRequest, useDayTypes } from '../leave/leave-queries';
 import { NotFoundPage } from '../not-found/not-found-page';
 import { useSession } from '../session/session-queries';
+import { Button } from '../ui/button';
 import { useSettings } from '../settings/settings-queries';
 import { calendarPath, useYearCalendar } from './calendar-queries';
-import { halfKey, MonthCard } from './month-card';
+import { halfKey, MonthCard, type HalfAction } from './month-card';
 import { UsageSummaryPanel } from './usage-summary-panel';
 
 const MIN_START_YEAR = 2000;
@@ -59,6 +71,52 @@ function DefaultPeriod({ render }: { render: (startYear: number) => ReactNode })
   );
 }
 
+type CalendarDialog =
+  | { kind: 'request' | 'declare'; date: string; half?: Half }
+  | { kind: 'cancel'; declared: CalendarHalfDay };
+
+function CancelDeclaredDialog({
+  declared,
+  label,
+  onClose,
+}: {
+  declared: CalendarHalfDay;
+  label: string;
+  onClose: () => void;
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const cancel = useCancelLeaveRequest(declared.leaveRequestId);
+  useEffect(() => {
+    dialogRef.current?.showModal();
+  }, []);
+  // The payload has no request range: the question names the type and the clicked day.
+  const question = `${copy.calendar.cancelQuestionPrefix} ${label} ${copy.calendar.cancelQuestionMiddle} ${formatDayMonth(declared.date)} ?`;
+  return (
+    <dialog
+      ref={dialogRef}
+      aria-label={question}
+      onClose={onClose}
+      className="m-auto w-[min(26rem,calc(100vw-2rem))] rounded-card border border-zinc-200 bg-white p-6 shadow-card backdrop:bg-zinc-900/30"
+    >
+      <div className="space-y-4">
+        <p className="text-sm text-zinc-800">{question}</p>
+        <ErrorBanner message={bannerMessageFor(cancel.error, [])} />
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={onClose}>
+            {copy.leaveRequests.keep}
+          </Button>
+          <Button
+            onClick={() => cancel.mutate(undefined, { onSuccess: onClose })}
+            isPending={cancel.isPending}
+          >
+            {copy.leaveRequests.confirmCancel}
+          </Button>
+        </div>
+      </div>
+    </dialog>
+  );
+}
+
 function YearCalendarView({
   ownerId,
   pathUserId,
@@ -82,6 +140,22 @@ function YearCalendarView({
     () => new Map(data?.holidays.map((holiday) => [holiday.date, holiday.label])),
     [data],
   );
+  const [dialog, setDialog] = useState<CalendarDialog | null>(null);
+  const isOwn = ownerId === viewerId;
+  const canDeclare = data?.canDeclare ?? false;
+  // Who may act on a half: yourself from today on (free workable halves), a manager on anyone's.
+  const halfAction: HalfAction | undefined = data
+    ? (date, half, declared) => {
+        if (declared) {
+          return canDeclare ? () => setDialog({ kind: 'cancel', declared }) : undefined;
+        }
+        if (isWeekendDate(date) || holidaysByDate.has(date)) return undefined;
+        if (canDeclare) return () => setDialog({ kind: 'declare', date, half });
+        return isOwn && date >= data.today
+          ? () => setDialog({ kind: 'request', date, half })
+          : undefined;
+      }
+    : undefined;
   const goTo = (year: number) => void navigate(calendarPath(pathUserId, year));
 
   return (
@@ -118,6 +192,11 @@ function YearCalendarView({
           pathFor={(userId) => calendarPath(userId, startYear)}
           label={copy.calendar.viewCalendarOf}
         />
+        {data && canDeclare ? (
+          <Button onClick={() => setDialog({ kind: 'declare', date: data.today })}>
+            {`${copy.calendar.declareFor} ${data.user.firstName}`}
+          </Button>
+        ) : null}
       </div>
       {calendar.isError ? (
         <p role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">
@@ -138,11 +217,30 @@ function YearCalendarView({
                 holidaysByDate={holidaysByDate}
                 dayTypes={dayTypes.data ?? []}
                 today={data.today}
+                halfAction={halfAction}
               />
             ))}
           </div>
           <UsageSummaryPanel calendar={data} dayTypes={dayTypes.data ?? []} />
         </div>
+      ) : null}
+      {data && dialog?.kind === 'cancel' ? (
+        <CancelDeclaredDialog
+          declared={dialog.declared}
+          label={
+            dayTypes.data?.find((type) => type.code === dialog.declared.dayTypeCode)?.label ??
+            dialog.declared.dayTypeCode
+          }
+          onClose={() => setDialog(null)}
+        />
+      ) : null}
+      {data && dialog && dialog.kind !== 'cancel' ? (
+        <LeaveRequestDialog
+          initialDate={dialog.date}
+          initialHalf={dialog.half}
+          {...(dialog.kind === 'request' ? { minDate: data.today } : { targetUser: data.user })}
+          onClose={() => setDialog(null)}
+        />
       ) : null}
     </section>
   );
