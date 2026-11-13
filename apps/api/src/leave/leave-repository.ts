@@ -1,4 +1,10 @@
-import type { DayTypeView, Half, HalfDaySlot, LeaveStatus } from '@work-planner/domain';
+import type {
+  CalendarHalfDay,
+  DayTypeView,
+  Half,
+  HalfDaySlot,
+  LeaveStatus,
+} from '@work-planner/domain';
 import type { Kysely } from 'kysely';
 import type { Database } from '../db/database';
 
@@ -148,4 +154,35 @@ export async function findTakenSlots(
     .orderBy('half')
     .execute();
   return rows.map((row) => ({ date: row.workDate, half: row.half }));
+}
+
+export async function findCalendarHalfDays(
+  db: Kysely<Database>,
+  query: { userId: number; fromDate: string; toDate: string },
+): Promise<CalendarHalfDay[]> {
+  const rows = await db
+    .selectFrom('halfDay')
+    .innerJoin('dayType', 'dayType.id', 'halfDay.dayTypeId')
+    .innerJoin('leaveRequest', 'leaveRequest.id', 'halfDay.leaveRequestId')
+    .select([
+      'halfDay.workDate',
+      'halfDay.half',
+      'dayType.code as dayTypeCode',
+      'leaveRequest.status',
+      'halfDay.leaveRequestId',
+    ])
+    .where('halfDay.userId', '=', query.userId)
+    .where('halfDay.workDate', '>=', query.fromDate)
+    .where('halfDay.workDate', '<=', query.toDate)
+    .orderBy('halfDay.workDate')
+    .orderBy('halfDay.half')
+    .execute();
+  return rows.map((row) => ({
+    date: row.workDate,
+    half: row.half,
+    dayTypeCode: row.dayTypeCode,
+    // Refused / cancelled requests keep no half-days: what is left is pending or approved.
+    status: row.status === 'approved' ? 'approved' : 'pending',
+    leaveRequestId: row.leaveRequestId,
+  }));
 }
