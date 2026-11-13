@@ -313,6 +313,8 @@ export const copy = {
     leaveApproved: 'a validé votre demande :',
     leaveRefused: 'a refusé votre demande :',
     leaveCancelled: 'a annulé sa demande validée :',
+    leaveDeclared: 'a déclaré pour vous :',
+    leaveWithdrawn: 'a annulé votre demande :',
     onDate: 'le',
     fromDate: 'du',
     toDate: 'au',

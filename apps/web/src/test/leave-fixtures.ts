@@ -58,6 +58,7 @@ export function leaveRequestView(overrides: Partial<LeaveRequestView> = {}): Lea
     ruleNote: null,
     isAutoApproved: false,
     reviewer: null,
+    declaredBy: null,
     reviewComment: null,
     reviewedAt: null,
     createdAt: '2026-11-12T09:00:00.000Z',

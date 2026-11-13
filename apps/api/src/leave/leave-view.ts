@@ -27,6 +27,8 @@ export function toLeaveRequestView(
       row.reviewerId === null || row.reviewerFirstName === null || row.reviewerLastName === null
         ? null
         : { id: row.reviewerId, firstName: row.reviewerFirstName, lastName: row.reviewerLastName },
+    // Task 2 reads the author; until then nothing is declared for someone.
+    declaredBy: null,
     reviewComment: row.reviewComment,
     reviewedAt: row.reviewedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),

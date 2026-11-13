@@ -21,6 +21,30 @@ describe('leave notifications', () => {
     endDate: '2026-11-25',
   };
 
+  it('tells a person a manager declared an absence for them and opens their calendar', () => {
+    const notification = leaveNotification({
+      type: 'leave_request_declared',
+      payload: { ...payload, actorName: 'Sophie Dubois' },
+    });
+
+    expect(notificationText(notification)).toBe(
+      'Sophie Dubois a déclaré pour vous : Congé, du 23 nov. 2026 au 25 nov. 2026',
+    );
+    expect(notificationLink(notification, 7)).toBe('/calendrier');
+  });
+
+  it('tells a person a manager cancelled their request and opens their calendar', () => {
+    const notification = leaveNotification({
+      type: 'leave_request_withdrawn',
+      payload: { ...payload, actorName: 'Sophie Dubois' },
+    });
+
+    expect(notificationText(notification)).toBe(
+      'Sophie Dubois a annulé votre demande : Congé, du 23 nov. 2026 au 25 nov. 2026',
+    );
+    expect(notificationLink(notification, 7)).toBe('/calendrier');
+  });
+
   it('tells an approver about a new request and opens the inbox', () => {
     const notification = leaveNotification({ type: 'leave_request_received', payload });
 

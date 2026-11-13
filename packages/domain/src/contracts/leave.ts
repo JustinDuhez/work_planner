@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { userSummarySchema } from './clock';
+import { publicHolidaySchema } from './holidays';
 import { workDateSchema } from './work-date';
 
 export const HALVES = ['am', 'pm'] as const;
@@ -62,6 +63,7 @@ export const leaveRequestSchema = z.object({
   ruleNote: z.string().nullable(),
   isAutoApproved: z.boolean(),
   reviewer: userSummarySchema.nullable(),
+  declaredBy: userSummarySchema.nullable(),
   reviewComment: z.string().nullable(),
   reviewedAt: z.iso.datetime().nullable(),
   createdAt: z.iso.datetime(),
@@ -76,3 +78,30 @@ export const leaveReviewInboxSchema = z.object({
   recent: z.array(leaveRequestSchema),
 });
 export type LeaveReviewInbox = z.infer<typeof leaveReviewInboxSchema>;
+
+export const calendarHalfDaySchema = z.object({
+  date: workDateSchema,
+  half: halfSchema,
+  dayTypeCode: z.string(),
+  status: z.enum(['pending', 'approved']),
+  leaveRequestId: z.number().int(),
+});
+export type CalendarHalfDay = z.infer<typeof calendarHalfDaySchema>;
+
+export const leaveUsageSchema = z.object({
+  dayTypeCode: z.string(),
+  approvedHalfDays: z.number().int(),
+  pendingHalfDays: z.number().int(),
+});
+
+export const yearCalendarSchema = z.object({
+  user: userSummarySchema,
+  period: z.object({ startDate: workDateSchema, endDate: workDateSchema }),
+  halfDays: z.array(calendarHalfDaySchema),
+  holidays: z.array(publicHolidaySchema),
+  summary: z.array(leaveUsageSchema),
+  holidayCount: z.number().int(),
+  canDeclare: z.boolean(),
+  today: workDateSchema,
+});
+export type YearCalendar = z.infer<typeof yearCalendarSchema>;
