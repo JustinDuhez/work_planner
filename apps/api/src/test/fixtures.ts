@@ -212,6 +212,7 @@ export async function insertLeaveRequest(
     endHalf?: Half;
     status?: LeaveStatus;
     reviewerId?: number;
+    authorId?: number;
   },
 ): Promise<number> {
   const range = {
@@ -232,6 +233,7 @@ export async function insertLeaveRequest(
     .insertInto('leaveRequest')
     .values({
       userId: request.userId,
+      authorId: request.authorId ?? request.userId,
       dayTypeId,
       ...range,
       halfDayCount: slots.length,

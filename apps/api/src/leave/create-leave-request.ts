@@ -97,6 +97,7 @@ export async function createLeaveRequest(
         .insertInto('leaveRequest')
         .values({
           userId: viewer.id,
+          authorId: viewer.id,
           dayTypeId: dayType.id,
           startDate: request.startDate,
           startHalf: request.startHalf,

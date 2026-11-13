@@ -167,10 +167,12 @@ export interface LeaveRequestTable {
   reason: NullableColumn<string>;
   ruleNote: NullableColumn<string>;
   isAutoApproved: Generated<boolean>;
+  authorId: number;
   reviewerId: NullableColumn<number>;
   reviewComment: NullableColumn<string>;
   reviewedAt: NullableColumn<Date>;
   cancelledAt: NullableColumn<Date>;
+  cancelledById: NullableColumn<number>;
   createdAt: Generated<Date>;
   updatedAt: Generated<Date>;
 }

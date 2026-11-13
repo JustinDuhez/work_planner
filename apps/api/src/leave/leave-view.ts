@@ -1,6 +1,8 @@
 import {
   canCancelLeaveRequest,
+  canDeclareLeaveFor,
   canReviewLeave,
+  MANAGER_CANCELLABLE_STATUSES,
   type Actor,
   type LeaveRequestView,
 } from '@work-planner/domain';
@@ -27,12 +29,25 @@ export function toLeaveRequestView(
       row.reviewerId === null || row.reviewerFirstName === null || row.reviewerLastName === null
         ? null
         : { id: row.reviewerId, firstName: row.reviewerFirstName, lastName: row.reviewerLastName },
-    // Task 2 reads the author; until then nothing is declared for someone.
-    declaredBy: null,
+    declaredBy:
+      row.authorId === row.userId
+        ? null
+        : { id: row.authorId, firstName: row.authorFirstName, lastName: row.authorLastName },
     reviewComment: row.reviewComment,
     reviewedAt: row.reviewedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
     canReview: row.status === 'pending' && canReviewLeave(context.actor, row.userId),
-    canCancel: row.userId === context.viewerId && canCancelLeaveRequest(row, context.today),
+    canCancel: canCancel(row, context),
   };
+}
+
+/** The owner follows E6a-D3; a scope manager or admin may cancel any live request (E6b-D4). */
+function canCancel(
+  row: LeaveRequestRow,
+  context: { viewerId: number; actor: Actor; today: string },
+): boolean {
+  if (row.userId === context.viewerId) return canCancelLeaveRequest(row, context.today);
+  return (
+    canDeclareLeaveFor(context.actor, row.userId) && MANAGER_CANCELLABLE_STATUSES.has(row.status)
+  );
 }

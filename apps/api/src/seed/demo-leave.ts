@@ -174,6 +174,7 @@ export async function seedDemoLeave(
         .insertInto('leaveRequest')
         .values({
           userId: user.id,
+          authorId: user.id,
           dayTypeId: dayType.id,
           ...range,
           halfDayCount: slots.length,

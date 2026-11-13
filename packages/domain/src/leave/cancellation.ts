@@ -8,3 +8,9 @@ export function canCancelLeaveRequest(
   if (request.status === 'pending') return true;
   return request.status === 'approved' && request.startDate > today;
 }
+
+/** E6b-D4: a scope manager or admin may cancel any live request, whatever its dates. */
+export const MANAGER_CANCELLABLE_STATUSES: ReadonlySet<LeaveStatus> = new Set([
+  'pending',
+  'approved',
+]);

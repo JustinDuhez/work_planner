@@ -80,6 +80,9 @@ export interface LeaveRequestRow {
   reason: string | null;
   ruleNote: string | null;
   isAutoApproved: boolean;
+  authorId: number;
+  authorFirstName: string;
+  authorLastName: string;
   reviewerId: number | null;
   reviewerFirstName: string | null;
   reviewerLastName: string | null;
@@ -93,6 +96,7 @@ export function selectLeaveRequests(db: Kysely<Database>) {
     .selectFrom('leaveRequest')
     .innerJoin('appUser as requester', 'requester.id', 'leaveRequest.userId')
     .innerJoin('dayType', 'dayType.id', 'leaveRequest.dayTypeId')
+    .innerJoin('appUser as author', 'author.id', 'leaveRequest.authorId')
     .leftJoin('appUser as reviewer', 'reviewer.id', 'leaveRequest.reviewerId')
     .select([
       'leaveRequest.id',
@@ -110,6 +114,9 @@ export function selectLeaveRequests(db: Kysely<Database>) {
       'leaveRequest.reason',
       'leaveRequest.ruleNote',
       'leaveRequest.isAutoApproved',
+      'leaveRequest.authorId',
+      'author.firstName as authorFirstName',
+      'author.lastName as authorLastName',
       'leaveRequest.reviewerId',
       'reviewer.firstName as reviewerFirstName',
       'reviewer.lastName as reviewerLastName',
