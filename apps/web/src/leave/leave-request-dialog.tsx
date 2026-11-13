@@ -244,7 +244,7 @@ export function LeaveRequestDialog({
           </Button>
           {create.data ? null : (
             <Button type="submit" isPending={create.isPending}>
-              {copy.leave.submit}
+              {targetUser ? copy.leave.declare : copy.leave.submit}
             </Button>
           )}
         </div>

@@ -1,5 +1,7 @@
 import {
   formatDayMonth,
+  HOLIDAY_YEAR_MAX,
+  HOLIDAY_YEAR_MIN,
   isWeekendDate,
   monthsOfPeriod,
   periodStartYearContaining,
@@ -25,8 +27,6 @@ import { calendarPath, useYearCalendar } from './calendar-queries';
 import { halfKey, MonthCard, type HalfAction } from './month-card';
 import { UsageSummaryPanel } from './usage-summary-panel';
 
-const MIN_START_YEAR = 2000;
-const MAX_START_YEAR = 2100;
 const periodMonthFormat = new Intl.DateTimeFormat('fr-FR', {
   month: 'short',
   year: 'numeric',
@@ -49,7 +49,7 @@ export function YearCalendarPage() {
   }
   const requested = Number(searchParams.get('periode'));
   const hasRequestedYear =
-    Number.isInteger(requested) && requested >= MIN_START_YEAR && requested <= MAX_START_YEAR;
+    Number.isInteger(requested) && requested >= HOLIDAY_YEAR_MIN && requested <= HOLIDAY_YEAR_MAX;
   const view = (startYear: number) => (
     <YearCalendarView
       key={`${pathUserId ?? 'me'}-${startYear}`}
@@ -170,8 +170,9 @@ function YearCalendarView({
           <button
             type="button"
             aria-label={copy.calendar.previousPeriod}
+            disabled={startYear <= HOLIDAY_YEAR_MIN}
             onClick={() => goTo(startYear - 1)}
-            className="rounded-lg p-2 hover:bg-zinc-100"
+            className="rounded-lg p-2 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <ChevronLeft size={18} aria-hidden />
           </button>
@@ -181,8 +182,9 @@ function YearCalendarView({
           <button
             type="button"
             aria-label={copy.calendar.nextPeriod}
+            disabled={startYear >= HOLIDAY_YEAR_MAX}
             onClick={() => goTo(startYear + 1)}
-            className="rounded-lg p-2 hover:bg-zinc-100"
+            className="rounded-lg p-2 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <ChevronRight size={18} aria-hidden />
           </button>
@@ -192,6 +194,11 @@ function YearCalendarView({
           pathFor={(userId) => calendarPath(userId, startYear)}
           label={copy.calendar.viewCalendarOf}
         />
+        {data && isOwn ? (
+          <Button onClick={() => setDialog({ kind: 'request', date: data.today })}>
+            {copy.leave.requestButton}
+          </Button>
+        ) : null}
         {data && canDeclare ? (
           <Button onClick={() => setDialog({ kind: 'declare', date: data.today })}>
             {`${copy.calendar.declareFor} ${data.user.firstName}`}

@@ -69,7 +69,7 @@ function HalfCell({
       <button
         type="button"
         onClick={onClick}
-        className={`block h-3 w-full cursor-pointer hover:bg-primary-100 ${background}`}
+        className={`block h-3 w-full cursor-pointer hover:bg-primary-100 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-600 ${background}`}
       >
         <span className="sr-only">{text ?? `${formatDayMonth(date)} : ${halfWord}`}</span>
       </button>
@@ -103,8 +103,14 @@ function DayCell({
 }) {
   const holidayLabel = holidaysByDate.get(date);
   return (
-    <td title={holidayLabel} className={`p-0.5 ${isInPeriod ? '' : 'opacity-40'}`}>
-      <div className={`overflow-hidden rounded ${isToday ? 'ring-1 ring-primary-500' : ''}`}>
+    <td
+      title={holidayLabel}
+      aria-current={isToday ? 'date' : undefined}
+      className={`p-0.5 ${isInPeriod ? '' : 'opacity-40'}`}
+    >
+      <div
+        className={`overflow-hidden rounded border border-zinc-200 ${isToday ? 'ring-1 ring-primary-500' : ''}`}
+      >
         <span aria-hidden className="block px-0.5 text-[10px] leading-4 text-zinc-600">
           {day}
         </span>

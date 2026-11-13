@@ -409,6 +409,7 @@ export const copy = {
     reason: 'Motif',
     reasonRequired: 'Indiquez le motif du départ anticipé.',
     submit: 'Envoyer la demande',
+    declare: 'Déclarer',
     cancel: 'Annuler',
     close: 'Fermer',
     sentToManager: 'Demande envoyée à votre responsable.',

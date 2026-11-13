@@ -56,7 +56,7 @@ describe('calendar actions', () => {
     await user.click(await screen.findByRole('button', { name: /^3 nov\. : matin/ }));
     const dialog = screen.getByRole('dialog', { name: 'Déclarer une absence pour Léa Moreau' });
     await user.selectOptions(await within(dialog).findByLabelText(copy.leave.type), 'sick');
-    await user.click(within(dialog).getByRole('button', { name: copy.leave.submit }));
+    await user.click(within(dialog).getByRole('button', { name: copy.leave.declare }));
 
     await waitFor(() => {
       const call = findCall(fetchMock, 'POST', '/api/v1/users/7/leave-requests');
@@ -115,15 +115,20 @@ describe('calendar actions', () => {
     const { user } = renderAs(MANAGER_SESSION, '/calendrier/7?periode=2026', {
       'GET /api/v1/users/7/year-calendars/2026': { status: 200, body: LEA_CALENDAR },
       'PUT /api/v1/leave-requests/4/cancellation': {
-        status: 404,
-        body: { code: 'LEAVE_REQUEST_NOT_FOUND', message: 'Demande introuvable.' },
+        status: 409,
+        body: {
+          code: 'LEAVE_NOT_CANCELLABLE',
+          message: 'Cette demande ne peut plus être annulée.',
+        },
       },
     });
 
     await user.click(await screen.findByRole('button', { name: /^23 nov\. : Congé · matin/ }));
     await user.click(screen.getByRole('button', { name: copy.leaveRequests.confirmCancel }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Demande introuvable.');
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Cette demande ne peut plus être annulée.',
+    );
   });
 
   it("offers no action on a colleague's calendar", async () => {
