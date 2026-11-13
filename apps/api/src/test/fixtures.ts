@@ -213,6 +213,8 @@ export async function insertLeaveRequest(
     status?: LeaveStatus;
     reviewerId?: number;
     authorId?: number;
+    reason?: string;
+    reviewComment?: string;
   },
 ): Promise<number> {
   const range = {
@@ -239,6 +241,8 @@ export async function insertLeaveRequest(
       halfDayCount: slots.length,
       status,
       reviewerId: request.reviewerId ?? null,
+      reason: request.reason ?? null,
+      reviewComment: request.reviewComment ?? null,
     })
     .returning('id')
     .executeTakeFirstOrThrow();

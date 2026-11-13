@@ -23,8 +23,7 @@ const personParamsSchema = z.object({ id: databaseIdSchema('Utilisateur invalide
 
 const leaveListQuerySchema = z.object({ view: z.enum(['mine', 'to-review'], 'Vue invalide.') });
 
-const calendarParamsSchema = z.object({
-  id: databaseIdSchema('Utilisateur invalide.'),
+const calendarParamsSchema = personParamsSchema.extend({
   startYear: z.coerce.number({ error: HOLIDAY_YEAR_RANGE_MESSAGE }).pipe(holidayYearSchema),
 });
 

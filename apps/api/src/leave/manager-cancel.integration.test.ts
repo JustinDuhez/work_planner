@@ -106,6 +106,13 @@ describe('cancelling as a manager', () => {
       .where('type', '=', 'leave_request_withdrawn')
       .execute();
     expect(told.map((notification) => notification.userId)).toEqual([leaId]);
+    // The owner-approved branch must not fire for a manager's cancel.
+    const ownerNotices = await db
+      .selectFrom('notification')
+      .select('id')
+      .where('type', '=', 'leave_request_cancelled')
+      .execute();
+    expect(ownerNotices).toEqual([]);
   });
 
   it('lets a higher-level manager cancel too, a pending request included', async () => {

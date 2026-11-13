@@ -134,6 +134,9 @@ describe('declaring an absence for someone', () => {
   });
 
   it('answers 404 for an unknown person', async () => {
-    expect((await declare('ines.dec@example.com', 999999, sick())).statusCode).toBe(404);
+    const response = await declare('ines.dec@example.com', 999999, sick());
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json<{ code: string }>().code).toBe('USER_NOT_FOUND');
   });
 });

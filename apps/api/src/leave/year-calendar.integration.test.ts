@@ -51,6 +51,8 @@ describe('the year calendar', () => {
       dayTypeCode: 'leave',
       startDate: '2026-11-23',
       endDate: '2026-11-24',
+      reason: 'Vacances secrètes',
+      reviewComment: 'Bon voyage',
       status: 'approved',
     });
     await insertLeaveRequest(db, {
@@ -86,11 +88,13 @@ describe('the year calendar', () => {
 
     expect(calendar.period).toEqual({ startDate: '2026-07-01', endDate: '2027-06-30' });
     expect(calendar.halfDays).toHaveLength(5);
-    expect(calendar.halfDays[0]).toMatchObject({
+    expect(typeof calendar.halfDays[0]?.leaveRequestId).toBe('number');
+    expect(calendar.halfDays[0]).toEqual({
       date: '2026-11-23',
       half: 'am',
       dayTypeCode: 'leave',
       status: 'approved',
+      leaveRequestId: calendar.halfDays[0]?.leaveRequestId,
     });
     expect(calendar.holidays.map((holiday) => holiday.date)).toEqual(['2026-12-25', '2027-01-01']);
     expect(calendar.holidayCount).toBe(2);
@@ -107,6 +111,7 @@ describe('the year calendar', () => {
       .body;
 
     expect(body).not.toMatch(/reason|ruleNote|reviewComment/);
+    expect(body).not.toMatch(/secrètes|Bon voyage/);
   });
 
   it.each([
