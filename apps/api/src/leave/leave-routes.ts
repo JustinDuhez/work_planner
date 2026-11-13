@@ -11,12 +11,15 @@ import { databaseIdSchema } from '../http/database-id';
 import { parseInput } from '../http/parse-input';
 import { cancelLeaveRequest } from './cancel-leave-request';
 import { createLeaveRequest } from './create-leave-request';
+import { declareLeaveRequest } from './declare-leave-request';
 import { findDayTypes } from './leave-repository';
 import { listLeaveRequestsToReview, listOwnLeaveRequests } from './read-leave-requests';
 import { reviewLeaveRequest } from './review-leave-request';
 import { buildYearCalendar } from './year-calendar';
 
 const leaveParamsSchema = z.object({ id: databaseIdSchema('Demande invalide.') });
+
+const personParamsSchema = z.object({ id: databaseIdSchema('Utilisateur invalide.') });
 
 const leaveListQuerySchema = z.object({ view: z.enum(['mine', 'to-review'], 'Vue invalide.') });
 
@@ -35,6 +38,17 @@ export function registerLeaveRoutes(scope: FastifyInstance, deps: ClockDependenc
       ...body,
     });
     return reply.status(201).send(created);
+  });
+
+  scope.post('/api/v1/users/:id/leave-requests', async (request, reply) => {
+    const { id } = parseInput(personParamsSchema, request.params);
+    const body = parseInput(createLeaveRequestRequestSchema, request.body);
+    const declared = await declareLeaveRequest(deps, {
+      viewer: clockViewerOf(request, deps.db),
+      userId: id,
+      ...body,
+    });
+    return reply.status(201).send(declared);
   });
 
   scope.get('/api/v1/leave-requests', (request) => {

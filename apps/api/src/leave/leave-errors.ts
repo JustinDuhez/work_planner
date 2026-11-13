@@ -95,3 +95,21 @@ export class LeaveNotCancellableError extends ConflictError {
     super('LEAVE_NOT_CANCELLABLE', 'Cette demande ne peut plus être annulée.');
   }
 }
+
+export class LeaveDeclareForbiddenError extends ForbiddenError {
+  constructor() {
+    super(
+      'LEAVE_DECLARE_FORBIDDEN',
+      'Vous ne pouvez pas déclarer une absence pour cette personne.',
+    );
+  }
+}
+
+export class LeaveDeclareSelfError extends ValidationError {
+  constructor() {
+    super(
+      'LEAVE_DECLARE_SELF',
+      'Pour vous-même, faites une demande depuis votre semaine ou votre calendrier.',
+    );
+  }
+}

@@ -58,7 +58,7 @@ describe('seedDatabase', () => {
       .orderBy('appUser.email')
       .execute();
 
-    expect(firstRun.leaveRequestCount).toBe(5);
+    expect(firstRun.leaveRequestCount).toBe(6);
     expect(statuses).toEqual(
       expect.arrayContaining([
         { email: 'lea.moreau@example.com', status: 'approved' },
@@ -66,8 +66,33 @@ describe('seedDatabase', () => {
         { email: 'camille.simon@example.com', status: 'refused' },
         { email: 'emma.lefebvre@example.com', status: 'approved' },
         { email: 'emma.lefebvre@example.com', status: 'cancelled' },
+        { email: 'hugo.laurent@example.com', status: 'approved' },
       ]),
     );
+  });
+
+  it("has Sophie declare Hugo's past sick afternoon", async () => {
+    const declared = await db
+      .selectFrom('leaveRequest')
+      .innerJoin('appUser as person', 'person.id', 'leaveRequest.userId')
+      .innerJoin('appUser as author', 'author.id', 'leaveRequest.authorId')
+      .innerJoin('dayType', 'dayType.id', 'leaveRequest.dayTypeId')
+      .select([
+        'person.email as personEmail',
+        'author.email as authorEmail',
+        'leaveRequest.startHalf',
+        'leaveRequest.status',
+      ])
+      .where('dayType.code', '=', 'sick')
+      .where('person.email', '=', 'hugo.laurent@example.com')
+      .executeTakeFirstOrThrow();
+
+    expect(declared).toEqual({
+      personEmail: 'hugo.laurent@example.com',
+      authorEmail: 'sophie.dubois@example.com',
+      startHalf: 'pm',
+      status: 'approved',
+    });
   });
 
   it('never clocks demo hours on a day of approved absence', async () => {
