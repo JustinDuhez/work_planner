@@ -2,7 +2,6 @@ import { Users } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { copy } from '../copy';
-import { clockWeekPath } from './clock-time';
 import { useActiveUsers } from './clock-queries';
 
 const PICKER_ID = 'person-picker';
@@ -11,7 +10,15 @@ function closePicker(): void {
   document.getElementById(PICKER_ID)?.hidePopover?.();
 }
 
-export function PersonPicker({ viewerId, isoWeek }: { viewerId: number; isoWeek: string }) {
+export function PersonPicker({
+  viewerId,
+  pathFor,
+  label,
+}: {
+  viewerId: number;
+  pathFor: (userId: number | undefined) => string;
+  label: string;
+}) {
   const [search, setSearch] = useState('');
   const users = useActiveUsers();
   const normalizedSearch = search.trim().toLocaleLowerCase('fr-FR');
@@ -28,7 +35,7 @@ export function PersonPicker({ viewerId, isoWeek }: { viewerId: number; isoWeek:
         popoverTarget={PICKER_ID}
         className="inline-flex h-9 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 hover:bg-zinc-50"
       >
-        <Users size={16} aria-hidden /> {copy.clock.viewWeekOf}
+        <Users size={16} aria-hidden /> {label}
       </button>
       <div
         id={PICKER_ID}
@@ -47,7 +54,7 @@ export function PersonPicker({ viewerId, isoWeek }: { viewerId: number; isoWeek:
           {matches.map((user) => (
             <li key={user.id}>
               <Link
-                to={clockWeekPath(user.id === viewerId ? undefined : user.id, isoWeek)}
+                to={pathFor(user.id === viewerId ? undefined : user.id)}
                 onClick={closePicker}
                 className="block rounded-lg px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100"
               >
