@@ -23,6 +23,14 @@ export function AppShell() {
               {copy.nav.clock}
             </NavLink>
             <NavLink
+              to="/calendrier"
+              className={({ isActive }) =>
+                `text-sm ${isActive ? 'font-semibold text-zinc-900' : 'text-zinc-500'}`
+              }
+            >
+              {copy.nav.calendar}
+            </NavLink>
+            <NavLink
               to="/annuaire"
               className={({ isActive }) =>
                 `text-sm ${isActive ? 'font-semibold text-zinc-900' : 'text-zinc-500'}`

@@ -168,18 +168,4 @@ describe('cancelling leave requests', () => {
     expect(again.statusCode).toBe(409);
     expect(again.json<{ code: string }>().code).toBe('LEAVE_NOT_CANCELLABLE');
   });
-
-  it('lets only the owner cancel', async () => {
-    const requestId = await insertLeaveRequest(db, {
-      userId: leaId,
-      dayTypeCode: 'leave',
-      startDate: '2026-11-26',
-      status: 'pending',
-    });
-
-    const response = await cancel('sophie.cancel@example.com', requestId);
-
-    expect(response.statusCode).toBe(404);
-    expect(response.json<{ code: string }>().code).toBe('LEAVE_NOT_FOUND');
-  });
 });

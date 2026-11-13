@@ -22,10 +22,13 @@ interface DemoLeave {
   week: number;
   firstDay: number;
   lastDay: number;
+  startHalf?: Half;
   endHalf?: Half;
   status: LeaveStatus;
   reviewerEmail?: string;
   reviewComment?: string;
+  /** The manager who recorded it for the person; defaults to the person. */
+  declaredByEmail?: string;
 }
 
 const DEMO_LEAVE: readonly DemoLeave[] = [
@@ -66,6 +69,19 @@ const DEMO_LEAVE: readonly DemoLeave[] = [
     status: 'approved',
     reviewerEmail: 'nicolas.michel@example.com',
   },
+  // E6b: a manager records a past sick afternoon for someone (declared, approved at once).
+  {
+    email: 'hugo.laurent@example.com',
+    dayTypeCode: 'sick',
+    week: -1,
+    firstDay: 3,
+    lastDay: 3,
+    startHalf: 'pm',
+    endHalf: 'pm',
+    status: 'approved',
+    reviewerEmail: 'sophie.dubois@example.com',
+    declaredByEmail: 'sophie.dubois@example.com',
+  },
   {
     email: 'emma.lefebvre@example.com',
     dayTypeCode: 'leave',
@@ -87,7 +103,7 @@ export async function seedDemoLeave(
     const weekSunday = addDays(weekMonday, DAYS_PER_WEEK - 1);
     const range = {
       startDate: addDays(weekMonday, demo.firstDay),
-      startHalf: 'am' as const,
+      startHalf: demo.startHalf ?? ('am' as const),
       endDate: addDays(weekMonday, demo.lastDay),
       endHalf: demo.endHalf ?? ('pm' as const),
     };
@@ -170,10 +186,18 @@ export async function seedDemoLeave(
               }),
             )
           : null;
+      const author = demo.declaredByEmail
+        ? await trx
+            .selectFrom('appUser')
+            .select('id')
+            .where('email', '=', demo.declaredByEmail)
+            .executeTakeFirstOrThrow()
+        : user;
       const { id } = await trx
         .insertInto('leaveRequest')
         .values({
           userId: user.id,
+          authorId: author.id,
           dayTypeId: dayType.id,
           ...range,
           halfDayCount: slots.length,

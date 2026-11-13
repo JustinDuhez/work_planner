@@ -1,5 +1,7 @@
 import {
   canCancelLeaveRequest,
+  canDeclareLeaveFor,
+  MANAGER_CANCELLABLE_STATUSES,
   toWorkDate,
   truncateToMinute,
   type LeaveRequestView,
@@ -18,8 +20,10 @@ export async function cancelLeaveRequest(
   command: { viewer: ClockViewer; requestId: number },
 ): Promise<LeaveRequestView> {
   const { row, actor } = await findVisibleLeaveRequest(deps, command);
-  // Only the owner cancels (E6a-D3); for anyone else the request might as well not exist.
-  if (row.userId !== command.viewer.id) throw new LeaveNotFoundError();
+  const isOwner = row.userId === command.viewer.id;
+  const isManagerCancel = !isOwner && canDeclareLeaveFor(actor, row.userId);
+  // Visible but not cancellable by this viewer: the request might as well not exist.
+  if (!isOwner && !isManagerCancel) throw new LeaveNotFoundError();
   const now = deps.now();
   const today = toWorkDate(now, deps.timeZone);
   const cancelledAt = truncateToMinute(now);
@@ -31,15 +35,35 @@ export async function cancelLeaveRequest(
       .where('id', '=', row.id)
       .forNoKeyUpdate()
       .executeTakeFirstOrThrow();
-    if (!canCancelLeaveRequest(locked, today)) throw new LeaveNotCancellableError();
+    const isAllowed = isOwner
+      ? canCancelLeaveRequest(locked, today)
+      : MANAGER_CANCELLABLE_STATUSES.has(locked.status);
+    if (!isAllowed) throw new LeaveNotCancellableError();
     await trx
       .updateTable('leaveRequest')
-      .set({ status: 'cancelled', cancelledAt })
+      .set({ status: 'cancelled', cancelledAt, cancelledById: command.viewer.id })
       .where('id', '=', row.id)
       .execute();
     await trx.deleteFrom('halfDay').where('leaveRequestId', '=', row.id).execute();
     await markLeaveNotificationsRead(trx, { leaveRequestId: row.id, readAt: cancelledAt });
-    if (locked.status === 'approved') {
+    if (isManagerCancel) {
+      const canceller = await trx
+        .selectFrom('appUser')
+        .select(['firstName', 'lastName'])
+        .where('id', '=', command.viewer.id)
+        .executeTakeFirstOrThrow();
+      await notify(trx, {
+        userId: row.userId,
+        type: 'leave_request_withdrawn',
+        payload: {
+          leaveRequestId: row.id,
+          actorName: `${canceller.firstName} ${canceller.lastName}`,
+          dayTypeLabel: row.dayTypeLabel,
+          startDate: row.startDate,
+          endDate: row.endDate,
+        },
+      });
+    } else if (locked.status === 'approved') {
       for (const approverId of await findLeaveApproverIds(trx, row.userId)) {
         await notify(trx, {
           userId: approverId,

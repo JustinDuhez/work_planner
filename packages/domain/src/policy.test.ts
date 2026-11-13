@@ -1,4 +1,5 @@
 import {
+  canDeclareLeaveFor,
   canEditDailyMinutes,
   canEditPastClock,
   canEditProfile,
@@ -142,5 +143,23 @@ describe.each([
     ['manager and admin', managerAndAdmin, true],
   ])('%s → %s', (_actorName, actor, expected) => {
     expect(rule(actor)).toBe(expected);
+  });
+});
+
+describe('canDeclareLeaveFor', () => {
+  it('lets an admin declare for anyone but themselves', () => {
+    expect(canDeclareLeaveFor(admin, OUTSIDER_ID)).toBe(true);
+    expect(canDeclareLeaveFor(admin, admin.id)).toBe(false);
+  });
+
+  it('lets a manager declare for their whole scope only', () => {
+    expect(canDeclareLeaveFor(manager, DIRECT_REPORT_ID)).toBe(true);
+    expect(canDeclareLeaveFor(manager, SUB_TEAM_MEMBER_ID)).toBe(true);
+    expect(canDeclareLeaveFor(manager, OUTSIDER_ID)).toBe(false);
+    expect(canDeclareLeaveFor(manager, manager.id)).toBe(false);
+  });
+
+  it('never lets a collaborator declare', () => {
+    expect(canDeclareLeaveFor(collaborator, DIRECT_REPORT_ID)).toBe(false);
   });
 });

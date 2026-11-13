@@ -1,4 +1,5 @@
 import { createBrowserRouter, type RouteObject } from 'react-router';
+import { YearCalendarPage } from './calendar/year-calendar-page';
 import { ClockWeekPage } from './clock/clock-week-page';
 import { DirectoryAdminPage } from './directory/directory-admin-page';
 import { LeaveRequestsPage } from './leave/leave-requests-page';
@@ -28,6 +29,8 @@ export const routes: RouteObject[] = [
           { path: 'equipes', element: <TeamsAdminPage /> },
           { path: 'parametres', element: <SettingsPage /> },
           { path: 'demandes', element: <LeaveRequestsPage /> },
+          { path: 'calendrier', element: <YearCalendarPage /> },
+          { path: 'calendrier/:userId', element: <YearCalendarPage /> },
           { path: '*', element: <NotFoundPage /> },
         ],
       },

@@ -4,6 +4,15 @@ import { copy } from '../copy';
 
 const LEAVE_INBOX_PATH = '/demandes?onglet=a-valider';
 const OWN_REQUESTS_PATH = '/demandes?onglet=mes-demandes';
+const OWN_CALENDAR_PATH = '/calendrier';
+
+// A reviewed request is absent: its wording depends on the decision.
+const LEAVE_ACTIONS: Partial<Record<NotificationView['type'], string>> = {
+  leave_request_received: copy.notifications.leaveRequested,
+  leave_request_cancelled: copy.notifications.leaveCancelled,
+  leave_request_declared: copy.notifications.leaveDeclared,
+  leave_request_withdrawn: copy.notifications.leaveWithdrawn,
+};
 
 function correctionAction(type: NotificationView['type'], status?: string): string {
   if (type === 'clock_correction_received') return copy.notifications.correctedYourDay;
@@ -26,20 +35,22 @@ export function notificationText(notification: NotificationView): string {
   }
   const { actorName, dayTypeLabel, startDate, endDate, decision } = payload;
   const action =
-    notification.type === 'leave_request_received'
-      ? copy.notifications.leaveRequested
-      : notification.type === 'leave_request_cancelled'
-        ? copy.notifications.leaveCancelled
-        : decision === 'approved'
-          ? copy.notifications.leaveApproved
-          : copy.notifications.leaveRefused;
+    LEAVE_ACTIONS[notification.type] ??
+    (decision === 'approved' ? copy.notifications.leaveApproved : copy.notifications.leaveRefused);
   return `${actorName} ${action} ${dayTypeLabel}, ${leavePeriod(startDate, endDate)}`;
 }
 
 export function notificationLink(notification: NotificationView, viewerId: number): string {
   const { payload } = notification;
   if ('leaveRequestId' in payload) {
-    return notification.type === 'leave_request_reviewed' ? OWN_REQUESTS_PATH : LEAVE_INBOX_PATH;
+    if (notification.type === 'leave_request_reviewed') return OWN_REQUESTS_PATH;
+    if (
+      notification.type === 'leave_request_declared' ||
+      notification.type === 'leave_request_withdrawn'
+    ) {
+      return OWN_CALENDAR_PATH;
+    }
+    return LEAVE_INBOX_PATH;
   }
   // The corrected day's week, with the correction open (`?correction=`).
   const { ownerId, workDate, correctionId } = payload;

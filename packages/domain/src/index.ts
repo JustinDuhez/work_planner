@@ -26,6 +26,8 @@ export * from './leave/cancellation';
 export * from './leave/french-format';
 export * from './leave/half-days';
 export * from './leave/telework-rule';
+export * from './leave/usage-summary';
+export * from './leave/year-period';
 export * from './policy';
 export * from './settings/year-start';
 export * from './teams/team-tree';

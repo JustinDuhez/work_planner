@@ -11,6 +11,8 @@ export const LEAVE_NOTIFICATION_TYPES = [
   'leave_request_received',
   'leave_request_reviewed',
   'leave_request_cancelled',
+  'leave_request_declared',
+  'leave_request_withdrawn',
 ] as const;
 export const NOTIFICATION_TYPES = [
   ...CORRECTION_NOTIFICATION_TYPES,

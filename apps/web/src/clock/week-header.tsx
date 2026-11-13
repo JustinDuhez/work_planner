@@ -52,7 +52,11 @@ export function WeekHeader({
           {copy.clock.today}
         </button>
       </div>
-      <PersonPicker viewerId={viewerId} isoWeek={isoWeek} />
+      <PersonPicker
+        viewerId={viewerId}
+        pathFor={(userId) => clockWeekPath(userId, isoWeek)}
+        label={copy.clock.viewWeekOf}
+      />
     </div>
   );
 }

@@ -75,6 +75,11 @@ export function LeaveRequestCard({
           {request.ruleNote}
         </p>
       ) : null}
+      {request.declaredBy ? (
+        <p className="text-sm text-zinc-600">
+          {`${copy.leaveRequests.declaredBy} ${request.declaredBy.firstName} ${request.declaredBy.lastName}`}
+        </p>
+      ) : null}
       {request.reviewComment ? (
         <p className="text-sm text-zinc-600">
           {request.reviewer

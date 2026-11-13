@@ -40,6 +40,12 @@ export function canReviewLeave(actor: Actor, requesterId: number): boolean {
   return actor.isAdmin || actor.directReportIds.has(requesterId);
 }
 
+/** E6b-D4: scope managers (any depth) and admins record absences for others, never for themselves. */
+export function canDeclareLeaveFor(actor: Actor, targetId: number): boolean {
+  if (isSelf(actor, targetId)) return false;
+  return actor.isAdmin || actor.managedUserIds.has(targetId);
+}
+
 export function canEditProfile(actor: Actor, targetId: number): boolean {
   return isSelf(actor, targetId);
 }

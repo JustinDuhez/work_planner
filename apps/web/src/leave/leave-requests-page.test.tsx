@@ -116,6 +116,37 @@ describe('LeaveRequestsPage', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('says who declared a request', async () => {
+    const declared = leaveRequestView({
+      status: 'approved',
+      declaredBy: { id: 2, firstName: 'Sophie', lastName: 'Dubois' },
+    });
+    renderPage('/demandes', {
+      'GET /api/v1/leave-requests?view=mine': { status: 200, body: [declared] },
+    });
+
+    expect(await screen.findByText('Déclarée par Sophie Dubois')).toBeInTheDocument();
+  });
+
+  it('lets a manager cancel a pending request of their team, after asking', async () => {
+    const pending = leaveRequestView({ id: 5, canReview: true, canCancel: true });
+    const { user, fetchMock } = renderPage('/demandes?onglet=a-valider', {
+      'GET /api/v1/me': { status: 200, body: MANAGER_SESSION },
+      'GET /api/v1/leave-requests?view=to-review': {
+        status: 200,
+        body: { pending: [pending], recent: [] },
+      },
+      'PUT /api/v1/leave-requests/5/cancellation': { status: 200, body: pending },
+    });
+
+    await user.click(await screen.findByRole('button', { name: copy.leaveRequests.cancel }));
+    await user.click(screen.getByRole('button', { name: copy.leaveRequests.confirmCancel }));
+
+    await waitFor(() =>
+      expect(findCall(fetchMock, 'PUT', '/api/v1/leave-requests/5/cancellation')).toBeDefined(),
+    );
+  });
+
   it('lets a direct manager approve a request', async () => {
     const pending = leaveRequestView({ id: 5, canReview: true, canCancel: false });
     const { user, fetchMock } = renderPage('/demandes?onglet=a-valider', {
