@@ -4,6 +4,7 @@ import type {
   Half,
   HalfDaySlot,
   LeaveStatus,
+  TeamMonthHalfDay,
 } from '@work-planner/domain';
 import type { Kysely } from 'kysely';
 import type { Database } from '../db/database';
@@ -156,33 +157,70 @@ export async function findTakenSlots(
   return rows.map((row) => ({ date: row.workDate, half: row.half }));
 }
 
-export async function findCalendarHalfDays(
-  db: Kysely<Database>,
-  query: { userId: number; fromDate: string; toDate: string },
-): Promise<CalendarHalfDay[]> {
-  const rows = await db
+function calendarHalfDayRows(db: Kysely<Database>, range: { fromDate: string; toDate: string }) {
+  return db
     .selectFrom('halfDay')
     .innerJoin('dayType', 'dayType.id', 'halfDay.dayTypeId')
     .innerJoin('leaveRequest', 'leaveRequest.id', 'halfDay.leaveRequestId')
     .select([
+      'halfDay.userId',
       'halfDay.workDate',
       'halfDay.half',
       'dayType.code as dayTypeCode',
       'leaveRequest.status',
       'halfDay.leaveRequestId',
     ])
-    .where('halfDay.userId', '=', query.userId)
-    .where('halfDay.workDate', '>=', query.fromDate)
-    .where('halfDay.workDate', '<=', query.toDate)
+    .where('halfDay.workDate', '>=', range.fromDate)
+    .where('halfDay.workDate', '<=', range.toDate)
     .orderBy('halfDay.workDate')
-    .orderBy('halfDay.half')
+    .orderBy('halfDay.half');
+}
+
+// Refused / cancelled requests keep no half-days: what is left is pending or approved.
+const liveStatus = (status: LeaveStatus): 'pending' | 'approved' =>
+  status === 'approved' ? 'approved' : 'pending';
+
+export async function findCalendarHalfDays(
+  db: Kysely<Database>,
+  query: { userId: number; fromDate: string; toDate: string },
+): Promise<CalendarHalfDay[]> {
+  const rows = await calendarHalfDayRows(db, query)
+    .where('halfDay.userId', '=', query.userId)
     .execute();
   return rows.map((row) => ({
     date: row.workDate,
     half: row.half,
     dayTypeCode: row.dayTypeCode,
-    // Refused / cancelled requests keep no half-days: what is left is pending or approved.
-    status: row.status === 'approved' ? 'approved' : 'pending',
+    status: liveStatus(row.status),
     leaveRequestId: row.leaveRequestId,
   }));
+}
+
+export async function findMonthHalfDays(
+  db: Kysely<Database>,
+  range: { fromDate: string; toDate: string },
+): Promise<(TeamMonthHalfDay & { userId: number })[]> {
+  const rows = await calendarHalfDayRows(db, range).execute();
+  return rows.map((row) => ({
+    userId: row.userId,
+    date: row.workDate,
+    half: row.half,
+    dayTypeCode: row.dayTypeCode,
+    status: liveStatus(row.status),
+  }));
+}
+
+/** E7-D4: unreachable on `date` = one approved half-day of a non-badgeable type; telework is work. */
+export async function findAbsentUserIds(db: Kysely<Database>, date: string): Promise<number[]> {
+  const rows = await db
+    .selectFrom('halfDay')
+    .innerJoin('dayType', 'dayType.id', 'halfDay.dayTypeId')
+    .innerJoin('leaveRequest', 'leaveRequest.id', 'halfDay.leaveRequestId')
+    .select('halfDay.userId')
+    .distinct()
+    .where('halfDay.workDate', '=', date)
+    .where('leaveRequest.status', '=', 'approved')
+    .where('dayType.isBadgeable', '=', false)
+    .execute();
+  return rows.map((row) => row.userId);
 }

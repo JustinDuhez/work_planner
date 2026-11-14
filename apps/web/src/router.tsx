@@ -6,6 +6,7 @@ import { LeaveRequestsPage } from './leave/leave-requests-page';
 import { LoginPage } from './login/login-page';
 import { NotFoundPage } from './not-found/not-found-page';
 import { ForcedPasswordPage } from './password/forced-password-page';
+import { PlanningPage } from './planning/planning-page';
 import { ProfilePage } from './profile/profile-page';
 import { RequireAuth } from './session/require-auth';
 import { SettingsPage } from './settings/settings-page';
@@ -31,6 +32,7 @@ export const routes: RouteObject[] = [
           { path: 'demandes', element: <LeaveRequestsPage /> },
           { path: 'calendrier', element: <YearCalendarPage /> },
           { path: 'calendrier/:userId', element: <YearCalendarPage /> },
+          { path: 'planning', element: <PlanningPage /> },
           { path: '*', element: <NotFoundPage /> },
         ],
       },
