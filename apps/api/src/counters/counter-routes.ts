@@ -1,10 +1,13 @@
-import { createCounterResetRequestSchema } from '@work-planner/domain';
+import {
+  createCounterResetRequestSchema,
+  createCounterResetsRequestSchema,
+} from '@work-planner/domain';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { clockViewerOf, type ClockDependencies } from '../clock/clock-dependencies';
 import { databaseIdSchema } from '../http/database-id';
 import { parseInput } from '../http/parse-input';
-import { createCounterReset, listCounterResets } from './counter-resets';
+import { createCounterReset, createCounterResets, listCounterResets } from './counter-resets';
 
 const ownerParamsSchema = z.object({ userId: databaseIdSchema('Utilisateur invalide.') });
 
@@ -18,6 +21,16 @@ export function registerCounterRoutes(scope: FastifyInstance, deps: ClockDepende
       resetDate,
     });
     return reply.status(201).send(reset);
+  });
+
+  scope.post('/api/v1/counter-resets', async (request, reply) => {
+    const { userIds, resetDate } = parseInput(createCounterResetsRequestSchema, request.body ?? {});
+    const resets = await createCounterResets(deps, {
+      viewer: clockViewerOf(request, deps.db),
+      userIds,
+      resetDate,
+    });
+    return reply.status(201).send({ resets });
   });
 
   scope.get('/api/v1/users/:userId/counter-resets', (request) => {

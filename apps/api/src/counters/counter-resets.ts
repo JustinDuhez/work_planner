@@ -1,7 +1,15 @@
-import { canResetCounter, toWorkDate, type CounterResetView } from '@work-planner/domain';
+import {
+  AppError,
+  canResetCounter,
+  ForbiddenError,
+  toWorkDate,
+  ValidationError,
+  type CounterResetView,
+} from '@work-planner/domain';
 import type { ClockDependencies, ClockViewer } from '../clock/clock-dependencies';
 import { assertRealDate } from '../http/real-date';
 import { UserNotFoundError } from '../users/user-errors';
+import { findActiveUserSummary } from '../users/user-repository';
 import {
   CounterResetDateBeforeStartError,
   CounterResetDateInFutureError,
@@ -28,6 +36,28 @@ async function authorizedOwner(
   return owner;
 }
 
+function assertResettableDate(input: {
+  owner: CounterProfile;
+  resetDate: string;
+  today: string;
+}): void {
+  if (input.resetDate > input.today) throw new CounterResetDateInFutureError();
+  if (input.resetDate < input.owner.startDate) throw new CounterResetDateBeforeStartError();
+}
+
+/** F4.3b: the batch error says whose counter failed, keeping E4's code and status. */
+function namingPerson(error: unknown, person: { firstName: string; lastName: string }): Error {
+  if (!(error instanceof AppError)) {
+    return error instanceof Error ? error : new Error('Unexpected error', { cause: error });
+  }
+  const message = `${error.message} (${person.firstName} ${person.lastName})`;
+  if (error instanceof ValidationError) {
+    return new ValidationError(error.code, message, error.fieldErrors);
+  }
+  if (error instanceof ForbiddenError) return new ForbiddenError(error.code, message);
+  return error;
+}
+
 export async function createCounterReset(
   deps: ClockDependencies,
   command: { viewer: ClockViewer; ownerId: number; resetDate?: string },
@@ -36,8 +66,7 @@ export async function createCounterReset(
   const today = toWorkDate(deps.now(), deps.timeZone);
   const resetDate = command.resetDate ?? today;
   assertRealDate(resetDate, 'resetDate');
-  if (resetDate > today) throw new CounterResetDateInFutureError();
-  if (resetDate < owner.startDate) throw new CounterResetDateBeforeStartError();
+  assertResettableDate({ owner, resetDate, today });
   const resetId = await insertCounterReset(deps.db, {
     userId: owner.id,
     resetDate,
@@ -52,4 +81,38 @@ export async function listCounterResets(
 ): Promise<CounterResetView[]> {
   const owner = await authorizedOwner(deps, query);
   return (await findCounterResets(deps.db, owner.id)).map(toCounterResetView);
+}
+
+export async function createCounterResets(
+  deps: ClockDependencies,
+  command: { viewer: ClockViewer; userIds: readonly number[]; resetDate?: string },
+): Promise<CounterResetView[]> {
+  const actor = await command.viewer.loadActor();
+  const today = toWorkDate(deps.now(), deps.timeZone);
+  const resetDate = command.resetDate ?? today;
+  assertRealDate(resetDate, 'resetDate');
+  // All or nothing (E7-D5): the first refusal rolls back every reset already written.
+  const resetIds = await deps.db.transaction().execute(async (trx) => {
+    const ids: number[] = [];
+    for (const userId of command.userIds) {
+      const [owner, person] = await Promise.all([
+        findCounterProfile(trx, userId),
+        findActiveUserSummary(trx, userId),
+      ]);
+      if (!owner || !person) throw new UserNotFoundError();
+      try {
+        if (!canResetCounter(actor, owner.id)) throw new CounterResetForbiddenError();
+        assertResettableDate({ owner, resetDate, today });
+      } catch (error) {
+        throw namingPerson(error, person);
+      }
+      ids.push(
+        await insertCounterReset(trx, { userId: owner.id, resetDate, authorId: command.viewer.id }),
+      );
+    }
+    return ids;
+  });
+  return Promise.all(
+    resetIds.map(async (id) => toCounterResetView(await findCounterResetById(deps.db, id))),
+  );
 }
