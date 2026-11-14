@@ -198,4 +198,31 @@ describe('PlanningPage', () => {
     expect(within(grid).getByRole('rowheader', { name: /Sophie Dubois/ })).toBeInTheDocument();
     expect(within(grid).queryByText('Claire Martin')).not.toBeInTheDocument();
   });
+
+  it('keeps the chosen team when moving on again while a month is still loading', async () => {
+    const { user, router } = renderPlanning('/planning?mois=2026-11&equipe=3', {
+      'GET /api/v1/team-months/2027-01': {
+        status: 200,
+        body: teamMonth({ month: { startDate: '2027-01-01', endDate: '2027-01-31' } }),
+      },
+    });
+    await table();
+    const answer = globalThis.fetch;
+    let releaseDecember: () => void = () => undefined;
+    const decemberHeld = new Promise<void>((resolve) => (releaseDecember = resolve));
+    globalThis.fetch = jest.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (typeof input === 'string' && input.endsWith('/2026-12')) {
+        await decemberHeld;
+        return { ok: true, status: 200, json: () => Promise.resolve(teamMonth()) } as Response;
+      }
+      return answer(input, init);
+    });
+
+    await user.click(screen.getByRole('button', { name: copy.planning.nextMonth }));
+    await user.click(screen.getByRole('button', { name: copy.planning.nextMonth }));
+
+    expect(router.state.location.search).toContain('mois=2027-01');
+    expect(router.state.location.search).toContain('equipe=3');
+    releaseDecember();
+  });
 });
