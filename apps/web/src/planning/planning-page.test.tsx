@@ -21,6 +21,34 @@ async function table() {
   return screen.findByRole('table', { name: /novembre 2026/ });
 }
 
+const realFetch = globalThis.fetch;
+let releaseHeld: (() => void) | undefined;
+
+// Holds the December answer on a promise the test (or afterEach) releases.
+function holdDecember(): () => void {
+  const answer = globalThis.fetch;
+  const held = new Promise<void>((resolve) => (releaseHeld = resolve));
+  globalThis.fetch = jest.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    if (typeof input === 'string' && input.endsWith('/2026-12')) {
+      await held;
+      const month = { startDate: '2026-12-01', endDate: '2026-12-31' };
+      return {
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(teamMonth({ month })),
+      } as Response;
+    }
+    return answer(input, init);
+  });
+  return () => releaseHeld?.();
+}
+
+afterEach(() => {
+  releaseHeld?.();
+  releaseHeld = undefined;
+  globalThis.fetch = realFetch;
+});
+
 describe('PlanningPage', () => {
   it("starts on the viewer's team, manager first, with week headers and today", async () => {
     renderPlanning('/planning?mois=2026-11');
@@ -207,22 +235,26 @@ describe('PlanningPage', () => {
       },
     });
     await table();
-    const answer = globalThis.fetch;
-    let releaseDecember: () => void = () => undefined;
-    const decemberHeld = new Promise<void>((resolve) => (releaseDecember = resolve));
-    globalThis.fetch = jest.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      if (typeof input === 'string' && input.endsWith('/2026-12')) {
-        await decemberHeld;
-        return { ok: true, status: 200, json: () => Promise.resolve(teamMonth()) } as Response;
-      }
-      return answer(input, init);
-    });
+    holdDecember();
 
     await user.click(screen.getByRole('button', { name: copy.planning.nextMonth }));
     await user.click(screen.getByRole('button', { name: copy.planning.nextMonth }));
 
     expect(router.state.location.search).toContain('mois=2027-01');
     expect(router.state.location.search).toContain('equipe=3');
-    releaseDecember();
+  });
+
+  it('shows the loading text, not the previous month, while the next month loads', async () => {
+    const { user } = renderPlanning('/planning?mois=2026-11&equipe=3');
+    await table();
+    const release = holdDecember();
+
+    await user.click(screen.getByRole('button', { name: copy.planning.nextMonth }));
+
+    expect(screen.getByText('décembre 2026')).toBeInTheDocument();
+    expect(screen.getByText(copy.planning.loading)).toBeInTheDocument();
+    expect(screen.queryByRole('table', { name: /novembre 2026/ })).not.toBeInTheDocument();
+    release();
+    expect(await screen.findByRole('table', { name: /décembre 2026/ })).toBeInTheDocument();
   });
 });

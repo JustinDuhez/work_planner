@@ -53,7 +53,7 @@ export function PlanningPage() {
   const yearMonth = parsedMonth.success
     ? parsedMonth.data
     : toWorkDate(new Date(), APP_TIME_ZONE).slice(0, 7);
-  const { data, isPending, isError } = useTeamMonth(yearMonth);
+  const { data, isPending, isError, isPlaceholderData } = useTeamMonth(yearMonth);
   if (!session) return null;
 
   const isAbsentOnly = searchParams.get('absents') === '1';
@@ -158,15 +158,15 @@ export function PlanningPage() {
             {copy.planning.loadError}
           </p>
         ) : null}
-        {isPending && !isError ? (
+        {(isPending || isPlaceholderData) && !isError ? (
           <p className="text-sm text-zinc-500">{copy.planning.loading}</p>
         ) : null}
-        {data && sections.length === 0 ? (
+        {data && !isPlaceholderData && sections.length === 0 ? (
           <p className="text-sm text-zinc-500">
             {isAbsentOnly ? copy.planning.nobodyAbsent : copy.planning.noPeople}
           </p>
         ) : null}
-        {data && sections.length > 0 ? (
+        {data && !isPlaceholderData && sections.length > 0 ? (
           <>
             <div className="hidden md:block">
               <TeamMonthTable teamMonth={data} sections={sections} dayTypes={dayTypes.data ?? []} />
