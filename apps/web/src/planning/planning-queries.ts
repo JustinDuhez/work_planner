@@ -1,6 +1,11 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { teamMonthSchema } from '@work-planner/domain';
-import { apiGet } from '../api/api-client';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  counterResetBatchSchema,
+  teamMonthSchema,
+  type CreateCounterResetsRequest,
+} from '@work-planner/domain';
+import { apiGet, apiSend } from '../api/api-client';
+import { CLOCK_WEEK_QUERY_PREFIX } from '../clock/clock-queries';
 
 export const TEAM_MONTH_QUERY_KEY = ['team-month'] as const;
 export const ALL_TEAMS = 'toutes';
@@ -25,4 +30,19 @@ export function planningPath(filters: {
   });
   if (filters.isAbsentOnly) params.set('absents', '1');
   return `/planning?${params.toString()}`;
+}
+
+export function useCreateCounterResets() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (request: CreateCounterResetsRequest) =>
+      apiSend('POST', '/api/v1/counter-resets', request, counterResetBatchSchema),
+    // Balances live in the month view, every cached week and each person's reset history.
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: TEAM_MONTH_QUERY_KEY }),
+        queryClient.invalidateQueries({ queryKey: CLOCK_WEEK_QUERY_PREFIX }),
+        queryClient.invalidateQueries({ queryKey: ['counter-resets'] }),
+      ]),
+  });
 }

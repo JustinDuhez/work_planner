@@ -1,28 +1,21 @@
 import {
   defaultTeamFilter,
   groupPeopleByTeam,
-  HOLIDAY_YEAR_MAX,
-  HOLIDAY_YEAR_MIN,
   isAbsentOn,
   toWorkDate,
   yearMonthSchema,
   type TeamMonth,
 } from '@work-planner/domain';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { APP_TIME_ZONE } from '../clock/clock-time';
 import { copy } from '../copy';
 import { useDayTypes } from '../leave/leave-queries';
 import { useSession } from '../session/session-queries';
 import { PersonCards } from './person-cards';
+import { PlanningFilterBar, type PlanningFilters } from './planning-filter-bar';
 import { ALL_TEAMS, planningPath, useTeamMonth } from './planning-queries';
 import { TeamMonthTable } from './team-month-table';
 
-const monthTitle = new Intl.DateTimeFormat('fr-FR', {
-  month: 'long',
-  year: 'numeric',
-  timeZone: 'UTC',
-});
 const MONTHS_PER_YEAR = 12;
 
 function shiftMonth(yearMonth: string, delta: number): string {
@@ -39,9 +32,6 @@ function resolveTeam(requested: string | null, teamMonth: TeamMonth, viewerId: n
     ? requestedId
     : defaultTeamFilter(teamMonth.teams, viewerId);
 }
-
-const navButtonClass =
-  'rounded-lg p-2 hover:bg-zinc-100 focus-visible:outline-2 focus-visible:outline-primary-600 disabled:cursor-not-allowed disabled:opacity-50';
 
 export function PlanningPage() {
   const navigate = useNavigate();
@@ -85,7 +75,7 @@ export function PlanningPage() {
   const peopleCount = new Set(sections.flatMap((section) => section.rows.map((r) => r.personId)))
     .size;
   // Filters replace the history entry; months push one so Back steps through them.
-  const goTo = (filters: { yearMonth: string; team: number | 'all'; isAbsentOnly: boolean }) =>
+  const goTo = (filters: PlanningFilters) =>
     void navigate(planningPath(filters), { replace: filters.yearMonth === yearMonth });
   const goToMonth = (delta: number) =>
     goTo({ yearMonth: shiftMonth(yearMonth, delta), team, isAbsentOnly });
@@ -93,65 +83,14 @@ export function PlanningPage() {
   return (
     <section className="space-y-4">
       <h1 className="text-xl font-semibold tracking-tight">{copy.planning.title}</h1>
-      <div className="sticky top-14 z-20 -mx-4 flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 bg-zinc-50/90 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-card sm:border">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            aria-label={copy.planning.previousMonth}
-            disabled={yearMonth <= `${HOLIDAY_YEAR_MIN}-01`}
-            onClick={() => goToMonth(-1)}
-            className={navButtonClass}
-          >
-            <ChevronLeft size={18} aria-hidden />
-          </button>
-          <p className="min-w-36 text-center text-base font-semibold first-letter:uppercase">
-            {monthTitle.format(new Date(`${yearMonth}-01T12:00:00Z`))}
-          </p>
-          <button
-            type="button"
-            aria-label={copy.planning.nextMonth}
-            disabled={yearMonth >= `${HOLIDAY_YEAR_MAX}-12`}
-            onClick={() => goToMonth(1)}
-            className={navButtonClass}
-          >
-            <ChevronRight size={18} aria-hidden />
-          </button>
-        </div>
-        <label className="flex items-center gap-2 text-sm">
-          {copy.planning.teamFilter}
-          <select
-            value={team}
-            onChange={(event) =>
-              goTo({
-                yearMonth,
-                team: event.target.value === 'all' ? 'all' : Number(event.target.value),
-                isAbsentOnly,
-              })
-            }
-            className="rounded-lg border border-zinc-300 bg-white px-2 py-1 focus-visible:outline-2 focus-visible:outline-primary-600"
-          >
-            <option value="all">{copy.planning.allTeams}</option>
-            {data?.teams.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.path}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={isAbsentOnly}
-            onChange={(event) => goTo({ yearMonth, team, isAbsentOnly: event.target.checked })}
-            className="size-4 focus-visible:outline-2 focus-visible:outline-primary-600"
-          />
-          {copy.planning.absentToday}
-        </label>
-        <p className="text-sm text-zinc-600">
-          {`${peopleCount} ${peopleCount === 1 ? copy.planning.personSingular : copy.planning.personPlural}`}
-        </p>
-        {/* Task 5: the bulk reset button and its status line go here. */}
-      </div>
+      <PlanningFilterBar
+        filters={{ yearMonth, team, isAbsentOnly }}
+        teamMonth={data}
+        sections={sections}
+        peopleCount={peopleCount}
+        onChange={goTo}
+        onShiftMonth={goToMonth}
+      />
       <div key={yearMonth} className="motion-safe:animate-[week-in_200ms_ease-out]">
         {isError ? (
           <p role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">
