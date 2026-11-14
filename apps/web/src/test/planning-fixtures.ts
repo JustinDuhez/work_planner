@@ -63,6 +63,7 @@ export function teamMonth(overrides: Partial<TeamMonth> = {}): TeamMonth {
       },
     ],
     canResetUserIds: [],
+    absentTodayUserIds: [7],
     ...overrides,
   };
 }

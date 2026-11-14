@@ -118,13 +118,57 @@ describe('PlanningPage', () => {
     renderPlanning('/planning?mois=2026-11&equipe=toutes&absents=1', {
       'GET /api/v1/team-months/2026-11': {
         status: 200,
-        body: teamMonth({
-          people: teamMonth().people.map((person) => ({ ...person, halfDays: [] })),
-        }),
+        body: teamMonth({ absentTodayUserIds: [] }),
       },
     });
 
     expect(await screen.findByText(copy.planning.nobodyAbsent)).toBeInTheDocument();
+  });
+
+  it("keeps today's absentees whatever month is shown", async () => {
+    renderPlanning('/planning?mois=2026-12&equipe=toutes&absents=1', {
+      'GET /api/v1/team-months/2026-12': {
+        status: 200,
+        body: teamMonth({
+          month: { startDate: '2026-12-01', endDate: '2026-12-31' },
+          // December holds no half-day of today: only the server's list can name Léa.
+          people: teamMonth().people.map((person) => ({ ...person, halfDays: [] })),
+          absentTodayUserIds: [7],
+        }),
+      },
+    });
+
+    const grid = await screen.findByRole('table', { name: /décembre 2026/ });
+    expect(
+      within(grid)
+        .getAllByRole('rowheader')
+        .map((cell) => cell.textContent),
+    ).toEqual([expect.stringContaining('Léa Moreau')]);
+  });
+
+  it('shows a parent team together with its sub-teams, counting each person once', async () => {
+    renderPlanning('/planning?mois=2026-11&equipe=1');
+
+    const grid = await table();
+
+    expect(within(grid).getByText('Tech')).toBeInTheDocument();
+    expect(within(grid).getByText('Tech › Front')).toBeInTheDocument();
+    expect(within(grid).getByRole('rowheader', { name: /Claire Martin/ })).toBeInTheDocument();
+    expect(within(grid).getByRole('rowheader', { name: /Léa Moreau/ })).toBeInTheDocument();
+    expect(screen.getByText('4 personnes')).toBeInTheDocument();
+  });
+
+  it('says in text that a balance has a refused correction to take up again', async () => {
+    renderPlanning('/planning?mois=2026-11');
+
+    const grid = await table();
+
+    expect(within(grid).getAllByText(copy.planning.openRefusal)).toHaveLength(1);
+    expect(
+      within(within(grid).getByRole('rowheader', { name: /Hugo Laurent/ })).getByText(
+        copy.planning.openRefusal,
+      ),
+    ).toBeInTheDocument();
   });
 
   it('moves to the next month in the URL', async () => {

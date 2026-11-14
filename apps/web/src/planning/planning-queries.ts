@@ -6,6 +6,7 @@ import {
 } from '@work-planner/domain';
 import { apiGet, apiSend } from '../api/api-client';
 import { CLOCK_WEEK_QUERY_PREFIX } from '../clock/clock-queries';
+import { COUNTER_RESETS_QUERY_PREFIX } from '../clock/counter-queries';
 
 export const TEAM_MONTH_QUERY_KEY = ['team-month'] as const;
 export const ALL_TEAMS = 'toutes';
@@ -16,6 +17,8 @@ export function useTeamMonth(yearMonth: string) {
     queryFn: () => apiGet(`/api/v1/team-months/${yearMonth}`, teamMonthSchema),
     // Keeps the table and filters on screen while the next month loads.
     placeholderData: keepPreviousData,
+    // The read runs the E4 balance per person: skip refetches for 30 s (a reset invalidates at once).
+    staleTime: 30_000,
   });
 }
 
@@ -42,7 +45,7 @@ export function useCreateCounterResets() {
       Promise.all([
         queryClient.invalidateQueries({ queryKey: TEAM_MONTH_QUERY_KEY }),
         queryClient.invalidateQueries({ queryKey: CLOCK_WEEK_QUERY_PREFIX }),
-        queryClient.invalidateQueries({ queryKey: ['counter-resets'] }),
+        queryClient.invalidateQueries({ queryKey: COUNTER_RESETS_QUERY_PREFIX }),
       ]),
   });
 }

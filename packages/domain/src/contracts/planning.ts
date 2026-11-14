@@ -51,6 +51,7 @@ export const teamMonthSchema = z.object({
     }),
   ),
   canResetUserIds: z.array(z.number().int()),
+  absentTodayUserIds: z.array(z.number().int()),
 });
 export type TeamMonth = z.infer<typeof teamMonthSchema>;
 

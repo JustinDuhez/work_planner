@@ -8,10 +8,9 @@ import {
   type TeamMonth,
 } from '@work-planner/domain';
 import type { ClockDependencies, ClockViewer } from '../clock/clock-dependencies';
-import { findCounterProfile } from '../counters/counter-repository';
 import { buildWeekCounters } from '../counters/week-counters';
 import { findPublicHolidays } from '../holidays/holiday-repository';
-import { findMonthHalfDays } from '../leave/leave-repository';
+import { findAbsentUserIds, findMonthHalfDays } from '../leave/leave-repository';
 import { loadTeams } from '../teams/teams';
 
 /** E7-D7: the whole company in one read; the page filters by team and absence itself. */
@@ -23,15 +22,16 @@ export async function buildTeamMonth(
   const now = deps.now();
   const today = toWorkDate(now, deps.timeZone);
   const range = { fromDate: month.startDate, toDate: month.endDate };
-  const [teamViews, people, holidays, halfDays, actor] = await Promise.all([
+  const [teamViews, people, holidays, halfDays, absentUserIds, actor] = await Promise.all([
     loadTeams(deps.db, query.viewer),
     deps.db
       .selectFrom('appUser')
-      .select(['id', 'firstName', 'lastName'])
+      .select(['id', 'firstName', 'lastName', 'startDate', 'dailyMinutes'])
       .where('archivedAt', 'is', null)
       .execute(),
     findPublicHolidays(deps.db, range),
     findMonthHalfDays(deps.db, range),
+    findAbsentUserIds(deps.db, today),
     query.viewer.loadActor(),
   ]);
   const teams = orderTeams(
@@ -46,19 +46,19 @@ export async function buildTeamMonth(
   const week = datesOfIsoWeek(isoWeekOf(today)) ?? [today];
   const currentWeek = { fromDate: week[0] ?? today, toDate: week.at(-1) ?? today };
   const result: TeamMonth['people'] = [];
-  // ponytail: one E4 balance computation per person, one after another (≈8 queries each) so the
+  // ponytail: one E4 balance computation per person, one after another (≈6 queries each) so the
   // pool is never flooded; batch the counter facts if the company grows past a few dozen people.
   for (const person of people) {
-    const profile = await findCounterProfile(deps.db, person.id);
-    if (!profile) continue;
     const { counters } = await buildWeekCounters(deps, {
-      owner: profile,
+      owner: person,
       week: currentWeek,
       instant: { now, today },
       viewer: query.viewer,
     });
     result.push({
-      ...person,
+      id: person.id,
+      firstName: person.firstName,
+      lastName: person.lastName,
       teamIds: teams
         .filter((team) => team.managerId === person.id || team.memberIds.includes(person.id))
         .map((team) => team.id),
@@ -80,5 +80,8 @@ export async function buildTeamMonth(
     canResetUserIds: result
       .filter((person) => canResetCounter(actor, person.id))
       .map((person) => person.id),
+    absentTodayUserIds: result
+      .map((person) => person.id)
+      .filter((id) => absentUserIds.includes(id)),
   };
 }

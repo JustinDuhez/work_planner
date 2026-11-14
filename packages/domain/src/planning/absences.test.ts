@@ -1,41 +1,4 @@
-import { absenceRuns, isAbsentOn } from './absences';
-
-const NON_BADGEABLE = new Set(['leave', 'sick', 'training_travel', 'recovery', 'early_departure']);
-
-describe('isAbsentOn', () => {
-  it('counts one approved non-workable half-day', () => {
-    expect(
-      isAbsentOn(
-        [{ date: '2026-11-13', status: 'approved', dayTypeCode: 'early_departure' }],
-        '2026-11-13',
-        NON_BADGEABLE,
-      ),
-    ).toBe(true);
-  });
-
-  it.each([
-    ['telework', 'approved'],
-    ['leave', 'pending'],
-  ])('ignores %s %s', (dayTypeCode, status) => {
-    expect(
-      isAbsentOn(
-        [{ date: '2026-11-13', status: status as 'approved' | 'pending', dayTypeCode }],
-        '2026-11-13',
-        NON_BADGEABLE,
-      ),
-    ).toBe(false);
-  });
-
-  it('ignores another day', () => {
-    expect(
-      isAbsentOn(
-        [{ date: '2026-11-12', status: 'approved', dayTypeCode: 'leave' }],
-        '2026-11-13',
-        NON_BADGEABLE,
-      ),
-    ).toBe(false);
-  });
-});
+import { absenceRuns } from './absences';
 
 describe('absenceRuns', () => {
   it('merges consecutive halves of the same type and status', () => {

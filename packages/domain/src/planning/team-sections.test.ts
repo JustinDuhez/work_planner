@@ -71,12 +71,23 @@ describe('groupPeopleByTeam', () => {
 
 describe('defaultTeamFilter', () => {
   const ordered = orderTeams(TEAMS);
+  // Viewer 40 belongs to the first team in page order but manages a later one.
+  const withLaterManagedTeam = orderTeams([
+    ...TEAMS,
+    { id: 4, name: 'Support', parentTeamId: null, managerId: 40, memberIds: [] },
+  ]);
 
   it.each([
-    ['a manager gets the team they manage', 20, 3],
-    ['a member gets their first team', 31, 2],
-    ['someone in no team gets every team', 50, 'all'],
-  ])('%s', (_case, viewerId, filter) => {
-    expect(defaultTeamFilter(ordered, viewerId)).toBe(filter);
+    ['a manager gets the team they manage', ordered, 20, 3],
+    ['a member gets their first team', ordered, 31, 2],
+    ['someone in no team gets every team', ordered, 50, 'all'],
+    [
+      'a viewer who belongs to an earlier team but manages a later one gets the managed team',
+      withLaterManagedTeam,
+      40,
+      4,
+    ],
+  ])('%s', (_case, teams, viewerId, filter) => {
+    expect(defaultTeamFilter(teams, viewerId)).toBe(filter);
   });
 });

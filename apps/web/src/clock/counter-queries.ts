@@ -3,8 +3,10 @@ import { counterResetListSchema, counterResetSchema } from '@work-planner/domain
 import { apiGet, apiSend } from '../api/api-client';
 import { CLOCK_WEEK_QUERY_PREFIX } from './clock-queries';
 
+export const COUNTER_RESETS_QUERY_PREFIX = ['counter-resets'] as const;
+
 function counterResetsQueryKey(ownerId: number) {
-  return ['counter-resets', ownerId] as const;
+  return [...COUNTER_RESETS_QUERY_PREFIX, ownerId] as const;
 }
 
 export function useCreateCounterReset(ownerId: number) {

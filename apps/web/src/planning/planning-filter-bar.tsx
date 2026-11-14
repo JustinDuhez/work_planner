@@ -113,7 +113,7 @@ export function PlanningFilterBar({
       ) : null}
       {doneCount === null ? null : (
         <p role="status" className="basis-full text-sm text-emerald-800">
-          {`${doneCount} ${doneCount === 1 ? copy.planning.counterSingular : copy.planning.counterPlural} ${doneCount === 1 ? copy.planning.resetDoneSingular : copy.planning.resetDonePlural}`}
+          {`${doneCount} ${doneCount === 1 ? copy.planning.counterSingular : copy.planning.counterPlural} ${copy.planning.resetDone}`}
         </p>
       )}
       {isResetOpen && teamMonth ? (

@@ -61,6 +61,9 @@ function PersonRow({
             isRefused={person.balance.hasOpenRefusal}
             className=""
           />
+          {person.balance.hasOpenRefusal ? (
+            <span className="sr-only"> {copy.planning.openRefusal}</span>
+          ) : null}
         </span>
       </th>
       {dates.map((date) => (
@@ -136,9 +139,10 @@ export function TeamMonthTable({
             <tr>
               <td
                 colSpan={dates.length + 1}
-                className="sticky left-0 bg-zinc-50 px-3 py-1 text-left text-xs font-semibold text-zinc-700"
+                className="bg-zinc-50 px-3 py-1 text-left text-xs font-semibold text-zinc-700"
               >
-                {section.title}
+                {/* Sticky on the text, not the full-width cell: the title stays in view on scroll. */}
+                <span className="sticky left-3">{section.title}</span>
               </td>
             </tr>
             {section.rows.flatMap((row) => {

@@ -3,20 +3,6 @@ import type { Half } from '../contracts/leave';
 
 type Status = 'pending' | 'approved';
 
-/** E7-D4: unreachable today = one approved half-day of a non-badgeable type; telework is work. */
-export function isAbsentOn(
-  halfDays: readonly { date: string; status: Status; dayTypeCode: string }[],
-  date: string,
-  nonBadgeableCodes: ReadonlySet<string>,
-): boolean {
-  return halfDays.some(
-    (halfDay) =>
-      halfDay.date === date &&
-      halfDay.status === 'approved' &&
-      nonBadgeableCodes.has(halfDay.dayTypeCode),
-  );
-}
-
 export interface AbsenceRun {
   dayTypeCode: string;
   status: Status;

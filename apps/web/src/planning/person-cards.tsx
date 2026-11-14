@@ -61,6 +61,9 @@ export function PersonCards({
                 isRefused={person.balance.hasOpenRefusal}
                 className="text-xs"
               />
+              {person.balance.hasOpenRefusal ? (
+                <span className="sr-only">{copy.planning.openRefusal}</span>
+              ) : null}
             </div>
             <p className="text-xs text-zinc-600">{teamPaths.join(', ') || copy.planning.noTeam}</p>
             {runs.length === 0 ? (

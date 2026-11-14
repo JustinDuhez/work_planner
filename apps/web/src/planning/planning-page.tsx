@@ -1,7 +1,7 @@
 import {
   defaultTeamFilter,
   groupPeopleByTeam,
-  isAbsentOn,
+  isInSubtree,
   toWorkDate,
   yearMonthSchema,
   type TeamMonth,
@@ -52,22 +52,19 @@ export function PlanningPage() {
   const urlTeam =
     requestedTeam === ALL_TEAMS || !Number(requestedTeam) ? 'all' : Number(requestedTeam);
   const team = data ? resolveTeam(requestedTeam, data, session.user.id) : urlTeam;
-  const nonBadgeableCodes = new Set(
-    (dayTypes.data ?? []).filter((type) => !type.isBadgeable).map((type) => type.code),
-  );
+  const absentTodayUserIds = new Set(data?.absentTodayUserIds);
   const sections = data
     ? groupPeopleByTeam(data.teams, data.people, copy.planning.noTeam)
-        .filter((section) => team === 'all' || section.teamId === team)
+        // A parent team shows its sub-teams too: managers of a team with no direct members.
+        .filter(
+          (section) =>
+            team === 'all' ||
+            (section.teamId !== null && isInSubtree(data.teams, team, section.teamId)),
+        )
         .map((section) => ({
           ...section,
           rows: isAbsentOnly
-            ? section.rows.filter((row) =>
-                isAbsentOn(
-                  data.people.find((person) => person.id === row.personId)?.halfDays ?? [],
-                  data.today,
-                  nonBadgeableCodes,
-                ),
-              )
+            ? section.rows.filter((row) => absentTodayUserIds.has(row.personId))
             : section.rows,
         }))
         .filter((section) => section.rows.length > 0)

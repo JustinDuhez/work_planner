@@ -194,8 +194,8 @@ export const copy = {
     counterSingular: 'compteur',
     counterPlural: 'compteurs',
     resetSubmitSuffix: 'à zéro',
-    resetDoneSingular: 'remis à zéro.',
-    resetDonePlural: 'remis à zéro.',
+    resetDone: 'remis à zéro.',
+    openRefusal: '(correction refusée à reprendre)',
   },
   calendar: {
     title: 'Calendrier',

@@ -64,6 +64,12 @@ describe('bulk counter reset', () => {
       expect(postBody(fetchMock)).toEqual({ userIds: [2, 7], resetDate: '2026-11-02' }),
     );
     expect(await screen.findByText('2 compteurs remis à zéro.')).toHaveAttribute('role', 'status');
+    // Success refresh: the month is read a second time so the balances are current.
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.filter(([url]) => url === '/api/v1/team-months/2026-11'),
+      ).toHaveLength(2),
+    );
   });
 
   it('says "1 compteur" for a single person, and clears the line on the next filter change', async () => {

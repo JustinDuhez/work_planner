@@ -209,3 +209,18 @@ export async function findMonthHalfDays(
     status: liveStatus(row.status),
   }));
 }
+
+/** E7-D4: unreachable on `date` = one approved half-day of a non-badgeable type; telework is work. */
+export async function findAbsentUserIds(db: Kysely<Database>, date: string): Promise<number[]> {
+  const rows = await db
+    .selectFrom('halfDay')
+    .innerJoin('dayType', 'dayType.id', 'halfDay.dayTypeId')
+    .innerJoin('leaveRequest', 'leaveRequest.id', 'halfDay.leaveRequestId')
+    .select('halfDay.userId')
+    .distinct()
+    .where('halfDay.workDate', '=', date)
+    .where('leaveRequest.status', '=', 'approved')
+    .where('dayType.isBadgeable', '=', false)
+    .execute();
+  return rows.map((row) => row.userId);
+}

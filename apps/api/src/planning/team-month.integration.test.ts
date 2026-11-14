@@ -23,6 +23,7 @@ interface TeamMonthBody {
     balance: { globalGapMinutes: number; hasOpenRefusal: boolean };
   }[];
   canResetUserIds: number[];
+  absentTodayUserIds: number[];
 }
 
 describe('the team month', () => {
@@ -33,6 +34,7 @@ describe('the team month', () => {
   let hugoId: number;
   let archivedId: number;
   let frontId: number;
+  let claireId: number;
 
   async function get(email: string, url: string) {
     const { cookie } = await logIn(app, email);
@@ -41,7 +43,7 @@ describe('the team month', () => {
 
   beforeAll(async () => {
     db = await createMigratedTestDb();
-    const claireId = await insertUser(db, { email: 'claire.tm@example.com' });
+    claireId = await insertUser(db, { email: 'claire.tm@example.com' });
     sophieId = await insertUser(db, { email: 'sophie.tm@example.com' });
     leaId = await insertUser(db, { email: 'lea.tm@example.com', startDate: '2026-10-19' });
     hugoId = await insertUser(db, { email: 'hugo.tm@example.com' });
@@ -68,6 +70,24 @@ describe('the team month', () => {
       dayTypeCode: 'sick',
       startDate: '2026-10-30',
       status: 'approved',
+    });
+    await insertLeaveRequest(db, {
+      userId: sophieId,
+      dayTypeCode: 'leave',
+      startDate: '2026-11-13',
+      status: 'approved',
+    });
+    await insertLeaveRequest(db, {
+      userId: claireId,
+      dayTypeCode: 'telework',
+      startDate: '2026-11-13',
+      status: 'approved',
+    });
+    await insertLeaveRequest(db, {
+      userId: hugoId,
+      dayTypeCode: 'leave',
+      startDate: '2026-11-13',
+      status: 'pending',
     });
     await insertPublicHoliday(db, { date: '2026-11-11', label: 'Armistice' });
     app = await buildApp({ config: createTestConfig(), db, now: createTestClock(NOW).now });
@@ -156,6 +176,18 @@ describe('the team month', () => {
 
     expect(response.statusCode).toBe(400);
   });
+
+  it.each(['2026-11', '2026-12'])(
+    "lists today's approved absences whichever month is asked (%s), not telework or pending",
+    async (yearMonth) => {
+      const body = (
+        await get('hugo.tm@example.com', `/api/v1/team-months/${yearMonth}`)
+      ).json<TeamMonthBody>();
+
+      expect(body.today).toBe('2026-11-13');
+      expect(body.absentTodayUserIds).toEqual([sophieId]);
+    },
+  );
 
   it('places Hugo in no team', async () => {
     const hugo = (await get('hugo.tm@example.com', '/api/v1/team-months/2026-11'))
