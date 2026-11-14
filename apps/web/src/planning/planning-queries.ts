@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { teamMonthSchema } from '@work-planner/domain';
 import { apiGet } from '../api/api-client';
 
@@ -9,6 +9,8 @@ export function useTeamMonth(yearMonth: string) {
   return useQuery({
     queryKey: [...TEAM_MONTH_QUERY_KEY, yearMonth],
     queryFn: () => apiGet(`/api/v1/team-months/${yearMonth}`, teamMonthSchema),
+    // Keeps the table and filters on screen while the next month loads.
+    placeholderData: keepPreviousData,
   });
 }
 

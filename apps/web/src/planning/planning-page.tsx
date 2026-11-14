@@ -57,7 +57,11 @@ export function PlanningPage() {
   if (!session) return null;
 
   const isAbsentOnly = searchParams.get('absents') === '1';
-  const team = data ? resolveTeam(searchParams.get('equipe'), data, session.user.id) : 'all';
+  // Before any payload exists the URL's own choice is kept, so a quick click never rewrites it.
+  const requestedTeam = searchParams.get('equipe');
+  const urlTeam =
+    requestedTeam === ALL_TEAMS || !Number(requestedTeam) ? 'all' : Number(requestedTeam);
+  const team = data ? resolveTeam(requestedTeam, data, session.user.id) : urlTeam;
   const nonBadgeableCodes = new Set(
     (dayTypes.data ?? []).filter((type) => !type.isBadgeable).map((type) => type.code),
   );

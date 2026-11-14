@@ -182,4 +182,20 @@ describe('PlanningPage', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent(copy.planning.loadError);
   });
+
+  it('keeps the chosen team in the URL when moving to another month', async () => {
+    const { user, router } = renderPlanning('/planning?mois=2026-11&equipe=3', {
+      'GET /api/v1/team-months/2026-12': {
+        status: 200,
+        body: teamMonth({ month: { startDate: '2026-12-01', endDate: '2026-12-31' } }),
+      },
+    });
+
+    await user.click(await screen.findByRole('button', { name: copy.planning.nextMonth }));
+
+    expect(router.state.location.search).toContain('equipe=3');
+    const grid = await screen.findByRole('table', { name: /décembre 2026/ });
+    expect(within(grid).getByRole('rowheader', { name: /Sophie Dubois/ })).toBeInTheDocument();
+    expect(within(grid).queryByText('Claire Martin')).not.toBeInTheDocument();
+  });
 });
