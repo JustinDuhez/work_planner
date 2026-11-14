@@ -31,7 +31,7 @@ export type HalfAction = (
   declared: CalendarHalfDay | undefined,
 ) => (() => void) | undefined;
 
-function HalfCell({
+export function HalfCell({
   date,
   half,
   declared,
@@ -41,7 +41,7 @@ function HalfCell({
 }: {
   date: string;
   half: HalfName;
-  declared: CalendarHalfDay | undefined;
+  declared: Pick<CalendarHalfDay, 'dayTypeCode' | 'status'> | undefined;
   holidayLabel: string | undefined;
   dayTypes: readonly DayTypeView[];
   onClick: (() => void) | undefined;

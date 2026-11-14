@@ -13,7 +13,7 @@ function gapToneClass(minutes: number): string {
   return 'text-zinc-900';
 }
 
-function Gap({
+export function Gap({
   minutes,
   className,
   isRefused = false,
