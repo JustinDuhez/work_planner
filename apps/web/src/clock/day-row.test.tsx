@@ -8,7 +8,7 @@ const SUNDAY: ClockDayView = {
   workMode: null,
   periods: [],
   workedMinutes: 0,
-  badgeableMinutes: 0,
+  targetMinutes: 0,
   holidayLabel: null,
   halfDays: { am: null, pm: null },
   isToday: false,
@@ -32,7 +32,7 @@ describe('DayRow', () => {
   });
 
   it("shows the day's badgeable time next to its total", () => {
-    const day = { ...SUNDAY, workedMinutes: 450, badgeableMinutes: 420 };
+    const day = { ...SUNDAY, workedMinutes: 450, targetMinutes: 420 };
 
     render(
       <ol>
@@ -56,7 +56,7 @@ describe('DayRow', () => {
   });
 
   it('shows the total alone on a day without badgeable time', () => {
-    const day = { ...SUNDAY, workedMinutes: 60, badgeableMinutes: 0 };
+    const day = { ...SUNDAY, workedMinutes: 60, targetMinutes: 0 };
 
     render(
       <ol>

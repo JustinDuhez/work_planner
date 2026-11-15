@@ -217,8 +217,8 @@ describe('working time', () => {
 
     expect(
       week
-        .json<{ days: { badgeableMinutes: number }[] }>()
-        .days.map((day) => day.badgeableMinutes)
+        .json<{ days: { targetMinutes: number }[] }>()
+        .days.map((day) => day.targetMinutes)
         .slice(0, 5),
     ).toEqual([420, 420, 420, 360, 360]);
   });

@@ -35,5 +35,6 @@ export * from './planning/team-sections';
 export * from './policy';
 export * from './settings/year-start';
 export * from './teams/team-tree';
+export * from './text/french-order';
 export * from './users/user-access-rules';
 export * from './users/working-time-rules';

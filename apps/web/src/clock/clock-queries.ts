@@ -38,11 +38,14 @@ export function useClockWeek(userId: number, isoWeek: string) {
   });
 }
 
+// Not forever: new hires appear without a reload.
+const ACTIVE_USERS_STALE_TIME_IN_MILLISECONDS = 5 * 60 * 1000;
+
 export function useActiveUsers() {
   return useQuery({
     queryKey: ['users', 'active'],
     queryFn: () => apiGet('/api/v1/users', userSummaryListSchema),
-    staleTime: Infinity,
+    staleTime: ACTIVE_USERS_STALE_TIME_IN_MILLISECONDS,
   });
 }
 

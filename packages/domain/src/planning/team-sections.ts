@@ -1,3 +1,5 @@
+import { compareFrench, comparePeopleByName } from '../text/french-order';
+
 export interface TeamLinkWithManager {
   id: number;
   name: string;
@@ -15,7 +17,7 @@ export interface PlanningSection {
 const PATH_SEPARATOR = ' › ';
 
 const byFrenchName = (first: { name: string }, second: { name: string }) =>
-  first.name.localeCompare(second.name, 'fr');
+  compareFrench(first.name, second.name);
 
 /** Équipes page order (E2b): parents before sub-teams, siblings by French collation. */
 export function orderTeams<T extends TeamLinkWithManager>(
@@ -47,14 +49,11 @@ export function groupPeopleByTeam(
 ): PlanningSection[] {
   type Person = (typeof people)[number];
   const personById = new Map(people.map((person) => [person.id, person]));
-  const byLastName = (first: Person, second: Person) =>
-    first.lastName.localeCompare(second.lastName, 'fr') ||
-    first.firstName.localeCompare(second.firstName, 'fr');
   const peopleOf = (ids: readonly number[]) =>
     ids
       .map((id) => personById.get(id))
       .filter((person): person is Person => person !== undefined)
-      .sort(byLastName);
+      .sort(comparePeopleByName);
 
   const placed = new Set<number>();
   const sections: PlanningSection[] = teams.map((team) => {
@@ -71,7 +70,7 @@ export function groupPeopleByTeam(
     }
     return { teamId: team.id, title: team.path, rows };
   });
-  const unplaced = people.filter((person) => !placed.has(person.id)).sort(byLastName);
+  const unplaced = people.filter((person) => !placed.has(person.id)).sort(comparePeopleByName);
   if (unplaced.length > 0) {
     sections.push({
       teamId: null,

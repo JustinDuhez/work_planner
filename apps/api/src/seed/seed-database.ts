@@ -53,9 +53,6 @@ async function idOfTeam(db: Kysely<Database>, name: string): Promise<number> {
   return id;
 }
 
-// The demo weeks include 11 November 2026.
-const DEMO_HOLIDAY_YEARS = [2025, 2026];
-
 async function countRows(
   db: Kysely<Database>,
   table:
@@ -120,7 +117,8 @@ export async function seedDatabase(
     }
   }
   // Holidays first: demo leave and the clock history both depend on them.
-  for (const year of DEMO_HOLIDAY_YEARS) await insertFrenchHolidays(db, year);
+  const seedYear = Number(today.slice(0, 4));
+  for (const year of [seedYear - 1, seedYear, seedYear + 1]) await insertFrenchHolidays(db, year);
   await seedDemoLeave(db, clock);
   const activeEmails = DEMO_USERS.filter((user) => !user.isArchived).map((user) => user.email);
   // A demo person never "works" on a public holiday or on a day of approved absence.

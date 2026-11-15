@@ -46,7 +46,7 @@ describe('seedDatabase', () => {
       .execute();
 
     expect(firstRun.clockDayCount).toBeGreaterThan(0);
-    expect(firstRun.publicHolidayCount).toBe(22);
+    expect(firstRun.publicHolidayCount).toBe(33);
     expect(chloeDays).toEqual([]);
   });
 
@@ -527,6 +527,33 @@ describe('seedDatabase on a database that already holds clocked history', () => 
         .where('status', '=', 'approved')
         .execute();
       expect(approved).toEqual([]);
+    } finally {
+      await db.destroy();
+    }
+  });
+});
+
+describe('seedDatabase holidays follow the seed clock', () => {
+  it('imports the previous, current and next year and keeps clock days off holidays', async () => {
+    const db = await createMigratedTestDb();
+    try {
+      await seedDatabase(db, SEED_CONFIG, {
+        now: new Date('2027-03-10T09:30:00Z'),
+        timeZone: 'Europe/Paris',
+      });
+      const years = await db
+        .selectFrom('publicHoliday')
+        .select(sql<string>`DISTINCT EXTRACT(YEAR FROM holiday_date)::text`.as('year'))
+        .orderBy('year')
+        .execute();
+      const clockDaysOnHolidays = await db
+        .selectFrom('clockDay')
+        .innerJoin('publicHoliday', 'publicHoliday.holidayDate', 'clockDay.workDate')
+        .select('clockDay.id')
+        .execute();
+
+      expect(years.map(({ year }) => year)).toEqual(['2026', '2027', '2028']);
+      expect(clockDaysOnHolidays).toEqual([]);
     } finally {
       await db.destroy();
     }

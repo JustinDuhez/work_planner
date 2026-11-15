@@ -12,7 +12,7 @@ import { createMigratedTestDb } from '../test/test-database';
 const NOW = new Date('2026-11-12T08:00:00Z');
 
 interface WeekBody {
-  days: { date: string; badgeableMinutes: number; halfDays: { am: unknown; pm: unknown } }[];
+  days: { date: string; targetMinutes: number; halfDays: { am: unknown; pm: unknown } }[];
   counters: { weekTargetMinutes: number; globalGapMinutes: number };
 }
 
@@ -112,9 +112,7 @@ describe('leave in the week', () => {
     const after = await getWeek(person.email, person.id, '2026-W47');
 
     expect(after.counters.weekTargetMinutes).toBe(before.counters.weekTargetMinutes - 420 - 210);
-    expect(after.days.map((day) => day.badgeableMinutes).slice(0, 5)).toEqual([
-      0, 420, 420, 210, 420,
-    ]);
+    expect(after.days.map((day) => day.targetMinutes).slice(0, 5)).toEqual([0, 420, 420, 210, 420]);
   });
 
   it('raises the overall balance for a past approved absence', async () => {

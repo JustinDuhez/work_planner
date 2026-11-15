@@ -1,6 +1,8 @@
 import {
   canEditDailyMinutes,
   canManageUsers,
+  compareFrench,
+  comparePeopleByName,
   toWorkDate,
   workingTimeOf,
   type Actor,
@@ -32,7 +34,11 @@ interface TeamLink {
   isOwnTeam: boolean;
 }
 
-function findDirectoryUsers(db: Kysely<Database>, query: { isArchived: boolean; userId?: number }) {
+// French order, not the database collation (E8a).
+async function findDirectoryUsers(
+  db: Kysely<Database>,
+  query: { isArchived: boolean; userId?: number },
+) {
   let select = db
     .selectFrom('appUser')
     .select([
@@ -48,7 +54,7 @@ function findDirectoryUsers(db: Kysely<Database>, query: { isArchived: boolean; 
     ])
     .where('archivedAt', query.isArchived ? 'is not' : 'is', null);
   if (query.userId !== undefined) select = select.where('id', '=', query.userId);
-  return select.orderBy('lastName').orderBy('firstName').execute();
+  return (await select.execute()).sort(comparePeopleByName);
 }
 
 /**
@@ -91,7 +97,7 @@ function toEntry(
     ...new Map(
       ownLinks.map((link) => [link.teamId, { id: link.teamId, name: link.teamName }]),
     ).values(),
-  ].sort((first, second) => first.name.localeCompare(second.name, 'fr'));
+  ].sort((first, second) => compareFrench(first.name, second.name));
   const managerIds = new Set(
     ownLinks
       .map((link) => link.managerId)

@@ -60,7 +60,7 @@ export async function buildClockWeek(
       workMode: stored?.workMode ?? null,
       periods: periods.map(toClockPeriodView),
       workedMinutes: dayWorkedMinutes(periods, { now, isToday }),
-      badgeableMinutes: targetMinutesByDate.get(date) ?? 0,
+      targetMinutes: targetMinutesByDate.get(date) ?? 0,
       holidayLabel: holidayLabelByDate.get(date) ?? null,
       halfDays: halfDaysByDate.get(date) ?? { am: null, pm: null },
       isToday,
