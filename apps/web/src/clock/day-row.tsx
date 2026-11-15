@@ -59,9 +59,9 @@ export function DayRow({
         className={`text-right text-sm font-semibold tabular-nums sm:col-start-3 sm:row-start-1 ${dim}`}
       >
         {formatMinutes(liveDayMinutes(day, now))}
-        {day.badgeableMinutes > 0 ? (
+        {day.targetMinutes > 0 ? (
           <span className="ml-1 font-normal text-zinc-400">
-            {`/ ${formatMinutes(day.badgeableMinutes)}`}
+            {`/ ${formatMinutes(day.targetMinutes)}`}
           </span>
         ) : null}
       </p>

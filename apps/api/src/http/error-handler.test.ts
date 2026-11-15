@@ -8,6 +8,7 @@ import {
   ValidationError,
 } from '@work-planner/domain';
 import Fastify from 'fastify';
+import { registerClientIp } from './client-ip';
 import { httpStatusFor, registerErrorHandlers } from './error-handler';
 
 describe('httpStatusFor', () => {
@@ -41,6 +42,7 @@ describe('security event logs', () => {
     const app = Fastify({
       logger: { level: 'warn', stream: { write: (line) => lines.push(line) } },
     });
+    registerClientIp(app, undefined);
     registerErrorHandlers(app, { serveSpa: false });
     app.get('/api/v1/test-failures', () => {
       throw error;
@@ -52,12 +54,21 @@ describe('security event logs', () => {
 
   it.each([
     ['INVALID_CREDENTIALS', new UnauthorizedError('INVALID_CREDENTIALS', 'm'), 'auth.login_failed'],
-    ['TOO_MANY_ATTEMPTS', new TooManyRequestsError('TOO_MANY_ATTEMPTS', 'm'), 'auth.login_locked'],
+    [
+      'TOO_MANY_ATTEMPTS',
+      new TooManyRequestsError('TOO_MANY_ATTEMPTS', 'm'),
+      'auth.too_many_attempts',
+    ],
     ['CSRF_INVALID', new ForbiddenError('CSRF_INVALID', 'm'), 'auth.csrf_refused'],
   ])('logs %s as a structured event without request data', async (code, error, event) => {
     const [line] = await logLinesFor(error);
 
-    expect(line).toMatchObject({ event, code });
+    expect(line).toMatchObject({
+      event,
+      code,
+      route: '/api/v1/test-failures',
+      clientIp: '127.0.0.1',
+    });
     expect(JSON.stringify(line)).not.toContain('secret@example.com');
   });
 

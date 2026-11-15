@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify';
+import Fastify, { type FastifyInstance } from 'fastify';
 import type { Kysely } from 'kysely';
 import { buildApp } from '../app';
 import type { Database } from '../db/database';
@@ -7,7 +7,7 @@ import { insertNotification, insertUser } from '../test/fixtures';
 import { createTestClock } from '../test/test-clock';
 import { createTestConfig } from '../test/test-config';
 import { createMigratedTestDb } from '../test/test-database';
-import { markCorrectionNotificationsRead } from './notification-repository';
+import { listNotifications, markCorrectionNotificationsRead } from './notification-repository';
 
 const NOW = new Date('2026-11-09T10:00:00Z');
 const NOTIFICATION_LIST_LIMIT = 20;
@@ -78,6 +78,58 @@ describe('notifications', () => {
     expect(body.unreadCount).toBe(NOTIFICATION_LIST_LIMIT + 2);
     expect(body.notifications).toHaveLength(NOTIFICATION_LIST_LIMIT);
     expect(body.notifications[0]?.payload.workDate).toBe('2026-10-22');
+  });
+
+  it('skips a stored notification whose payload is unreadable instead of failing the list', async () => {
+    const eveId = await insertUser(db, { email: 'eve.notifications@example.com' });
+    const validId = await insertNotification(db, {
+      userId: eveId,
+      type: 'clock_correction_received',
+      payload: payload('2026-11-01'),
+    });
+    await db
+      .insertInto('notification')
+      .values({
+        userId: eveId,
+        type: 'leave_request_received',
+        payload: JSON.stringify({ leaveRequestId: 'x' }),
+      })
+      .execute();
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/notifications',
+      headers: { cookie: (await sessionOf('eve.notifications@example.com')).cookie },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json<ListBody>().notifications.map(({ id }) => id)).toEqual([validId]);
+  });
+
+  it('logs one warning naming the unreadable notification, without its payload', async () => {
+    const frankId = await insertUser(db, { email: 'frank.notifications@example.com' });
+    const unreadable = await db
+      .insertInto('notification')
+      .values({
+        userId: frankId,
+        type: 'leave_request_received',
+        payload: JSON.stringify({ leaveRequestId: 'secret-value' }),
+      })
+      .returning('id')
+      .executeTakeFirstOrThrow();
+    const lines: string[] = [];
+    const logged = Fastify({ logger: { level: 'warn', stream: { write: (l) => lines.push(l) } } });
+
+    await listNotifications(db, { userId: frankId, log: logged.log });
+    await logged.close();
+
+    const entries = lines.map((line) => JSON.parse(line) as Record<string, unknown>);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      event: 'notification.invalid_row',
+      notificationId: unreadable.id,
+    });
+    expect(lines[0]).not.toContain('secret-value');
   });
 
   it('marks one of my notifications as read', async () => {

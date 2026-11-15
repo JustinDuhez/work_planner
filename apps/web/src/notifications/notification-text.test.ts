@@ -84,4 +84,10 @@ describe('leave notifications', () => {
       'Léa Moreau a annulé sa demande validée : Congé, du 23 nov. 2026 au 25 nov. 2026',
     );
   });
+
+  it('links a cancelled approved request nowhere: the list never shows it', () => {
+    expect(
+      notificationLink(leaveNotification({ type: 'leave_request_cancelled', payload }), 2),
+    ).toBeNull();
+  });
 });

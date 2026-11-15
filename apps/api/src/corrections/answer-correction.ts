@@ -3,6 +3,7 @@ import {
   type AnswerClockCorrectionRequest,
   type ClockCorrectionView,
 } from '@work-planner/domain';
+import { inClockTransaction } from '../clock/clock-repository';
 import type { ClockDependencies, ClockViewer } from '../clock/clock-dependencies';
 import { markCorrectionNotificationsRead } from '../notifications/notification-repository';
 import { notify } from '../notifications/notify';
@@ -22,7 +23,7 @@ export async function answerClockCorrection(
   const visible = await findVisibleCorrection(deps, command);
   if (visible.user.id !== command.viewer.id) throw new ClockCorrectionAnswerForbiddenError();
   const respondedAt = truncateToMinute(deps.now());
-  await deps.db.transaction().execute(async (trx) => {
+  await inClockTransaction(deps.db, async (trx) => {
     const isAnswered = await answerPendingCorrection(trx, {
       correctionId: command.correctionId,
       status: command.status,

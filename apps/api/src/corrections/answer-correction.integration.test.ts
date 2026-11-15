@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { sql, type Kysely } from 'kysely';
+import * as correctionRepository from './correction-repository';
 import { buildApp } from '../app';
 import type { Database } from '../db/database';
 import { logIn, TEST_ORIGIN } from '../test/auth-helpers';
@@ -7,6 +8,12 @@ import { insertTeam, insertUser } from '../test/fixtures';
 import { createTestClock } from '../test/test-clock';
 import { createTestConfig } from '../test/test-config';
 import { createMigratedTestDb } from '../test/test-database';
+
+// The compiled exports cannot be spied on, so the module is wrapped once, passing through.
+jest.mock('./correction-repository', () => {
+  const actual = jest.requireActual<typeof correctionRepository>('./correction-repository');
+  return { ...actual, answerPendingCorrection: jest.fn(actual.answerPendingCorrection) };
+});
 
 const NOW = new Date('2026-11-09T10:00:00Z');
 const MANAGER = 'sophie.answers@example.com';
@@ -86,6 +93,24 @@ describe('answering a correction', () => {
   afterAll(async () => {
     await app.close();
     await db.destroy();
+  });
+
+  it('answers 409 when the database reports a deadlock', async () => {
+    const member = await newMember();
+    const correction = await correctionFor(member.id);
+    jest
+      .mocked(correctionRepository.answerPendingCorrection)
+      .mockRejectedValueOnce(Object.assign(new Error('deadlock'), { code: '40P01' }));
+
+    const response = await send(
+      member.email,
+      'PATCH',
+      `/api/v1/clock-corrections/${correction.id}`,
+      { status: 'accepted' },
+    );
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json<{ code: string }>().code).toBe('CLOCK_WRITE_CONFLICT');
   });
 
   it('lets the person see the correction and answer it', async () => {

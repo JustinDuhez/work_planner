@@ -217,9 +217,28 @@ describe('working time', () => {
 
     expect(
       week
-        .json<{ days: { badgeableMinutes: number }[] }>()
-        .days.map((day) => day.badgeableMinutes)
+        .json<{ days: { targetMinutes: number }[] }>()
+        .days.map((day) => day.targetMinutes)
         .slice(0, 5),
     ).toEqual([420, 420, 420, 360, 360]);
+  });
+
+  it('ignores a daily time that is already in force, so earlier changes stay possible', async () => {
+    const memberId = await newMember();
+
+    const unchanged = await patch(MANAGER, memberId, {
+      dailyMinutes: 420,
+      effectiveDate: '2026-12-01',
+    });
+    const earlier = await patch(MANAGER, memberId, {
+      dailyMinutes: 360,
+      effectiveDate: '2026-11-20',
+    });
+
+    expect(unchanged.statusCode).toBe(200);
+    expect(earlier.statusCode).toBe(200);
+    expect(await changesOf(memberId)).toEqual([
+      { effectiveDate: '2026-11-20', previousDailyMinutes: 420 },
+    ]);
   });
 });

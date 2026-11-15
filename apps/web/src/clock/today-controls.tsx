@@ -24,6 +24,7 @@ export function TodayControls({
   onAddPeriod: () => void;
 }) {
   const [chosenMode, setChosenMode] = useState<WorkMode | null>(null);
+  const [isStopCancelled, setIsStopCancelled] = useState(false);
   const start = useStartClockPeriod(ownerId, isoWeek);
   const update = useUpdateClockPeriod(ownerId, isoWeek);
   const setDayMode = useSetDayMode(ownerId, isoWeek);
@@ -34,6 +35,7 @@ export function TodayControls({
 
   // Only the latest outcome is worth showing: a stale failure must not outlive a later success.
   function resetErrors() {
+    setIsStopCancelled(false);
     start.reset();
     update.reset();
     setDayMode.reset();
@@ -75,7 +77,10 @@ export function TodayControls({
             isPending={update.isPending}
             onClick={() => {
               resetErrors();
-              update.mutate({ periodId: runningPeriod.id, endedAt: 'now' });
+              update.mutate(
+                { periodId: runningPeriod.id, endedAt: 'now' },
+                { onSuccess: (period) => setIsStopCancelled(period === null) },
+              );
             }}
           >
             <Square size={16} aria-hidden /> {copy.clock.stop}
@@ -95,6 +100,11 @@ export function TodayControls({
           <Plus size={16} aria-hidden /> {copy.clock.addPeriod}
         </Button>
       </div>
+      {isStopCancelled ? (
+        <p role="status" className="text-sm text-zinc-600">
+          {copy.clock.periodCancelled}
+        </p>
+      ) : null}
       {errorMessage ? (
         <p role="alert" className="text-sm text-rose-700">
           {errorMessage}

@@ -9,7 +9,7 @@ const RUNNING_TODAY: ClockDayView = {
     { id: 2, startedAt: '2026-11-06T12:00:00.000Z', endedAt: null },
   ],
   workedMinutes: 240,
-  badgeableMinutes: 0,
+  targetMinutes: 0,
   holidayLabel: null,
   halfDays: { am: null, pm: null },
   isToday: true,

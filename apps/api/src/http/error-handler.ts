@@ -32,7 +32,8 @@ const CLIENT_ERROR_BY_STATUS: ReadonlyMap<number, ErrorResponse> = new Map([
 // log never needs the email, password, cookie or token of the request.
 const SECURITY_EVENT_BY_CODE: ReadonlyMap<string, string> = new Map([
   ['INVALID_CREDENTIALS', 'auth.login_failed'],
-  ['TOO_MANY_ATTEMPTS', 'auth.login_locked'],
+  // Emitted by the login and the password-change throttles, hence the route in the log.
+  ['TOO_MANY_ATTEMPTS', 'auth.too_many_attempts'],
   ['CSRF_INVALID', 'auth.csrf_refused'],
 ]);
 
@@ -69,7 +70,15 @@ export function registerErrorHandlers(
     if (error instanceof AppError && httpStatusFor(error) < 500) {
       const securityEvent = SECURITY_EVENT_BY_CODE.get(error.code);
       if (securityEvent !== undefined) {
-        request.log.warn({ event: securityEvent, code: error.code }, 'Security event');
+        request.log.warn(
+          {
+            event: securityEvent,
+            code: error.code,
+            route: request.routeOptions.url,
+            clientIp: request.clientIp,
+          },
+          'Security event',
+        );
       }
       return reply.status(httpStatusFor(error)).send(toErrorResponse(error));
     }

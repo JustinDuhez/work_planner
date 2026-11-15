@@ -20,7 +20,7 @@ export function registerNotificationRoutes(
   deps: { db: Kysely<Database>; now: () => Date },
 ): void {
   scope.get('/api/v1/notifications', (request) =>
-    listNotifications(deps.db, requireSession(request).user.id),
+    listNotifications(deps.db, { userId: requireSession(request).user.id, log: request.log }),
   );
 
   scope.patch('/api/v1/notifications/:id', async (request) => {

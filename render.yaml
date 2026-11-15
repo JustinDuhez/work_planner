@@ -17,6 +17,9 @@ services:
         value: info
       - key: TRUSTED_PROXY_HOP_COUNT
         value: '1'
+      # Cloudflare overwrites cf-connecting-ip on every request; only set this while all traffic comes through it (B1).
+      - key: CLIENT_IP_HEADER
+        value: cf-connecting-ip
       - key: DATABASE_URL
         sync: false
       - key: DATABASE_URL_UNPOOLED

@@ -38,6 +38,18 @@ describe('dayWorkedMinutes', () => {
 });
 
 describe('findDayPeriodViolation', () => {
+  const LATE_NOW = new Date('2026-11-06T22:59:30Z'); // 23:59:30 in Paris
+
+  it('refuses an open period started in the last minute of the day', () => {
+    const lastMinute = { startedAt: at('2026-11-06T22:59:00Z'), endedAt: null };
+    expect(findDayPeriodViolation([lastMinute], BOUNDS, LATE_NOW)).toBe('CLOCK_START_TOO_LATE');
+  });
+
+  it('accepts an open period started a minute earlier', () => {
+    const minuteBefore = { startedAt: at('2026-11-06T22:58:00Z'), endedAt: null };
+    expect(findDayPeriodViolation([minuteBefore], BOUNDS, LATE_NOW)).toBeNull();
+  });
+
   it('accepts valid periods, including back-to-back ones', () => {
     const backToBack = { startedAt: morning.endedAt, endedAt: at('2026-11-06T12:00:00Z') };
 

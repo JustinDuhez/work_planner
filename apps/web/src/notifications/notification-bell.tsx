@@ -53,20 +53,29 @@ export function NotificationBell() {
           <p className="px-3 py-2 text-sm text-zinc-500">{copy.notifications.empty}</p>
         ) : (
           <ul aria-label={copy.notifications.title} className="max-h-80 overflow-y-auto">
-            {notifications.data?.notifications.map((notification) => (
-              <li key={notification.id}>
-                <Link
-                  to={notificationLink(notification, session.user.id)}
-                  onClick={() => {
-                    closePanel();
-                    if (notification.readAt === null) markRead.mutate(notification.id);
-                  }}
-                  className={`block rounded-lg px-3 py-2 text-sm hover:bg-zinc-100 ${notification.readAt === null ? 'font-medium text-zinc-900' : 'text-zinc-500'}`}
-                >
-                  {notificationText(notification)}
-                </Link>
-              </li>
-            ))}
+            {notifications.data?.notifications.map((notification) => {
+              const link = notificationLink(notification, session.user.id);
+              const itemProps = {
+                onClick: () => {
+                  closePanel();
+                  if (notification.readAt === null) markRead.mutate(notification.id);
+                },
+                className: `block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-zinc-100 ${notification.readAt === null ? 'font-medium text-zinc-900' : 'text-zinc-500'}`,
+              };
+              return (
+                <li key={notification.id}>
+                  {link === null ? (
+                    <button type="button" {...itemProps}>
+                      {notificationText(notification)}
+                    </button>
+                  ) : (
+                    <Link to={link} {...itemProps}>
+                      {notificationText(notification)}
+                    </Link>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         )}
         {unreadCount > 0 ? (

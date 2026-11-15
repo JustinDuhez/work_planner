@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { copy } from '../copy';
 import { HUGO, LEA, signedInHomeRoutes, weekFixture } from '../test/clock-fixtures';
@@ -193,5 +193,82 @@ describe('ClockWeekPage', () => {
     expect(
       screen.queryByRole('button', { name: copy.leave.requestButton }),
     ).not.toBeInTheDocument();
+  });
+
+  describe('across Sunday midnight', () => {
+    const SUNDAY_NIGHT = '2026-11-15T22:59:30.000Z'; // 23:59:30 in Paris, week 46
+    const ONE_MINUTE_IN_MILLISECONDS = 60_000;
+
+    function renderSundayNight(path: string) {
+      jest.useFakeTimers({
+        now: new Date(SUNDAY_NIGHT),
+        doNotFake: ['queueMicrotask', 'nextTick'],
+      });
+      const fetchMock = mockFetchRoutes({
+        ...signedInHomeRoutes(weekFixture({ isoWeek: '2026-W46', serverNow: SUNDAY_NIGHT })),
+        [`GET /api/v1/users/${LEA.id}/clock-weeks/2026-W47`]: {
+          status: 200,
+          body: weekFixture({ isoWeek: '2026-W47', serverNow: '2026-11-16T00:00:30.000+01:00' }),
+        },
+      });
+      renderApp(path);
+      return fetchMock;
+    }
+
+    afterEach(() => jest.useRealTimers());
+
+    it('moves to the new week when no week was asked for', async () => {
+      const fetchMock = renderSundayNight('/');
+      expect(await screen.findByText('S46')).toBeInTheDocument();
+
+      act(() => {
+        jest.advanceTimersByTime(ONE_MINUTE_IN_MILLISECONDS);
+      });
+
+      expect(await screen.findByText('S47')).toBeInTheDocument();
+      expect(fetchMock).toHaveBeenCalledWith(
+        `/api/v1/users/${LEA.id}/clock-weeks/2026-W47`,
+        expect.anything(),
+      );
+    });
+
+    it('settles on the server week when the computer clock is already in the next week', async () => {
+      const serverNow = '2026-11-15T22:59:00.000Z'; // 23:59 in Paris, week 46
+      const ninetySecondsAhead = new Date('2026-11-15T23:00:30.000Z'); // 00:00:30, week 47
+      jest.useFakeTimers({ now: ninetySecondsAhead, doNotFake: ['queueMicrotask', 'nextTick'] });
+      const fetchMock = mockFetchRoutes({
+        ...signedInHomeRoutes(weekFixture({ isoWeek: '2026-W46', serverNow })),
+        [`GET /api/v1/users/${LEA.id}/clock-weeks/2026-W47`]: {
+          status: 200,
+          body: weekFixture({ isoWeek: '2026-W47', serverNow }),
+        },
+      });
+      const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+      renderApp('/');
+
+      expect(await screen.findByText('S46')).toBeInTheDocument();
+      act(() => {
+        jest.advanceTimersByTime(3000);
+      });
+
+      expect(screen.getByText('S46')).toBeInTheDocument();
+      const weekFetches = fetchMock.mock.calls.filter(([url]) =>
+        String(url).includes('/clock-weeks/'),
+      );
+      expect(weekFetches.length).toBeLessThanOrEqual(2);
+      expect(errorSpy).not.toHaveBeenCalled();
+      errorSpy.mockRestore();
+    });
+
+    it('keeps the week that was asked for', async () => {
+      renderSundayNight('/?semaine=2026-W46');
+      expect(await screen.findByText('S46')).toBeInTheDocument();
+
+      act(() => {
+        jest.advanceTimersByTime(ONE_MINUTE_IN_MILLISECONDS);
+      });
+
+      expect(screen.getByText('S46')).toBeInTheDocument();
+    });
   });
 });

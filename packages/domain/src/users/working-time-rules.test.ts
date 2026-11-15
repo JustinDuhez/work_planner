@@ -9,6 +9,7 @@ describe('planDailyMinutesChange', () => {
         effectiveDate: TODAY,
         today: TODAY,
         currentDailyMinutes: 420,
+        dailyMinutes: 240,
         changes: [],
       }),
     ).toEqual({ kind: 'insert', previousDailyMinutes: 420 });
@@ -20,6 +21,7 @@ describe('planDailyMinutesChange', () => {
         effectiveDate: '2026-11-16',
         today: TODAY,
         currentDailyMinutes: 420,
+        dailyMinutes: 240,
         changes: [],
       }),
     ).toEqual({ kind: 'insert', previousDailyMinutes: 420 });
@@ -31,6 +33,7 @@ describe('planDailyMinutesChange', () => {
         effectiveDate: '2026-11-09',
         today: TODAY,
         currentDailyMinutes: 420,
+        dailyMinutes: 240,
         changes: [],
       }),
     ).toEqual({ kind: 'refused', reason: 'DATE_IN_PAST' });
@@ -44,6 +47,7 @@ describe('planDailyMinutesChange', () => {
         effectiveDate: '2026-11-16',
         today: TODAY,
         currentDailyMinutes: 360,
+        dailyMinutes: 240,
         changes,
       }),
     ).toEqual({ kind: 'refused', reason: 'CHANGE_ORDER' });
@@ -60,6 +64,7 @@ describe('planDailyMinutesChange', () => {
         effectiveDate: '2026-11-18',
         today: TODAY,
         currentDailyMinutes: 300,
+        dailyMinutes: 240,
         changes,
       }),
     ).toEqual({ kind: 'refused', reason: 'CHANGE_ORDER' });
@@ -73,9 +78,22 @@ describe('planDailyMinutesChange', () => {
         effectiveDate: '2026-11-16',
         today: TODAY,
         currentDailyMinutes: 360,
+        dailyMinutes: 240,
         changes,
       }),
     ).toEqual({ kind: 'keepExisting' });
+  });
+
+  it('leaves the history alone when the new daily time is already the current one', () => {
+    expect(
+      planDailyMinutesChange({
+        effectiveDate: '2026-12-01',
+        today: '2026-11-15',
+        currentDailyMinutes: 420,
+        dailyMinutes: 420,
+        changes: [],
+      }),
+    ).toEqual({ kind: 'unchanged' });
   });
 
   it('chains a change after an existing one with the value in force the day before', () => {
@@ -86,6 +104,7 @@ describe('planDailyMinutesChange', () => {
         effectiveDate: '2026-11-23',
         today: TODAY,
         currentDailyMinutes: 360,
+        dailyMinutes: 240,
         changes,
       }),
     ).toEqual({ kind: 'insert', previousDailyMinutes: 360 });

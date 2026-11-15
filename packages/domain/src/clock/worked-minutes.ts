@@ -10,6 +10,7 @@ export interface ClockPeriodTimes {
 export type ClockViolation =
   | 'CLOCK_END_BEFORE_START'
   | 'CLOCK_TIME_OUTSIDE_DAY'
+  | 'CLOCK_START_TOO_LATE'
   | 'CLOCK_TIME_IN_FUTURE'
   | 'CLOCK_ALREADY_RUNNING'
   | 'CLOCK_PERIOD_OVERLAP';
@@ -54,6 +55,10 @@ export function findDayPeriodViolation(
     startedAt.getTime() < bounds.start.getTime() ||
     (endedAt ?? startedAt).getTime() >= bounds.nextStart.getTime();
   if (periods.some(isOutsideDay)) return 'CLOCK_TIME_OUTSIDE_DAY';
+  // A period opened in the day's last minute could never get an end before midnight.
+  const isStartedTooLate = ({ startedAt, endedAt }: ClockPeriodTimes) =>
+    endedAt === null && startedAt.getTime() >= bounds.nextStart.getTime() - MILLISECONDS_PER_MINUTE;
+  if (periods.some(isStartedTooLate)) return 'CLOCK_START_TOO_LATE';
   const isInFuture = ({ startedAt, endedAt }: ClockPeriodTimes) =>
     startedAt.getTime() > now.getTime() || (endedAt !== null && endedAt.getTime() > now.getTime());
   if (periods.some(isInFuture)) return 'CLOCK_TIME_IN_FUTURE';

@@ -4,6 +4,7 @@ import {
   updateProfileRequestSchema,
 } from '@work-planner/domain';
 import type { FastifyInstance } from 'fastify';
+import { rateLimitKeyOf } from '../http/client-ip';
 import { parseInput } from '../http/parse-input';
 import { loadCurrentUser } from '../organization/current-user';
 import {
@@ -40,7 +41,8 @@ export function registerMeRoutes(app: FastifyInstance, deps: AuthDependencies): 
           max: PASSWORD_CHANGES_PER_WINDOW,
           timeWindow: PASSWORD_CHANGE_WINDOW_IN_MILLISECONDS,
           // Key on the session (hashed, never stored raw) rather than on the IP shared by many users.
-          keyGenerator: (request) => hashToken(request.cookies[SESSION_COOKIE_NAME] ?? request.ip),
+          keyGenerator: (request) =>
+            hashToken(request.cookies[SESSION_COOKIE_NAME] ?? rateLimitKeyOf(request.clientIp)),
           errorResponseBuilder: () => new TooManyAttemptsError(),
         },
       },

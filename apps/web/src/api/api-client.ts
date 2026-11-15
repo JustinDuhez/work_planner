@@ -3,6 +3,7 @@ import type { z } from 'zod';
 import { copy } from '../copy';
 
 const NETWORK_ERROR_CODE = 'NETWORK_ERROR';
+const NO_CONTENT_STATUS = 204;
 const UNKNOWN_ERROR_CODE = 'UNKNOWN_ERROR';
 const UNKNOWN_ERROR_MESSAGE = 'Une erreur inattendue est survenue.';
 
@@ -90,6 +91,17 @@ export async function apiSend<T>(
 ): Promise<T> {
   const response = await send(method, path, body);
   return schema.parse(await readJsonBody(response));
+}
+
+/** For writes that may answer 204 when there is nothing left to return. */
+export async function apiSendOrNoContent<T>(
+  method: WriteMethod,
+  path: string,
+  body: unknown,
+  schema: z.ZodType<T>,
+): Promise<T | null> {
+  const response = await send(method, path, body);
+  return response.status === NO_CONTENT_STATUS ? null : schema.parse(await readJsonBody(response));
 }
 
 export async function apiSendNoContent(

@@ -25,7 +25,7 @@ interface CountersBody {
   serverNow: string;
   days: {
     date: string;
-    badgeableMinutes: number;
+    targetMinutes: number;
     workedMinutes: number;
     holidayLabel: string | null;
   }[];
@@ -110,7 +110,7 @@ describe('counters in the week', () => {
 
     expect(withHoliday.counters.weekTargetMinutes).toBe(before.counters.weekTargetMinutes - 420);
     expect(withHoliday.days[2]).toMatchObject({
-      badgeableMinutes: 0,
+      targetMinutes: 0,
       holidayLabel: 'Armistice 1918',
     });
     expect(after.counters.weekTargetMinutes).toBe(before.counters.weekTargetMinutes);
@@ -131,7 +131,7 @@ describe('counters in the week', () => {
   it('gives each day of the week its badgeable time', async () => {
     const body = await getWeek('colleague.counters@example.com', leaId);
 
-    expect(body.days.map((day) => day.badgeableMinutes)).toEqual([420, 420, 420, 420, 420, 0, 0]);
+    expect(body.days.map((day) => day.targetMinutes)).toEqual([420, 420, 420, 420, 420, 0, 0]);
   });
 
   it('counts the week: full target, badgeable time of the ended days, worked time up to now', async () => {
@@ -210,7 +210,7 @@ describe('counters in the week', () => {
 
     const body = await getWeek('colleague.counters@example.com', partTimeId);
 
-    expect(body.days.map((day) => day.badgeableMinutes).slice(0, 5)).toEqual([
+    expect(body.days.map((day) => day.targetMinutes).slice(0, 5)).toEqual([
       420, 420, 360, 360, 360,
     ]);
   });
@@ -218,7 +218,7 @@ describe('counters in the week', () => {
   it('counts nothing in a week before the start date', async () => {
     const { counters, days } = await getWeek('colleague.counters@example.com', leaId, '2026-W42');
 
-    expect(days.every((day) => day.badgeableMinutes === 0)).toBe(true);
+    expect(days.every((day) => day.targetMinutes === 0)).toBe(true);
     expect(counters).toMatchObject({ weekTargetMinutes: 0, weekGapMinutes: 0 });
   });
 

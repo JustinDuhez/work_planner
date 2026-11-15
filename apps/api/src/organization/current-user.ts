@@ -1,8 +1,9 @@
-import type { CurrentUser } from '@work-planner/domain';
+import { compareFrench, comparePeopleByName, type CurrentUser } from '@work-planner/domain';
 import { sql, type Kysely } from 'kysely';
 import type { Database } from '../db/database';
 import { findDirectManagerIds } from './scope-repository';
 
+// French order, not the database collation (E8a).
 export async function loadCurrentUser(db: Kysely<Database>, userId: number): Promise<CurrentUser> {
   const user = await db
     .selectFrom('appUser')
@@ -36,8 +37,8 @@ export async function loadCurrentUser(db: Kysely<Database>, userId: number): Pro
         ),
       ]),
     )
-    .orderBy('team.name')
     .execute();
+  teams.sort((first, second) => compareFrench(first.name, second.name));
   const directManagerIds = [...(await findDirectManagerIds(db, userId))];
   const directManagers =
     directManagerIds.length === 0
@@ -46,9 +47,8 @@ export async function loadCurrentUser(db: Kysely<Database>, userId: number): Pro
           .selectFrom('appUser')
           .select(['id', 'firstName', 'lastName'])
           .where('id', 'in', directManagerIds)
-          .orderBy('lastName')
-          .orderBy('firstName')
-          .execute();
+          .execute()
+          .then((managers) => managers.sort(comparePeopleByName));
   return {
     id: user.id,
     email: user.email,

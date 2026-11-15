@@ -59,6 +59,9 @@ export const copy = {
   },
   clock: {
     title: 'Pointage',
+    periodCancelled: 'Période annulée : moins d’une minute.',
+    startRequired: 'Indiquez l’heure de début.',
+    endRequired: 'Indiquez l’heure de fin.',
     holiday: 'Férié',
     previousWeek: 'Semaine précédente',
     nextWeek: 'Semaine suivante',

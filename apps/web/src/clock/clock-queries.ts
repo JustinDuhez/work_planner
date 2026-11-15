@@ -9,7 +9,7 @@ import {
   type UpdateClockPeriodRequest,
   type WorkMode,
 } from '@work-planner/domain';
-import { apiGet, apiSend, apiSendNoContent } from '../api/api-client';
+import { apiGet, apiSend, apiSendNoContent, apiSendOrNoContent } from '../api/api-client';
 
 const RUNNING_WEEK_REFRESH_INTERVAL_IN_MILLISECONDS = 60_000;
 
@@ -38,11 +38,14 @@ export function useClockWeek(userId: number, isoWeek: string) {
   });
 }
 
+// Not forever: new hires appear without a reload.
+const ACTIVE_USERS_STALE_TIME_IN_MILLISECONDS = 5 * 60 * 1000;
+
 export function useActiveUsers() {
   return useQuery({
     queryKey: ['users', 'active'],
     queryFn: () => apiGet('/api/v1/users', userSummaryListSchema),
-    staleTime: Infinity,
+    staleTime: ACTIVE_USERS_STALE_TIME_IN_MILLISECONDS,
   });
 }
 
@@ -70,7 +73,7 @@ export function useUpdateClockPeriod(ownerId: number, isoWeek: string) {
     ownerId,
     isoWeek,
     ({ periodId, ...body }: { periodId: number } & UpdateClockPeriodRequest) =>
-      apiSend('PATCH', `/api/v1/clock-periods/${periodId}`, body, clockPeriodSchema),
+      apiSendOrNoContent('PATCH', `/api/v1/clock-periods/${periodId}`, body, clockPeriodSchema),
   );
 }
 

@@ -15,6 +15,7 @@ import { registerLeaveRoutes } from './leave/leave-routes';
 import { registerPlanningRoutes } from './planning/planning-routes';
 import { registerHealthRoutes } from './health/health-routes';
 import { registerNotificationRoutes } from './notifications/notification-routes';
+import { registerClientIp } from './http/client-ip';
 import { registerErrorHandlers } from './http/error-handler';
 import { registerProtectedRoutes } from './http/protected-routes';
 import { registerSecurityHeaders } from './http/security-headers';
@@ -58,6 +59,7 @@ export async function buildApp({
     logger: buildLoggerOptions(config),
     trustProxy: (_address: string, hopIndex: number) => hopIndex < config.trustedProxyHopCount,
   });
+  registerClientIp(app, config.clientIpHeader);
   app.decorate('registeredApiRoutes', []);
   app.addHook('onRoute', (route) => {
     if (!route.url.startsWith('/api/')) return;

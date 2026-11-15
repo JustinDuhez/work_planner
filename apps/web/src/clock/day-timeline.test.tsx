@@ -8,7 +8,7 @@ const DAY: ClockDayView = {
   workMode: null,
   periods: [{ id: 4, startedAt: '2026-11-06T08:00:00.000Z', endedAt: null }],
   workedMinutes: 0,
-  badgeableMinutes: 0,
+  targetMinutes: 0,
   holidayLabel: null,
   halfDays: { am: null, pm: null },
   isToday: false,

@@ -72,6 +72,16 @@ describe('the directory', () => {
       lastName: 'Girard',
       isArchived: true,
     });
+    await insertUser(db, {
+      email: 'elodie.dir@example.com',
+      firstName: 'Élodie',
+      lastName: 'Éluard',
+    });
+    await insertUser(db, {
+      email: 'eric.dir@example.com',
+      firstName: 'Eric',
+      lastName: 'Dupont',
+    });
     await insertUser(db, { email: 'hugo.dir@example.com', firstName: 'Hugo', lastName: 'Laurent' });
     await insertUser(db, {
       email: 'ines.dir@example.com',
@@ -106,6 +116,8 @@ describe('the directory', () => {
 
     expect(entries.map((entry) => entry.firstName)).toEqual([
       'Sophie',
+      'Eric',
+      'Élodie',
       'Lucas',
       'Inès',
       'Hugo',

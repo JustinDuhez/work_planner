@@ -56,6 +56,17 @@ describe('the team list', () => {
       memberIds: [lea, hugo, chloe],
     });
     await insertTeam(db, { name: 'Archives', managerId: chloe });
+    const emile = await insertUser(db, {
+      email: 'emile.team@example.com',
+      firstName: 'Émile',
+      lastName: 'Éluard',
+    });
+    const eric = await insertUser(db, {
+      email: 'eric.team@example.com',
+      firstName: 'Eric',
+      lastName: 'Evrard',
+    });
+    await insertTeam(db, { name: 'Équipe B', memberIds: [eric, emile] });
     app = await buildApp({ config: createTestConfig(), db, now: createTestClock().now });
   });
 
@@ -67,13 +78,19 @@ describe('the team list', () => {
   it('lists every team by name with parent, manager and active members', async () => {
     const teams = await list('lea.team@example.com');
 
-    expect(teams.map((team) => team.name)).toEqual(['Archives', 'Direction', 'Front']);
-    expect(teams[2]).toMatchObject({
+    expect(teams.map((team) => team.name)).toEqual(['Archives', 'Direction', 'Équipe B', 'Front']);
+    expect(teams[3]).toMatchObject({
       parentTeamId: directionId,
       manager: { firstName: 'Sophie' },
       members: [{ firstName: 'Hugo' }, { firstName: 'Léa' }],
       canManage: false,
     });
+  });
+
+  it('sorts members by last name, then first name, in French order', async () => {
+    const teams = await list('lea.team@example.com');
+
+    expect(teams[2]?.members.map((member) => member.firstName)).toEqual(['Émile', 'Eric']);
   });
 
   it('shows no manager when the manager is archived', async () => {

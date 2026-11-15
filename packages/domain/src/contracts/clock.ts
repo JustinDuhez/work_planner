@@ -77,7 +77,8 @@ export const clockDaySchema = z.object({
   workMode: workModeSchema.nullable(),
   periods: z.array(clockPeriodSchema),
   workedMinutes: z.number().int(),
-  badgeableMinutes: z.number().int(),
+  /** The day's target, zero on a non-working day. */
+  targetMinutes: z.number().int(),
   holidayLabel: z.string().nullable(),
   halfDays: dayHalfDaysSchema,
   isToday: z.boolean(),

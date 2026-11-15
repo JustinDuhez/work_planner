@@ -1,4 +1,4 @@
-import { formatMinutes, type DirectoryEntry } from '@work-planner/domain';
+import { compareFrench, formatMinutes, type DirectoryEntry } from '@work-planner/domain';
 import { useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { clockWeekPath, currentIsoWeek, formatLongDate } from '../clock/clock-time';
@@ -45,7 +45,7 @@ export function DirectoryPage({
     () =>
       [
         ...new Set((directory.data ?? []).flatMap((entry) => entry.teams.map((team) => team.name))),
-      ].sort((first, second) => first.localeCompare(second, 'fr')),
+      ].sort((first, second) => compareFrench(first, second)),
     [directory.data],
   );
   const entries = (directory.data ?? []).filter(
