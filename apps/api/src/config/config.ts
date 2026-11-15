@@ -19,6 +19,8 @@ export interface AppConfig {
   isProduction: boolean;
   /** Reverse proxies in front of the app whose X-Forwarded-* headers can be believed. */
   trustedProxyHopCount: number;
+  /** Header a trusted edge (Cloudflare) overwrites with the visitor's address (B1). */
+  clientIpHeader: string | undefined;
 }
 
 export class ConfigurationError extends AppError {}
@@ -43,6 +45,11 @@ const environmentSchema = z.object({
   APP_TIMEZONE: z.string().refine(isKnownTimeZone, 'Unknown time zone').default('Europe/Paris'),
   LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
   TRUSTED_PROXY_HOP_COUNT: z.coerce.number().int().min(0).default(0),
+  CLIENT_IP_HEADER: z
+    .string()
+    .min(1)
+    .transform((name) => name.toLowerCase())
+    .optional(),
 });
 
 export function loadConfig(env: NodeJS.ProcessEnv): AppConfig {
@@ -65,5 +72,6 @@ export function loadConfig(env: NodeJS.ProcessEnv): AppConfig {
     logLevel: environment.LOG_LEVEL,
     isProduction: environment.NODE_ENV === 'production',
     trustedProxyHopCount: environment.TRUSTED_PROXY_HOP_COUNT,
+    clientIpHeader: environment.CLIENT_IP_HEADER,
   };
 }

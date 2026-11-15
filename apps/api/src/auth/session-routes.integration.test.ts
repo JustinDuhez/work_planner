@@ -21,7 +21,11 @@ describe('session routes', () => {
   let managerId: number;
 
   async function newApp(
-    overrides: { isProduction?: boolean; trustedProxyHopCount?: number } = {},
+    overrides: {
+      isProduction?: boolean;
+      trustedProxyHopCount?: number;
+      clientIpHeader?: string;
+    } = {},
   ): Promise<FastifyInstance> {
     const built = await buildApp({ config: createTestConfig(overrides), db, now: clock.now });
     built.post('/api/v1/test-protected-actions', { onRequest: built.requireAuth }, () => ({
@@ -35,11 +39,12 @@ describe('session routes', () => {
     email: string,
     password: string,
     origin = TEST_ORIGIN,
+    extraHeaders: Record<string, string> = {},
   ) {
     return target.inject({
       method: 'POST',
       url: '/api/v1/sessions',
-      headers: origin ? { origin } : {},
+      headers: { ...(origin ? { origin } : {}), ...extraHeaders },
       payload: { email, password },
     });
   }
@@ -172,6 +177,26 @@ describe('session routes', () => {
     expect(response.statusCode).toBe(429);
     expect(response.json<{ code: string }>().code).toBe('TOO_MANY_ATTEMPTS');
   });
+
+  it('counts login attempts per visitor behind the proxy, not per proxy address', async () => {
+    const proxiedApp = await newApp({ clientIpHeader: 'cf-connecting-ip' });
+    for (let attempt = 0; attempt < LOGIN_ATTEMPTS_PER_IP_PER_MINUTE; attempt += 1) {
+      await postLogin(proxiedApp, `visitor${attempt}@example.com`, 'wrong password!!', undefined, {
+        'cf-connecting-ip': '203.0.113.7',
+      });
+    }
+
+    const otherVisitor = await postLogin(
+      proxiedApp,
+      'alice@example.com',
+      DEFAULT_TEST_PASSWORD,
+      undefined,
+      { 'cf-connecting-ip': '198.51.100.4' },
+    );
+    await proxiedApp.close();
+
+    expect(otherVisitor.statusCode).toBe(201);
+  }, 30_000);
 
   it('limits one address to thirty login attempts per minute', async () => {
     for (let attempt = 0; attempt < LOGIN_ATTEMPTS_PER_IP_PER_MINUTE; attempt += 1) {

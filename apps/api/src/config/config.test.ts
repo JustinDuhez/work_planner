@@ -16,7 +16,17 @@ describe('loadConfig', () => {
       logLevel: 'info',
       isProduction: false,
       trustedProxyHopCount: 0,
+      clientIpHeader: undefined,
     });
+  });
+
+  it('lower-cases the header that carries the visitor address', () => {
+    const config = loadConfig({
+      DATABASE_URL: VALID_DATABASE_URL,
+      CLIENT_IP_HEADER: 'CF-Connecting-IP',
+    });
+
+    expect(config.clientIpHeader).toBe('cf-connecting-ip');
   });
 
   it('reads how many reverse proxies to trust', () => {

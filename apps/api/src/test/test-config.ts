@@ -11,6 +11,7 @@ export function createTestConfig(overrides: Partial<AppConfig> = {}): AppConfig 
     logLevel: 'silent',
     isProduction: false,
     trustedProxyHopCount: 0,
+    clientIpHeader: undefined,
     ...overrides,
   };
 }

@@ -36,6 +36,7 @@ export function registerSessionRoutes(app: FastifyInstance, deps: SessionRouteDe
     {
       config: {
         rateLimit: {
+          keyGenerator: (request) => request.clientIp,
           max: LOGIN_ATTEMPTS_PER_IP_PER_MINUTE,
           timeWindow: ONE_MINUTE_IN_MILLISECONDS,
           errorResponseBuilder: () => new TooManyAttemptsError(),
@@ -44,7 +45,7 @@ export function registerSessionRoutes(app: FastifyInstance, deps: SessionRouteDe
     },
     async (request, reply) => {
       const credentials = parseInput(loginRequestSchema, request.body);
-      const attemptKey = `${request.ip}|${credentials.email}`;
+      const attemptKey = `${request.clientIp}|${credentials.email}`;
       if (deps.loginFailureLimiter.isLocked(attemptKey)) {
         throw new TooManyAttemptsError();
       }

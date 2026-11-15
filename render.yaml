@@ -17,6 +17,8 @@ services:
         value: info
       - key: TRUSTED_PROXY_HOP_COUNT
         value: '1'
+      - key: CLIENT_IP_HEADER
+        value: cf-connecting-ip
       - key: DATABASE_URL
         sync: false
       - key: DATABASE_URL_UNPOOLED
