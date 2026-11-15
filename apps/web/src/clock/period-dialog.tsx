@@ -31,8 +31,12 @@ export function PeriodDialog({
   const create = useStartClockPeriod(ownerId, isoWeek);
   const update = useUpdateClockPeriod(ownerId, isoWeek);
   const remove = useDeleteClockPeriod(ownerId, isoWeek);
+  const [localErrors, setLocalErrors] = useState<Record<string, string>>({});
   const error = create.error ?? update.error ?? remove.error;
-  const fieldErrors = error instanceof ApiError ? error.fieldErrors : {};
+  const fieldErrors = {
+    ...(error instanceof ApiError ? error.fieldErrors : {}),
+    ...localErrors,
+  };
   const bannerMessage = bannerMessageFor(error, FIELD_NAMES);
   // A closed period cannot be reopened by emptying its end: the server would keep the old one.
   const hasEnd = Boolean(period?.endedAt);
@@ -44,6 +48,13 @@ export function PeriodDialog({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    // The browser's own bubbles follow its locale, so the form skips them (noValidate).
+    const missing = {
+      ...(startedAt === '' ? { startedAt: copy.clock.startRequired } : {}),
+      ...(hasEnd && endedAt === '' ? { endedAt: copy.clock.endRequired } : {}),
+    };
+    setLocalErrors(missing);
+    if (Object.keys(missing).length > 0) return;
     const times = { startedAt, ...(endedAt === '' ? {} : { endedAt }) };
     if (period) update.mutate({ periodId: period.id, ...times }, { onSuccess: onClose });
     else create.mutate(times, { onSuccess: onClose });
@@ -56,7 +67,7 @@ export function PeriodDialog({
       onClose={onClose}
       className="m-auto w-[min(24rem,calc(100vw-2rem))] rounded-card border border-zinc-200 bg-white p-6 shadow-card backdrop:bg-zinc-900/30"
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form noValidate onSubmit={handleSubmit} className="space-y-4">
         <h2 className="text-base font-semibold">{title}</h2>
         <label className="block space-y-1 text-sm font-medium">
           <span>{copy.clock.startTime}</span>

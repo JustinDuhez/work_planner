@@ -45,14 +45,15 @@ export function registerClockRoutes(scope: FastifyInstance, deps: ClockDependenc
     return reply.status(201).send(period);
   });
 
-  scope.patch('/api/v1/clock-periods/:id', (request) => {
+  scope.patch('/api/v1/clock-periods/:id', async (request, reply) => {
     const { id } = parseInput(periodParamsSchema, request.params);
     const body = parseInput(updateClockPeriodRequestSchema, request.body);
-    return updateClockPeriod(deps, {
+    const period = await updateClockPeriod(deps, {
       viewer: clockViewerOf(request, deps.db),
       periodId: id,
       ...body,
     });
+    return period ?? reply.status(204).send();
   });
 
   scope.delete('/api/v1/clock-periods/:id', async (request, reply) => {

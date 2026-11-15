@@ -55,4 +55,15 @@ describe('TodayControls work mode pre-fill', () => {
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(JSON.parse(init.body as string)).toEqual({ workMode: 'on_site' });
   });
+
+  it('says so when Stop cancels an empty period', async () => {
+    const user = userEvent.setup();
+    const running = { id: 5, startedAt: new Date().toISOString(), endedAt: null };
+    mockFetchRoutes({ 'PATCH /api/v1/clock-periods/5': { status: 204 } });
+    render(controls(dayWith({ periods: [running], workMode: 'on_site' })));
+
+    await user.click(screen.getByRole('button', { name: copy.clock.stop }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent(copy.clock.periodCancelled);
+  });
 });

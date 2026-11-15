@@ -181,6 +181,31 @@ describe('clocking from the week view', () => {
     expect(bodyOf(fetchMock, 'PATCH', `/api/v1/clock-periods/${CLOSED_PERIOD.id}`)).toBeUndefined();
   });
 
+  it('asks for a start time in French without sending anything', async () => {
+    const { fetchMock, user } = renderHome();
+
+    await user.click(await screen.findByRole('button', { name: copy.clock.addPeriod }));
+    const dialog = screen.getByRole('dialog', { name: copy.clock.addPeriodTitle });
+    await user.click(within(dialog).getByRole('button', { name: copy.clock.save }));
+
+    expect(within(dialog).getByText(copy.clock.startRequired)).toBeInTheDocument();
+    expect(bodyOf(fetchMock, 'POST', '/api/v1/clock-periods')).toBeUndefined();
+    expect(dialog.querySelector('form')).toHaveAttribute('novalidate');
+  });
+
+  it('asks for the end of a closed period in French', async () => {
+    const { user } = renderHome(
+      { [`PATCH /api/v1/clock-periods/${CLOSED_PERIOD.id}`]: { status: 200, body: CLOSED_PERIOD } },
+      { periods: [CLOSED_PERIOD], workMode: 'on_site', workedMinutes: 60 },
+    );
+
+    const dialog = await openClosedPeriodDialog(user);
+    await user.clear(within(dialog).getByLabelText(copy.clock.endTime));
+    await user.click(within(dialog).getByRole('button', { name: copy.clock.save }));
+
+    expect(within(dialog).getByText(copy.clock.endRequired)).toBeInTheDocument();
+  });
+
   async function openClosedPeriodDialog(user: ReturnType<typeof userEvent.setup>) {
     const today = await screen.findByRole('listitem', { current: 'date' });
     await user.click(

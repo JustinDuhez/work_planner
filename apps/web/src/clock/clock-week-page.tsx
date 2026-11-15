@@ -1,5 +1,5 @@
 import { datesOfIsoWeek, toWorkDate, type ClockDayView } from '@work-planner/domain';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router';
 import { copy } from '../copy';
 import { CorrectionDetailDialog } from '../corrections/correction-detail-dialog';
@@ -27,6 +27,8 @@ import { WeekHeader } from './week-header';
 export function ClockWeekPage() {
   const { userId } = useParams();
   const [searchParams] = useSearchParams();
+  // "This week" follows the live server clock across Sunday midnight when no week was asked for.
+  const [followedWeek, setFollowedWeek] = useState(() => currentIsoWeek(new Date()));
   const { data: session } = useSession();
   if (!session) return null;
   const pathUserId = userId === undefined ? undefined : Number(userId);
@@ -35,9 +37,7 @@ export function ClockWeekPage() {
   }
   const requestedWeek = searchParams.get('semaine');
   const isoWeek =
-    requestedWeek !== null && datesOfIsoWeek(requestedWeek)
-      ? requestedWeek
-      : currentIsoWeek(new Date());
+    requestedWeek !== null && datesOfIsoWeek(requestedWeek) ? requestedWeek : followedWeek;
   return (
     <ClockWeekView
       key={`${pathUserId ?? 'me'}-${isoWeek}`}
@@ -45,6 +45,7 @@ export function ClockWeekPage() {
       pathUserId={pathUserId}
       viewerId={session.user.id}
       isoWeek={isoWeek}
+      onTodayWeekChange={requestedWeek === null ? setFollowedWeek : undefined}
     />
   );
 }
@@ -61,11 +62,13 @@ function ClockWeekView({
   pathUserId,
   viewerId,
   isoWeek,
+  onTodayWeekChange,
 }: {
   ownerId: number;
   pathUserId: number | undefined;
   viewerId: number;
   isoWeek: string;
+  onTodayWeekChange: ((isoWeek: string) => void) | undefined;
 }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const correctionParam = Number(searchParams.get('correction'));
@@ -73,6 +76,10 @@ function ClockWeekView({
     Number.isInteger(correctionParam) && correctionParam > 0 ? correctionParam : null;
   const week = useClockWeek(ownerId, isoWeek);
   const now = useServerClock(week.data?.serverNow);
+  const todayWeek = currentIsoWeek(now);
+  useEffect(() => {
+    if (onTodayWeekChange && week.data && todayWeek !== isoWeek) onTodayWeekChange(todayWeek);
+  }, [onTodayWeekChange, todayWeek, isoWeek, week.data]);
   const isOwnWeek = ownerId === viewerId;
   const dayTypes = useDayTypes();
   const [leaveDialogDate, setLeaveDialogDate] = useState<string | null>(null);

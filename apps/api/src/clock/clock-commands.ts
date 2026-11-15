@@ -109,7 +109,7 @@ function assertCanClosePastPeriod(
 export function updateClockPeriod(
   deps: ClockDependencies,
   command: { viewer: ClockViewer; periodId: number } & UpdateClockPeriodRequest,
-): Promise<ClockPeriodView> {
+): Promise<ClockPeriodView | null> {
   const { now, today } = momentOf(deps);
   return inClockTransaction(deps.db, async (trx) => {
     const period = await findPeriodWithDay(trx, command.periodId, { shouldLock: true });
@@ -118,6 +118,17 @@ export function updateClockPeriod(
     if (isToday && period.userId !== command.viewer.id) throw new ClockDayNotEditableError();
     if (!isToday && period.workDate > today) throw new ClockDayNotEditableError();
     if (!isToday) assertCanClosePastPeriod(period, command);
+    // A Stop in the very minute of the Start leaves nothing worked: drop the period.
+    const isEmptyStop =
+      isToday &&
+      period.endedAt === null &&
+      command.endedAt === 'now' &&
+      command.startedAt === undefined &&
+      now.getTime() === period.startedAt.getTime();
+    if (isEmptyStop) {
+      await deleteClockPeriodById(trx, period.id);
+      return null;
+    }
     const startedAt = command.startedAt
       ? instantOn(deps, period.workDate, command.startedAt)
       : period.startedAt;

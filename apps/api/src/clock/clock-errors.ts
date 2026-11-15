@@ -31,6 +31,15 @@ export class ClockTimeOutsideDayError extends ValidationError {
   }
 }
 
+export class ClockStartTooLateError extends ValidationError {
+  constructor() {
+    super(
+      'CLOCK_START_TOO_LATE',
+      'Il est trop tard pour démarrer : la journée se termine à minuit.',
+    );
+  }
+}
+
 export class ClockEndBeforeStartError extends ValidationError {
   constructor() {
     super('CLOCK_END_BEFORE_START', "L'heure de fin doit être après l'heure de début.");
@@ -58,6 +67,7 @@ export class ClockPeriodNotFoundError extends NotFoundError {
 const ERROR_BY_VIOLATION: Record<ClockViolation, () => AppError> = {
   CLOCK_END_BEFORE_START: () => new ClockEndBeforeStartError(),
   CLOCK_TIME_OUTSIDE_DAY: () => new ClockTimeOutsideDayError(),
+  CLOCK_START_TOO_LATE: () => new ClockStartTooLateError(),
   CLOCK_TIME_IN_FUTURE: () => new ClockTimeInFutureError(),
   CLOCK_ALREADY_RUNNING: () => new ClockAlreadyRunningError(),
   CLOCK_PERIOD_OVERLAP: () => new ClockPeriodOverlapError(),

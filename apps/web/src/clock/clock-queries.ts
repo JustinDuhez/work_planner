@@ -9,7 +9,7 @@ import {
   type UpdateClockPeriodRequest,
   type WorkMode,
 } from '@work-planner/domain';
-import { apiGet, apiSend, apiSendNoContent } from '../api/api-client';
+import { apiGet, apiSend, apiSendNoContent, apiSendOrNoContent } from '../api/api-client';
 
 const RUNNING_WEEK_REFRESH_INTERVAL_IN_MILLISECONDS = 60_000;
 
@@ -70,7 +70,7 @@ export function useUpdateClockPeriod(ownerId: number, isoWeek: string) {
     ownerId,
     isoWeek,
     ({ periodId, ...body }: { periodId: number } & UpdateClockPeriodRequest) =>
-      apiSend('PATCH', `/api/v1/clock-periods/${periodId}`, body, clockPeriodSchema),
+      apiSendOrNoContent('PATCH', `/api/v1/clock-periods/${periodId}`, body, clockPeriodSchema),
   );
 }
 
