@@ -137,6 +137,41 @@ describe('NotificationBell', () => {
     );
   });
 
+  it('shows a cancelled leave notification as a button that marks it read', async () => {
+    const cancelled: NotificationView = {
+      id: 4,
+      type: 'leave_request_cancelled',
+      payload: {
+        leaveRequestId: 4,
+        actorName: 'Léa Moreau',
+        dayTypeLabel: 'Congé',
+        startDate: '2026-11-23',
+        endDate: '2026-11-23',
+      },
+      readAt: null,
+      createdAt: '2026-11-04T09:00:00.000Z',
+    };
+    const { user, fetchMock } = renderWithNotifications(
+      1,
+      {
+        'PATCH /api/v1/notifications/4': {
+          status: 200,
+          body: { ...cancelled, readAt: '2026-11-09T10:00:00.000Z' },
+        },
+      },
+      [cancelled],
+    );
+
+    await user.click(await screen.findByRole('button', { name: `${copy.notifications.bell} (1)` }));
+    expect(screen.queryByRole('link', { name: /a annulé sa demande/ })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /a annulé sa demande/ }));
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/notifications/4',
+      expect.objectContaining({ method: 'PATCH' }),
+    );
+  });
+
   it('words an accepted answer', async () => {
     const { user } = renderWithNotifications(0, {}, [ACCEPTED]);
 

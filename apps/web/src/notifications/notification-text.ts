@@ -40,9 +40,11 @@ export function notificationText(notification: NotificationView): string {
   return `${actorName} ${action} ${dayTypeLabel}, ${leavePeriod(startDate, endDate)}`;
 }
 
-export function notificationLink(notification: NotificationView, viewerId: number): string {
+export function notificationLink(notification: NotificationView, viewerId: number): string | null {
   const { payload } = notification;
   if ('leaveRequestId' in payload) {
+    // The cancelled request is listed nowhere, so there is nothing to open.
+    if (notification.type === 'leave_request_cancelled') return null;
     if (notification.type === 'leave_request_reviewed') return OWN_REQUESTS_PATH;
     if (
       notification.type === 'leave_request_declared' ||

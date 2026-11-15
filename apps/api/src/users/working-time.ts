@@ -48,6 +48,7 @@ export async function updateWorkingTime(
         effectiveDate,
         today,
         currentDailyMinutes: target.dailyMinutes,
+        dailyMinutes: command.dailyMinutes,
         changes: await findDailyMinutesChanges(trx, target.id),
       });
       if (plan.kind === 'refused') {
@@ -66,11 +67,13 @@ export async function updateWorkingTime(
           })
           .execute();
       }
-      await trx
-        .updateTable('appUser')
-        .set({ dailyMinutes: command.dailyMinutes })
-        .where('id', '=', target.id)
-        .execute();
+      if (plan.kind !== 'unchanged') {
+        await trx
+          .updateTable('appUser')
+          .set({ dailyMinutes: command.dailyMinutes })
+          .where('id', '=', target.id)
+          .execute();
+      }
     }
     if (command.startDate !== undefined) {
       await trx

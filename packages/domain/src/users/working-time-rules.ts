@@ -3,6 +3,7 @@ import { dailyMinutesOn, type DailyMinutesChange } from '../counters/counting';
 export type DailyMinutesChangePlan =
   | { kind: 'insert'; previousDailyMinutes: number }
   | { kind: 'keepExisting' }
+  | { kind: 'unchanged' }
   | { kind: 'refused'; reason: 'DATE_IN_PAST' | 'CHANGE_ORDER' };
 
 export interface WorkingTime {
@@ -28,6 +29,7 @@ export function planDailyMinutesChange(input: {
   effectiveDate: string;
   today: string;
   currentDailyMinutes: number;
+  dailyMinutes: number;
   changes: readonly DailyMinutesChange[];
 }): DailyMinutesChangePlan {
   if (input.effectiveDate < input.today) return { kind: 'refused', reason: 'DATE_IN_PAST' };
@@ -36,6 +38,8 @@ export function planDailyMinutesChange(input: {
     return { kind: 'refused', reason: 'CHANGE_ORDER' };
   }
   if (latest === input.effectiveDate) return { kind: 'keepExisting' };
+  // A no-op dated row would block every earlier change (CHANGE_ORDER).
+  if (input.dailyMinutes === input.currentDailyMinutes) return { kind: 'unchanged' };
   // No change is dated after the new one, so the value in force the day before is the current one.
   return { kind: 'insert', previousDailyMinutes: input.currentDailyMinutes };
 }

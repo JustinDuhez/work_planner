@@ -80,6 +80,32 @@ describe('notifications', () => {
     expect(body.notifications[0]?.payload.workDate).toBe('2026-10-22');
   });
 
+  it('skips a stored notification whose payload is unreadable instead of failing the list', async () => {
+    const eveId = await insertUser(db, { email: 'eve.notifications@example.com' });
+    const validId = await insertNotification(db, {
+      userId: eveId,
+      type: 'clock_correction_received',
+      payload: payload('2026-11-01'),
+    });
+    await db
+      .insertInto('notification')
+      .values({
+        userId: eveId,
+        type: 'leave_request_received',
+        payload: JSON.stringify({ leaveRequestId: 'x' }),
+      })
+      .execute();
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/notifications',
+      headers: { cookie: (await sessionOf('eve.notifications@example.com')).cookie },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json<ListBody>().notifications.map(({ id }) => id)).toEqual([validId]);
+  });
+
   it('marks one of my notifications as read', async () => {
     const [first] = (await list('lea.notifications@example.com')).notifications;
 

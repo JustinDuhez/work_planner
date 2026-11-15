@@ -5,6 +5,7 @@ import {
   type NotificationType,
   type NotificationView,
 } from '@work-planner/domain';
+import type { FastifyBaseLogger } from 'fastify';
 import { sql, type Kysely } from 'kysely';
 import type { Database } from '../db/database';
 
@@ -18,15 +19,19 @@ interface StoredNotification {
   createdAt: Date;
 }
 
-function toNotificationView(notification: StoredNotification): NotificationView {
-  // Parsing also guards rows written before a payload shape changed.
-  return notificationSchema.parse({
+function toNotificationCandidate(notification: StoredNotification) {
+  return {
     id: notification.id,
     type: notification.type,
     payload: notification.payload,
     readAt: notification.readAt?.toISOString() ?? null,
     createdAt: notification.createdAt.toISOString(),
-  });
+  };
+}
+
+// Parsing guards rows written before a payload shape changed.
+function toNotificationView(notification: StoredNotification): NotificationView {
+  return notificationSchema.parse(toNotificationCandidate(notification));
 }
 
 export async function insertNotification(
@@ -41,8 +46,9 @@ export async function insertNotification(
 
 export async function listNotifications(
   db: Kysely<Database>,
-  userId: number,
+  query: { userId: number; log: FastifyBaseLogger },
 ): Promise<NotificationList> {
+  const { userId, log } = query;
   const [rows, { unreadCount }] = await Promise.all([
     db
       .selectFrom('notification')
@@ -59,7 +65,19 @@ export async function listNotifications(
       .where('readAt', 'is', null)
       .executeTakeFirstOrThrow(),
   ]);
-  return { unreadCount: Number(unreadCount), notifications: rows.map(toNotificationView) };
+  return {
+    unreadCount: Number(unreadCount),
+    notifications: rows.flatMap((row) => {
+      const parsed = notificationSchema.safeParse(toNotificationCandidate(row));
+      if (parsed.success) return [parsed.data];
+      // One unreadable row must not hide the others.
+      log.warn(
+        { event: 'notification.invalid_row', notificationId: row.id },
+        'Skipped an invalid notification',
+      );
+      return [];
+    }),
+  };
 }
 
 export async function markNotificationRead(
