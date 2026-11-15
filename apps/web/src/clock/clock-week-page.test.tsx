@@ -232,6 +232,34 @@ describe('ClockWeekPage', () => {
       );
     });
 
+    it('settles on the server week when the computer clock is already in the next week', async () => {
+      const serverNow = '2026-11-15T22:59:00.000Z'; // 23:59 in Paris, week 46
+      const ninetySecondsAhead = new Date('2026-11-15T23:00:30.000Z'); // 00:00:30, week 47
+      jest.useFakeTimers({ now: ninetySecondsAhead, doNotFake: ['queueMicrotask', 'nextTick'] });
+      const fetchMock = mockFetchRoutes({
+        ...signedInHomeRoutes(weekFixture({ isoWeek: '2026-W46', serverNow })),
+        [`GET /api/v1/users/${LEA.id}/clock-weeks/2026-W47`]: {
+          status: 200,
+          body: weekFixture({ isoWeek: '2026-W47', serverNow }),
+        },
+      });
+      const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+      renderApp('/');
+
+      expect(await screen.findByText('S46')).toBeInTheDocument();
+      act(() => {
+        jest.advanceTimersByTime(3000);
+      });
+
+      expect(screen.getByText('S46')).toBeInTheDocument();
+      const weekFetches = fetchMock.mock.calls.filter(([url]) =>
+        String(url).includes('/clock-weeks/'),
+      );
+      expect(weekFetches.length).toBeLessThanOrEqual(2);
+      expect(errorSpy).not.toHaveBeenCalled();
+      errorSpy.mockRestore();
+    });
+
     it('keeps the week that was asked for', async () => {
       renderSundayNight('/?semaine=2026-W46');
       expect(await screen.findByText('S46')).toBeInTheDocument();

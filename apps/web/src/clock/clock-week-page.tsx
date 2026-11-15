@@ -27,7 +27,8 @@ import { WeekHeader } from './week-header';
 export function ClockWeekPage() {
   const { userId } = useParams();
   const [searchParams] = useSearchParams();
-  // "This week" follows the live server clock across Sunday midnight when no week was asked for.
+  // "This week" follows the live server clock across Sunday midnight; also kept current while a
+  // week is asked for, so leaving `?semaine=` lands on the right week at once.
   const [followedWeek, setFollowedWeek] = useState(() => currentIsoWeek(new Date()));
   const { data: session } = useSession();
   if (!session) return null;
@@ -45,7 +46,7 @@ export function ClockWeekPage() {
       pathUserId={pathUserId}
       viewerId={session.user.id}
       isoWeek={isoWeek}
-      onTodayWeekChange={requestedWeek === null ? setFollowedWeek : undefined}
+      onTodayWeekChange={setFollowedWeek}
     />
   );
 }
@@ -68,7 +69,7 @@ function ClockWeekView({
   pathUserId: number | undefined;
   viewerId: number;
   isoWeek: string;
-  onTodayWeekChange: ((isoWeek: string) => void) | undefined;
+  onTodayWeekChange: (isoWeek: string) => void;
 }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const correctionParam = Number(searchParams.get('correction'));
@@ -76,10 +77,13 @@ function ClockWeekView({
     Number.isInteger(correctionParam) && correctionParam > 0 ? correctionParam : null;
   const week = useClockWeek(ownerId, isoWeek);
   const now = useServerClock(week.data?.serverNow);
-  const todayWeek = currentIsoWeek(now);
+  // Re-checked every tick (`now`). Anchored on the answer, never on `now`: right after a remount
+  // its offset is still 0, and a computer clock in another week would flip the page back and forth.
   useEffect(() => {
-    if (onTodayWeekChange && week.data && todayWeek !== isoWeek) onTodayWeekChange(todayWeek);
-  }, [onTodayWeekChange, todayWeek, isoWeek, week.data]);
+    if (!week.data) return;
+    const serverNow = Date.parse(week.data.serverNow) + (Date.now() - week.dataUpdatedAt);
+    onTodayWeekChange(currentIsoWeek(new Date(serverNow)));
+  }, [onTodayWeekChange, now, week.data, week.dataUpdatedAt]);
   const isOwnWeek = ownerId === viewerId;
   const dayTypes = useDayTypes();
   const [leaveDialogDate, setLeaveDialogDate] = useState<string | null>(null);
