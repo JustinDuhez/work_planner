@@ -183,6 +183,25 @@ describe('API application', () => {
     expect(response.headers['x-content-type-options']).toBe('nosniff');
   });
 
+  it('sends no referrer to other sites', async () => {
+    const response = await app.inject({ method: 'GET', url: '/api/v1/health' });
+
+    expect(response.headers['referrer-policy']).toBe('no-referrer');
+  });
+
+  it('tells browsers to keep using HTTPS', async () => {
+    const response = await app.inject({ method: 'GET', url: '/api/v1/health' });
+
+    expect(String(response.headers['strict-transport-security'])).toMatch(/max-age=\d+/);
+  });
+
+  it('refuses to be framed by any site', async () => {
+    const response = await app.inject({ method: 'GET', url: '/api/v1/health' });
+
+    expect(response.headers['x-frame-options']).toBe('SAMEORIGIN');
+    expect(String(response.headers['content-security-policy'])).toContain("frame-ancestors 'none'");
+  });
+
   it('asks browsers to upgrade insecure requests in production', async () => {
     const productionDb = createDb(UNREACHABLE_DATABASE_URL);
     const productionApp = await buildApp({
