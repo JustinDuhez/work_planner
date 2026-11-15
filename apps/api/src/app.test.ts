@@ -198,7 +198,7 @@ describe('API application', () => {
   it('refuses to be framed by any site', async () => {
     const response = await app.inject({ method: 'GET', url: '/api/v1/health' });
 
-    expect(response.headers['x-frame-options']).toBe('SAMEORIGIN');
+    expect(response.headers['x-frame-options']).toBe('DENY');
     expect(String(response.headers['content-security-policy'])).toContain("frame-ancestors 'none'");
   });
 

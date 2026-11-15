@@ -23,7 +23,7 @@ describe('loadConfig', () => {
   it('lower-cases the header that carries the visitor address', () => {
     const config = loadConfig({
       DATABASE_URL: VALID_DATABASE_URL,
-      CLIENT_IP_HEADER: 'CF-Connecting-IP',
+      CLIENT_IP_HEADER: ' CF-Connecting-IP ',
     });
 
     expect(config.clientIpHeader).toBe('cf-connecting-ip');

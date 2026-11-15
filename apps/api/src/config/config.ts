@@ -47,6 +47,7 @@ const environmentSchema = z.object({
   TRUSTED_PROXY_HOP_COUNT: z.coerce.number().int().min(0).default(0),
   CLIENT_IP_HEADER: z
     .string()
+    .trim()
     .min(1)
     .transform((name) => name.toLowerCase())
     .optional(),

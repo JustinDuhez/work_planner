@@ -15,6 +15,7 @@ export async function registerSecurityHeaders(
     }
   });
   await app.register(helmet, {
+    frameguard: { action: 'deny' },
     contentSecurityPolicy: {
       directives: {
         defaultSrc: [SELF],

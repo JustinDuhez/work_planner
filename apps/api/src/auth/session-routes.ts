@@ -3,6 +3,7 @@ import {
   SESSION_ABSOLUTE_LIFETIME_IN_MILLISECONDS,
 } from '@work-planner/domain';
 import type { FastifyInstance } from 'fastify';
+import { rateLimitKeyOf } from '../http/client-ip';
 import { parseInput } from '../http/parse-input';
 import { loadCurrentUser } from '../organization/current-user';
 import { TooManyAttemptsError } from './auth-errors';
@@ -36,7 +37,7 @@ export function registerSessionRoutes(app: FastifyInstance, deps: SessionRouteDe
     {
       config: {
         rateLimit: {
-          keyGenerator: (request) => request.clientIp,
+          keyGenerator: (request) => rateLimitKeyOf(request.clientIp),
           max: LOGIN_ATTEMPTS_PER_IP_PER_MINUTE,
           timeWindow: ONE_MINUTE_IN_MILLISECONDS,
           errorResponseBuilder: () => new TooManyAttemptsError(),
@@ -45,7 +46,7 @@ export function registerSessionRoutes(app: FastifyInstance, deps: SessionRouteDe
     },
     async (request, reply) => {
       const credentials = parseInput(loginRequestSchema, request.body);
-      const attemptKey = `${request.clientIp}|${credentials.email}`;
+      const attemptKey = `${rateLimitKeyOf(request.clientIp)}|${credentials.email}`;
       if (deps.loginFailureLimiter.isLocked(attemptKey)) {
         throw new TooManyAttemptsError();
       }

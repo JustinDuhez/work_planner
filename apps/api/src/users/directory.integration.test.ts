@@ -75,7 +75,7 @@ describe('the directory', () => {
     await insertUser(db, {
       email: 'elodie.dir@example.com',
       firstName: 'Élodie',
-      lastName: 'Durand',
+      lastName: 'Éluard',
     });
     await insertUser(db, {
       email: 'eric.dir@example.com',

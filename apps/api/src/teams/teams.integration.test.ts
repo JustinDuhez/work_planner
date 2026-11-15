@@ -59,7 +59,7 @@ describe('the team list', () => {
     const emile = await insertUser(db, {
       email: 'emile.team@example.com',
       firstName: 'Émile',
-      lastName: 'Évrard',
+      lastName: 'Éluard',
     });
     const eric = await insertUser(db, {
       email: 'eric.team@example.com',
@@ -90,7 +90,7 @@ describe('the team list', () => {
   it('sorts members by last name, then first name, in French order', async () => {
     const teams = await list('lea.team@example.com');
 
-    expect(teams[2]?.members.map((member) => member.firstName)).toEqual(['Eric', 'Émile']);
+    expect(teams[2]?.members.map((member) => member.firstName)).toEqual(['Émile', 'Eric']);
   });
 
   it('shows no manager when the manager is archived', async () => {

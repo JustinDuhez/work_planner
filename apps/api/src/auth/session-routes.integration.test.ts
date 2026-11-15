@@ -193,9 +193,37 @@ describe('session routes', () => {
       undefined,
       { 'cf-connecting-ip': '198.51.100.4' },
     );
+    const sameVisitor = await postLogin(
+      proxiedApp,
+      'alice@example.com',
+      DEFAULT_TEST_PASSWORD,
+      undefined,
+      { 'cf-connecting-ip': '203.0.113.7' },
+    );
     await proxiedApp.close();
 
     expect(otherVisitor.statusCode).toBe(201);
+    expect(sameVisitor.statusCode).toBe(429);
+  }, 30_000);
+
+  it('counts every address of one IPv6 /64 as the same visitor', async () => {
+    const proxiedApp = await newApp({ clientIpHeader: 'cf-connecting-ip' });
+    for (let attempt = 1; attempt <= LOGIN_ATTEMPTS_PER_IP_PER_MINUTE; attempt += 1) {
+      await postLogin(proxiedApp, `visitor${attempt}@example.com`, 'wrong password!!', undefined, {
+        'cf-connecting-ip': `2001:db8::${attempt}`,
+      });
+    }
+
+    const response = await postLogin(
+      proxiedApp,
+      'alice@example.com',
+      DEFAULT_TEST_PASSWORD,
+      undefined,
+      { 'cf-connecting-ip': '2001:db8::99' },
+    );
+    await proxiedApp.close();
+
+    expect(response.statusCode).toBe(429);
   }, 30_000);
 
   it('limits one address to thirty login attempts per minute', async () => {
