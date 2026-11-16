@@ -26,7 +26,7 @@ function workModeLabel(workMode: CorrectionDay['workMode']): string {
 
 function DayColumn({ title, day }: { title: string; day: CorrectionDay }) {
   return (
-    <section className="flex-1 rounded-lg border border-zinc-200 p-3">
+    <section className="flex-1 rounded-control border border-line p-3">
       <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">{title}</h3>
       <p className="mt-1 text-xs text-zinc-500">{workModeLabel(day.workMode)}</p>
       <ul className="mt-2 space-y-1 text-sm tabular-nums">
@@ -81,11 +81,11 @@ export function CorrectionDetailDialog({
       ref={dialogRef}
       aria-label={copy.corrections.detailTitle}
       onClose={onClose}
-      className="m-auto w-[min(36rem,calc(100vw-2rem))] rounded-card border border-zinc-200 bg-white p-6 shadow-card backdrop:bg-zinc-900/30"
+      className="m-auto w-[min(36rem,calc(100vw-2rem))] rounded-card border border-line bg-white p-6 shadow-card backdrop:bg-zinc-900/30"
     >
       <h2 className="text-base font-semibold">{copy.corrections.detailTitle}</h2>
       {correction.isError ? (
-        <p role="alert" className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">
+        <p role="alert" className="mt-3 rounded-control bg-rose-50 px-3 py-2 text-sm text-rose-800">
           {copy.corrections.loadError}
         </p>
       ) : null}
@@ -105,10 +105,12 @@ export function CorrectionDetailDialog({
             </span>
           </p>
           {view.comment ? (
-            <p className="rounded-lg bg-zinc-50 px-3 py-2 text-sm text-zinc-700">{view.comment}</p>
+            <p className="rounded-control bg-zinc-50 px-3 py-2 text-sm text-zinc-700">
+              {view.comment}
+            </p>
           ) : null}
           {view.responseComment ? (
-            <p className="rounded-lg bg-zinc-50 px-3 py-2 text-sm text-zinc-700">
+            <p className="rounded-control bg-zinc-50 px-3 py-2 text-sm text-zinc-700">
               {`${copy.corrections.responseCommentLabel} : ${view.responseComment}`}
             </p>
           ) : null}
@@ -120,12 +122,12 @@ export function CorrectionDetailDialog({
                 onChange={(event) => setResponseComment(event.target.value)}
                 maxLength={500}
                 rows={2}
-                className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+                className="w-full rounded-control border border-line px-3 py-2 text-sm"
               />
             </label>
           ) : null}
           {bannerMessage ? (
-            <p role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">
+            <p role="alert" className="rounded-control bg-rose-50 px-3 py-2 text-sm text-rose-800">
               {bannerMessage}
             </p>
           ) : null}

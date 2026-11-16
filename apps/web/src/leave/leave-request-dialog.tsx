@@ -18,7 +18,7 @@ import { useCreateLeaveRequest, useDayTypes, useDeclareLeaveRequest } from './le
 const EARLY_DEPARTURE = 'early_departure';
 const RENDERED_FIELDS = ['dayTypeCode', 'startDate', 'endDate', 'reason'];
 const EARLY_DEPARTURE_RENDERED_FIELDS = ['dayTypeCode', 'startDate', 'reason'];
-const SELECT_CLASS = 'h-10 w-full rounded-lg border border-zinc-200 px-2';
+const SELECT_CLASS = 'h-10 w-full rounded-control border border-line px-2';
 
 function shortDay(date: string): string {
   const { weekday, dayOfMonth } = dayLabel(date);
@@ -136,7 +136,7 @@ export function LeaveRequestDialog({
       ref={dialogRef}
       aria-label={dialogTitle}
       onClose={onClose}
-      className="m-auto max-h-[90dvh] w-[min(30rem,calc(100vw-2rem))] overflow-y-auto rounded-card border border-zinc-200 bg-white p-6 shadow-card backdrop:bg-zinc-900/30"
+      className="m-auto max-h-[90dvh] w-[min(30rem,calc(100vw-2rem))] overflow-y-auto rounded-card border border-line bg-white p-6 shadow-card backdrop:bg-zinc-900/30"
     >
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <h2 className="text-base font-semibold">{dialogTitle}</h2>
@@ -171,7 +171,7 @@ export function LeaveRequestDialog({
                 setStartDate(event.target.value);
                 if (event.target.value > endDate) setEndDate(event.target.value);
               }}
-              className="h-10 w-full rounded-lg border border-zinc-200 px-3"
+              className="h-10 w-full rounded-control border border-line px-3"
             />
             {fieldErrors.startDate ? (
               <span className="block text-xs text-rose-700">{fieldErrors.startDate}</span>
@@ -197,7 +197,7 @@ export function LeaveRequestDialog({
                   value={endDate}
                   min={startDate}
                   onChange={(event) => setEndDate(event.target.value)}
-                  className="h-10 w-full rounded-lg border border-zinc-200 px-3"
+                  className="h-10 w-full rounded-control border border-line px-3"
                 />
                 {fieldErrors.endDate ? (
                   <span className="block text-xs text-rose-700">{fieldErrors.endDate}</span>
@@ -234,7 +234,10 @@ export function LeaveRequestDialog({
           )}
         />
         {create.data ? (
-          <p role="status" className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+          <p
+            role="status"
+            className="rounded-control bg-emerald-50 px-3 py-2 text-sm text-emerald-800"
+          >
             {outcomeMessage(create.data, targetUser !== undefined)}
           </p>
         ) : null}

@@ -36,7 +36,7 @@ export function UserMenu() {
       <div
         id={MENU_ID}
         popover="auto"
-        className="m-0 mt-2 w-60 rounded-card border border-zinc-200 bg-white p-1.5 shadow-card [inset:unset] [position-area:bottom_span-left]"
+        className="m-0 mt-2 w-60 rounded-card border border-line bg-white p-1.5 shadow-card [inset:unset] [position-area:bottom_span-left]"
       >
         <div className="px-3 py-2">
           <p className="text-sm font-medium text-zinc-900">
@@ -47,7 +47,7 @@ export function UserMenu() {
         <Link
           to="/profil"
           onClick={closeMenu}
-          className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100"
+          className="flex items-center gap-2 rounded-control px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100"
         >
           <UserRound size={16} aria-hidden /> {copy.userMenu.profile}
         </Link>
@@ -55,7 +55,7 @@ export function UserMenu() {
           <Link
             to="/parametres"
             onClick={closeMenu}
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100"
+            className="flex items-center gap-2 rounded-control px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100"
           >
             <Settings size={16} aria-hidden /> {copy.userMenu.settings}
           </Link>
@@ -63,7 +63,7 @@ export function UserMenu() {
         <button
           type="button"
           onClick={handleLogout}
-          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100"
+          className="flex w-full items-center gap-2 rounded-control px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100"
         >
           <LogOut size={16} aria-hidden /> {copy.userMenu.logout}
         </button>

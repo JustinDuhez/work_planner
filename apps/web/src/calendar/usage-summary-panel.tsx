@@ -12,7 +12,7 @@ export function UsageSummaryPanel({
   return (
     <section
       aria-label={copy.calendar.summaryTitle}
-      className="space-y-2 rounded-card border border-zinc-200 bg-white p-4"
+      className="space-y-2 rounded-card border border-line bg-white p-4"
     >
       <h2 className="text-sm font-semibold">{copy.calendar.summaryTitle}</h2>
       {calendar.summary.length === 0 ? (

@@ -119,7 +119,7 @@ function ClockWeekView({
       <h1 className="text-xl font-semibold tracking-tight">{copy.clock.title}</h1>
       <WeekHeader isoWeek={isoWeek} pathUserId={pathUserId} viewerId={viewerId} />
       {week.isError ? (
-        <p role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">
+        <p role="alert" className="rounded-control bg-rose-50 px-3 py-2 text-sm text-rose-800">
           {copy.clock.loadError}
         </p>
       ) : null}
@@ -127,7 +127,7 @@ function ClockWeekView({
       {week.data ? (
         <div className="animate-[week-in_200ms_ease-out] space-y-3">
           {!isOwnWeek ? (
-            <p className="rounded-lg bg-zinc-100 px-3 py-2 text-sm text-zinc-700">
+            <p className="rounded-control bg-zinc-100 px-3 py-2 text-sm text-zinc-700">
               {copy.clock.readOnlyPrefix} {week.data.user.firstName} {week.data.user.lastName} —{' '}
               {copy.clock.readOnlySuffix}
             </p>

@@ -10,7 +10,7 @@ import { useCreateTeam, useUpdateTeam } from './team-mutations';
 
 const RENDERED_FIELDS = ['name', 'parentTeamId', 'managerId', 'memberIds'];
 const NO_TEAM_ID = 0;
-const SELECT_CLASS = 'h-10 w-full rounded-lg border border-zinc-200 px-2';
+const SELECT_CLASS = 'h-10 w-full rounded-control border border-line px-2';
 
 function toOptionalId(value: string): number | null {
   return value === '' ? null : Number(value);
@@ -82,7 +82,7 @@ export function TeamDialog({
       ref={dialogRef}
       aria-label={title}
       onClose={onClose}
-      className="m-auto max-h-[90dvh] w-[min(32rem,calc(100vw-2rem))] overflow-y-auto rounded-card border border-zinc-200 bg-white p-6 shadow-card backdrop:bg-zinc-900/30"
+      className="m-auto max-h-[90dvh] w-[min(32rem,calc(100vw-2rem))] overflow-y-auto rounded-card border border-line bg-white p-6 shadow-card backdrop:bg-zinc-900/30"
     >
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <h2 className="text-base font-semibold">{title}</h2>
@@ -137,7 +137,7 @@ export function TeamDialog({
             placeholder={copy.teamDialog.memberFilter}
             value={filter}
             onChange={(event) => setFilter(event.target.value)}
-            className="h-9 w-full rounded-lg border border-zinc-200 px-3 text-sm"
+            className="h-9 w-full rounded-control border border-line px-3 text-sm"
           />
           <ul className="max-h-48 space-y-1 overflow-y-auto">
             {visiblePeople.map((person) => (

@@ -109,7 +109,7 @@ function DayCell({
       className={`p-0.5 ${isInPeriod ? '' : 'opacity-40'}`}
     >
       <div
-        className={`overflow-hidden rounded border border-zinc-200 ${isToday ? 'ring-1 ring-primary-500' : ''}`}
+        className={`overflow-hidden rounded border border-line ${isToday ? 'ring-1 ring-primary-500' : ''}`}
       >
         <span aria-hidden className="block px-0.5 text-[10px] leading-4 text-zinc-600">
           {day}
@@ -163,7 +163,7 @@ export function MonthCard({
     slots.slice(week * DAYS_PER_WEEK, (week + 1) * DAYS_PER_WEEK),
   );
   return (
-    <table className="w-full table-fixed rounded-card border border-zinc-200 bg-white">
+    <table className="w-full table-fixed rounded-card border border-line bg-white">
       <caption className="px-2 pt-2 text-left text-sm font-semibold first-letter:uppercase">
         {monthTitle.format(new Date(Date.UTC(year, month - 1, 1, 12)))}
       </caption>

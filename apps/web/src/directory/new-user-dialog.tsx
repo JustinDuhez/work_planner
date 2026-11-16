@@ -65,7 +65,7 @@ export function NewUserDialog({ onClose }: { onClose: () => void }) {
       ref={dialogRef}
       aria-label={copy.newUser.title}
       onClose={onClose}
-      className="m-auto max-h-[90dvh] w-[min(28rem,calc(100vw-2rem))] overflow-y-auto rounded-card border border-zinc-200 bg-white p-6 shadow-card backdrop:bg-zinc-900/30"
+      className="m-auto max-h-[90dvh] w-[min(28rem,calc(100vw-2rem))] overflow-y-auto rounded-card border border-line bg-white p-6 shadow-card backdrop:bg-zinc-900/30"
     >
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <h2 className="text-base font-semibold">{copy.newUser.title}</h2>
@@ -112,7 +112,7 @@ export function NewUserDialog({ onClose }: { onClose: () => void }) {
             type="date"
             value={startDate}
             onChange={(event) => setStartDate(event.target.value)}
-            className="h-10 w-full rounded-lg border border-zinc-200 px-3"
+            className="h-10 w-full rounded-control border border-line px-3"
           />
           {fieldErrors.startDate ? (
             <span className="text-xs text-rose-700">{fieldErrors.startDate}</span>

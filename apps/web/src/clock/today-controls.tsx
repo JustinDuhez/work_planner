@@ -51,12 +51,12 @@ export function TodayControls({
 
   return (
     <div className="space-y-2">
-      <fieldset className="inline-flex rounded-lg border border-zinc-200 bg-zinc-50 p-0.5">
+      <fieldset className="inline-flex rounded-card border border-line bg-zinc-50 p-1">
         <legend className="sr-only">{copy.clock.workModeLabel}</legend>
         {WORK_MODE_OPTIONS.map(({ value, label, Icon }) => (
           <label
             key={value}
-            className={`flex cursor-pointer items-center gap-1 rounded-md has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary-500 px-2.5 py-1 text-xs ${workMode === value ? 'bg-white font-medium text-zinc-900 shadow-card' : 'text-zinc-600'}`}
+            className={`flex cursor-pointer items-center gap-1 rounded-inner-sm has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary-500 px-2.5 py-1 text-xs ${workMode === value ? 'bg-white font-medium text-zinc-900 shadow-card' : 'text-zinc-600'}`}
           >
             <input
               type="radio"
@@ -71,7 +71,7 @@ export function TodayControls({
           </label>
         ))}
       </fieldset>
-      <div className="fixed inset-x-0 bottom-0 z-20 flex gap-2 border-t border-zinc-200 bg-white/95 p-3 backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0">
+      <div className="fixed inset-x-0 bottom-0 z-20 flex gap-2 border-t border-line bg-white/95 p-3 backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0">
         {runningPeriod ? (
           <Button
             isPending={update.isPending}

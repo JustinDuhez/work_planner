@@ -37,7 +37,7 @@ export function DayRow({
       aria-label={`${weekday} ${dayOfMonth}`}
       aria-current={day.isToday ? 'date' : undefined}
       className={`rounded-card border p-3 transition-colors grid grid-cols-[1fr_auto] items-center gap-x-4 sm:grid-cols-[5rem_1fr_7rem] ${
-        day.isToday ? 'border-primary-500 bg-white shadow-card' : 'border-zinc-200 bg-white'
+        day.isToday ? 'border-primary-500 bg-white shadow-card' : 'border-line bg-white'
       } `}
     >
       <div className="flex items-center gap-3 sm:col-start-1 sm:row-start-1 sm:block">
@@ -60,7 +60,7 @@ export function DayRow({
       >
         {formatMinutes(liveDayMinutes(day, now))}
         {day.targetMinutes > 0 ? (
-          <span className="ml-1 font-normal text-zinc-400">
+          <span className="ml-1 font-normal text-zinc-500">
             {`/ ${formatMinutes(day.targetMinutes)}`}
           </span>
         ) : null}

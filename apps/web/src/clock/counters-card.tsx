@@ -58,7 +58,7 @@ export function CountersCard({
 
   return (
     <div className="grid gap-3 sm:grid-cols-2">
-      <section className="rounded-card border border-zinc-200 bg-white p-4 shadow-card">
+      <section className="rounded-card border border-line bg-white p-4 shadow-card">
         <h2 className="text-sm font-medium text-zinc-500">{copy.counters.weekTitle}</h2>
         <p className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm text-zinc-600">
           <span>
@@ -79,7 +79,7 @@ export function CountersCard({
           <Gap minutes={weekGapMinutes} className="text-lg" />
         </p>
       </section>
-      <section className="rounded-card border border-zinc-200 bg-white p-4 shadow-card">
+      <section className="rounded-card border border-line bg-white p-4 shadow-card">
         <h2 className="text-sm font-medium text-zinc-500">{copy.counters.globalTitle}</h2>
         <p className="mt-1">
           <Gap

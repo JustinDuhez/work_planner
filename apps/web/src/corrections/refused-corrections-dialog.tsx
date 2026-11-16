@@ -25,11 +25,11 @@ export function RefusedCorrectionsDialog({
       ref={dialogRef}
       aria-label={copy.corrections.refusedTitle}
       onClose={onClose}
-      className="m-auto w-[min(28rem,calc(100vw-2rem))] rounded-card border border-zinc-200 bg-white p-6 shadow-card backdrop:bg-zinc-900/30"
+      className="m-auto w-[min(28rem,calc(100vw-2rem))] rounded-card border border-line bg-white p-6 shadow-card backdrop:bg-zinc-900/30"
     >
       <h2 className="text-base font-semibold">{copy.corrections.refusedTitle}</h2>
       {corrections.isError ? (
-        <p role="alert" className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">
+        <p role="alert" className="mt-3 rounded-control bg-rose-50 px-3 py-2 text-sm text-rose-800">
           {copy.corrections.loadError}
         </p>
       ) : null}
@@ -42,7 +42,7 @@ export function RefusedCorrectionsDialog({
             <button
               type="button"
               onClick={() => onOpen(correction.id)}
-              className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-left text-sm hover:bg-zinc-50"
+              className="w-full rounded-control border border-line px-3 py-2 text-left text-sm hover:bg-zinc-50"
             >
               <span className="block font-medium">{formatLongDate(correction.workDate)}</span>
               <span className="block text-xs text-zinc-500">

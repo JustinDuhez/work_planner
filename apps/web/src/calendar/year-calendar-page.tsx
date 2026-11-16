@@ -96,7 +96,7 @@ function CancelDeclaredDialog({
       ref={dialogRef}
       aria-label={question}
       onClose={onClose}
-      className="m-auto w-[min(26rem,calc(100vw-2rem))] rounded-card border border-zinc-200 bg-white p-6 shadow-card backdrop:bg-zinc-900/30"
+      className="m-auto w-[min(26rem,calc(100vw-2rem))] rounded-card border border-line bg-white p-6 shadow-card backdrop:bg-zinc-900/30"
     >
       <div className="space-y-4">
         <p className="text-sm text-zinc-800">{question}</p>
@@ -165,14 +165,14 @@ function YearCalendarView({
           ? `${copy.calendar.titleOf} ${data.user.firstName} ${data.user.lastName}`
           : copy.calendar.title}
       </h1>
-      <div className="sticky top-14 z-10 -mx-4 flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 bg-zinc-50/90 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-card sm:border">
+      <div className="sticky top-14 z-10 -mx-4 flex flex-wrap items-center justify-between gap-3 border-b border-line bg-zinc-50/90 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-card sm:border">
         <div className="flex items-center gap-2">
           <button
             type="button"
             aria-label={copy.calendar.previousPeriod}
             disabled={startYear <= HOLIDAY_YEAR_MIN}
             onClick={() => goTo(startYear - 1)}
-            className="rounded-lg p-2 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-control p-2 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <ChevronLeft size={18} aria-hidden />
           </button>
@@ -184,7 +184,7 @@ function YearCalendarView({
             aria-label={copy.calendar.nextPeriod}
             disabled={startYear >= HOLIDAY_YEAR_MAX}
             onClick={() => goTo(startYear + 1)}
-            className="rounded-lg p-2 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-control p-2 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <ChevronRight size={18} aria-hidden />
           </button>
@@ -206,7 +206,7 @@ function YearCalendarView({
         ) : null}
       </div>
       {calendar.isError ? (
-        <p role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">
+        <p role="alert" className="rounded-control bg-rose-50 px-3 py-2 text-sm text-rose-800">
           {copy.calendar.loadError}
         </p>
       ) : null}

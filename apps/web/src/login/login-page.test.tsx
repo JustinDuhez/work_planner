@@ -1,6 +1,7 @@
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { copy } from '../copy';
+import { expectNoAxeViolations } from '../test/axe';
 import { NO_NOTIFICATIONS, signedInHomeRoutes } from '../test/clock-fixtures';
 import { mockFetchRoutes } from '../test/mock-fetch';
 import { renderApp } from '../test/render-app';
@@ -16,6 +17,15 @@ async function fillAndSubmit(email: string, password: string): Promise<void> {
 }
 
 describe('LoginPage', () => {
+  it('has no detectable accessibility problems', async () => {
+    mockFetchRoutes({ 'GET /api/v1/me': ANONYMOUS });
+    const { container, queryClient } = renderApp('/connexion');
+    await screen.findByLabelText(copy.login.email);
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+
+    await expectNoAxeViolations(container);
+  });
+
   it('shows the server message when the credentials are wrong', async () => {
     mockFetchRoutes({
       'GET /api/v1/me': ANONYMOUS,

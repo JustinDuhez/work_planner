@@ -17,7 +17,7 @@ const monthTitle = new Intl.DateTimeFormat('fr-FR', {
 });
 
 const navButtonClass =
-  'rounded-lg p-2 hover:bg-zinc-100 focus-visible:outline-2 focus-visible:outline-primary-600 disabled:cursor-not-allowed disabled:opacity-50';
+  'rounded-control p-2 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50';
 
 export interface PlanningFilters {
   yearMonth: string;
@@ -48,7 +48,7 @@ export function PlanningFilterBar({
   const doneCount = resetDone?.filterKey === filterKey ? resetDone.count : null;
 
   return (
-    <div className="sticky top-14 z-20 -mx-4 flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 bg-zinc-50/90 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-card sm:border">
+    <div className="sticky top-14 z-20 -mx-4 flex flex-wrap items-center justify-between gap-3 border-b border-line bg-zinc-50/90 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-card sm:border">
       <div className="flex items-center gap-2">
         <button
           type="button"
@@ -83,7 +83,7 @@ export function PlanningFilterBar({
               isAbsentOnly,
             })
           }
-          className="rounded-lg border border-zinc-300 bg-white px-2 py-1 focus-visible:outline-2 focus-visible:outline-primary-600"
+          className="rounded-control border border-line-strong bg-white px-2 py-1"
         >
           <option value="all">{copy.planning.allTeams}</option>
           {teamMonth?.teams.map((option) => (
@@ -98,7 +98,7 @@ export function PlanningFilterBar({
           type="checkbox"
           checked={isAbsentOnly}
           onChange={(event) => onChange({ yearMonth, team, isAbsentOnly: event.target.checked })}
-          className="size-4 focus-visible:outline-2 focus-visible:outline-primary-600"
+          className="size-4"
         />
         {copy.planning.absentToday}
       </label>

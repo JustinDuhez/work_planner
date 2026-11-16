@@ -25,7 +25,7 @@ export function DeleteTeamDialog({ team, onClose }: { team: TeamView; onClose: (
       ref={dialogRef}
       aria-label={copy.teamDialog.deleteTitle}
       onClose={onClose}
-      className="m-auto w-[min(26rem,calc(100vw-2rem))] rounded-card border border-zinc-200 bg-white p-6 shadow-card backdrop:bg-zinc-900/30"
+      className="m-auto w-[min(26rem,calc(100vw-2rem))] rounded-card border border-line bg-white p-6 shadow-card backdrop:bg-zinc-900/30"
     >
       <div className="space-y-4">
         <h2 className="text-base font-semibold">{copy.teamDialog.deleteTitle}</h2>

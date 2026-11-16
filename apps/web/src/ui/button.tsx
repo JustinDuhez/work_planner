@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 const VARIANT_CLASS = {
   primary: 'bg-primary-600 text-white hover:bg-primary-700',
-  secondary: 'border border-zinc-200 bg-white text-zinc-800 hover:bg-zinc-50',
+  secondary: 'border border-line bg-white text-zinc-800 hover:bg-zinc-50',
   ghost: 'text-zinc-700 hover:bg-zinc-100',
 } as const;
 
@@ -32,7 +32,7 @@ export function Button({
       disabled={isPending || isDisabled}
       aria-busy={isPending}
       aria-describedby={describedBy}
-      className={`inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500 ${VARIANT_CLASS[variant]}`}
+      className={`inline-flex h-10 items-center justify-center gap-2 rounded-control px-4 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${VARIANT_CLASS[variant]}`}
     >
       {children}
     </button>

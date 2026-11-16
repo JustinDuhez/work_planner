@@ -181,12 +181,12 @@ export function LeaveRequestsPage() {
     canSeeInbox && searchParams.get(TAB_PARAM) === TO_REVIEW_TAB ? TO_REVIEW_TAB : MINE_TAB;
   const pendingCount = inbox.data?.pending.filter((request) => request.canReview).length ?? 0;
   const tabClass = (isActive: boolean) =>
-    `rounded-lg px-3 py-1.5 text-sm ${isActive ? 'bg-white font-medium text-zinc-900 shadow-card' : 'text-zinc-600'}`;
+    `rounded-inner-sm px-3 py-1.5 text-sm ${isActive ? 'bg-white font-medium text-zinc-900 shadow-card' : 'text-zinc-600'}`;
 
   return (
     <section className="space-y-4">
       <h1 className="text-xl font-semibold tracking-tight">{copy.leaveRequests.title}</h1>
-      <div role="tablist" className="inline-flex gap-1 rounded-xl bg-zinc-100 p-1">
+      <div role="tablist" className="inline-flex gap-1 rounded-card bg-zinc-100 p-1">
         <button
           type="button"
           role="tab"

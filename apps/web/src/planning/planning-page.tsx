@@ -90,7 +90,7 @@ export function PlanningPage() {
       />
       <div key={yearMonth} className="motion-safe:animate-[week-in_200ms_ease-out]">
         {isError ? (
-          <p role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">
+          <p role="alert" className="rounded-control bg-rose-50 px-3 py-2 text-sm text-rose-800">
             {copy.planning.loadError}
           </p>
         ) : null}

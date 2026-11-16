@@ -44,8 +44,8 @@ export function TextField({
           aria-invalid={error !== undefined}
           aria-describedby={message ? messageId : undefined}
           onChange={(event) => onChange?.(event.target.value)}
-          className={`h-10 w-full rounded-lg border bg-white px-3 text-sm text-zinc-900 shadow-sm outline-none transition-colors focus:border-primary-500 focus:ring-2 focus:ring-primary-100 read-only:bg-zinc-50 read-only:text-zinc-600 ${
-            error ? 'border-rose-400' : 'border-zinc-200'
+          className={`h-10 w-full rounded-control border bg-white px-3 text-sm text-zinc-900 shadow-sm outline-none transition-colors focus:border-primary-500 focus:ring-2 focus:ring-primary-100 read-only:bg-zinc-50 read-only:text-zinc-600 ${
+            error ? 'border-rose-400' : 'border-line'
           } ${trailing ? 'pr-10' : ''}`}
         />
         {trailing ? (

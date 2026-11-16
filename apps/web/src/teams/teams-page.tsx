@@ -29,7 +29,7 @@ function TeamItem({
     : copy.teams.noManager;
   return (
     <li aria-labelledby={nameId} className="space-y-2">
-      <div className="rounded-card border border-zinc-200 bg-white p-3">
+      <div className="rounded-card border border-line bg-white p-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <p id={nameId} className="font-medium text-zinc-900">
@@ -58,7 +58,7 @@ function TeamItem({
         </details>
       </div>
       {children.length > 0 ? (
-        <ul className="space-y-2 border-l border-zinc-200 pl-4">
+        <ul className="space-y-2 border-l border-line pl-4">
           {children.map((child) => (
             <TeamItem
               key={child.team.id}
@@ -93,7 +93,7 @@ export function TeamsPage({
         {toolbar}
       </div>
       {teams.isError ? (
-        <p role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">
+        <p role="alert" className="rounded-control bg-rose-50 px-3 py-2 text-sm text-rose-800">
           {copy.teams.loadError}
         </p>
       ) : null}

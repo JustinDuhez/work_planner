@@ -43,14 +43,17 @@ export function LoginPage() {
 
   return (
     <main className="flex min-h-dvh items-center justify-center bg-zinc-50 px-4 py-10 font-sans">
-      <section className="w-full max-w-sm rounded-card border border-zinc-200 bg-white p-6 shadow-card sm:p-8">
+      <section className="w-full max-w-sm rounded-card border border-line bg-white p-6 shadow-card sm:p-8">
         <p className="text-sm font-semibold tracking-tight text-primary-600">{copy.appName}</p>
         <h1 className="mt-4 text-xl font-semibold tracking-tight text-zinc-900">
           {copy.login.title}
         </h1>
         <p className="mt-1 text-sm text-zinc-500">{copy.login.subtitle}</p>
         {bannerMessage !== undefined ? (
-          <p role="alert" className="mt-4 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">
+          <p
+            role="alert"
+            className="mt-4 rounded-control bg-rose-50 px-3 py-2 text-sm text-rose-800"
+          >
             {bannerMessage}
           </p>
         ) : null}

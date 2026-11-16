@@ -47,7 +47,7 @@ export function DayTimeline({
           {segments.map(labelOf).join(' · ')}
         </p>
       ) : null}
-      <div className="relative h-10 rounded-lg bg-zinc-100/70">
+      <div className="relative h-10 rounded-control bg-zinc-100/70">
         {segments.map((segment) => {
           const isOpen = segment.endedAt === null;
           const label = labelOf(segment);

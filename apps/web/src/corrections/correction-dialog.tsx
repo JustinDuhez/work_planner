@@ -101,16 +101,16 @@ export function CorrectionDialog({
       ref={dialogRef}
       aria-label={copy.corrections.dialogTitle}
       onClose={onClose}
-      className="m-auto w-[min(32rem,calc(100vw-2rem))] rounded-card border border-zinc-200 bg-white p-6 shadow-card backdrop:bg-zinc-900/30"
+      className="m-auto w-[min(32rem,calc(100vw-2rem))] rounded-card border border-line bg-white p-6 shadow-card backdrop:bg-zinc-900/30"
     >
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <h2 className="text-base font-semibold">{`${copy.corrections.dialogTitle} — ${formatLongDate(day.date)}`}</h2>
-        <fieldset className="inline-flex rounded-lg border border-zinc-200 bg-zinc-50 p-0.5">
+        <fieldset className="inline-flex rounded-card border border-line bg-zinc-50 p-1">
           <legend className="sr-only">{copy.corrections.workMode}</legend>
           {WORK_MODE_OPTIONS.map(({ value, label, Icon }) => (
             <label
               key={value}
-              className={`flex cursor-pointer items-center gap-1 rounded-md px-2.5 py-1 text-xs has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary-500 ${workMode === value ? 'bg-white font-medium text-zinc-900 shadow-card' : 'text-zinc-600'}`}
+              className={`flex cursor-pointer items-center gap-1 rounded-inner-sm px-2.5 py-1 text-xs has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary-500 ${workMode === value ? 'bg-white font-medium text-zinc-900 shadow-card' : 'text-zinc-600'}`}
             >
               <input
                 type="radio"
@@ -139,7 +139,7 @@ export function CorrectionDialog({
                       value={row.startedAt}
                       onChange={(event) => updateRow(row.key, { startedAt: event.target.value })}
                       aria-invalid={startError !== undefined}
-                      className="h-10 w-full rounded-lg border border-zinc-200 px-3 text-sm"
+                      className="h-10 w-full rounded-control border border-line px-3 text-sm"
                     />
                   </label>
                   <label className="flex-1 space-y-1 text-xs font-medium">
@@ -149,7 +149,7 @@ export function CorrectionDialog({
                       value={row.endedAt}
                       onChange={(event) => updateRow(row.key, { endedAt: event.target.value })}
                       aria-invalid={endError !== undefined}
-                      className="h-10 w-full rounded-lg border border-zinc-200 px-3 text-sm"
+                      className="h-10 w-full rounded-control border border-line px-3 text-sm"
                     />
                   </label>
                   <button
@@ -158,7 +158,7 @@ export function CorrectionDialog({
                     onClick={() =>
                       setRows((current) => current.filter((other) => other.key !== row.key))
                     }
-                    className="h-10 rounded-lg px-2 text-zinc-500 hover:bg-zinc-100"
+                    className="h-10 rounded-control px-2 text-zinc-500 hover:bg-zinc-100"
                   >
                     <Trash2 size={16} aria-hidden />
                   </button>
@@ -183,11 +183,11 @@ export function CorrectionDialog({
             onChange={(event) => setComment(event.target.value)}
             maxLength={500}
             rows={2}
-            className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+            className="w-full rounded-control border border-line px-3 py-2 text-sm"
           />
         </label>
         {bannerMessage ? (
-          <p role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">
+          <p role="alert" className="rounded-control bg-rose-50 px-3 py-2 text-sm text-rose-800">
             {bannerMessage}
           </p>
         ) : null}

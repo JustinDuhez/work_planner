@@ -27,7 +27,7 @@ import {
 const YEAR_PARAM = 'annee';
 const MAX_DAY_OF_MONTH = 31;
 const YEAR_BUTTON_CLASS =
-  'flex size-9 items-center justify-center rounded-lg text-zinc-700 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50';
+  'flex size-9 items-center justify-center rounded-control text-zinc-700 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50';
 
 function yearFromUrl(value: string | null): number {
   const year = Number(value);
@@ -106,7 +106,7 @@ function HolidaysSection({
   }
 
   return (
-    <section className="space-y-3 rounded-card border border-zinc-200 bg-white p-6 shadow-card">
+    <section className="space-y-3 rounded-card border border-line bg-white p-6 shadow-card">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-base font-semibold">{copy.settings.holidaysTitle}</h2>
         <div className="flex items-center gap-1">
@@ -134,7 +134,7 @@ function HolidaysSection({
       {holidays.data && holidays.data.length === 0 ? (
         <p className="text-sm text-zinc-500">{copy.settings.noHolidays}</p>
       ) : null}
-      <ul className="divide-y divide-zinc-100">
+      <ul className="divide-y divide-line">
         {(holidays.data ?? []).map((holiday) => (
           <HolidayRow key={holiday.date} holiday={holiday} />
         ))}
@@ -161,7 +161,7 @@ function HolidaysSection({
             type="date"
             value={date}
             onChange={(event) => setDate(event.target.value)}
-            className="h-10 rounded-lg border border-zinc-200 px-3"
+            className="h-10 rounded-control border border-line px-3"
           />
           {addErrors.date ? (
             <span className="block text-xs text-rose-700">{addErrors.date}</span>
@@ -195,7 +195,7 @@ function YearStartSection({ yearStart }: { yearStart: string }) {
   }
 
   return (
-    <section className="space-y-3 rounded-card border border-zinc-200 bg-white p-6 shadow-card">
+    <section className="space-y-3 rounded-card border border-line bg-white p-6 shadow-card">
       <h2 className="text-base font-semibold">{copy.settings.yearStartTitle}</h2>
       <form onSubmit={handleSubmit} noValidate className="flex flex-wrap items-end gap-3">
         <label className="space-y-1 text-sm font-medium">
@@ -203,7 +203,7 @@ function YearStartSection({ yearStart }: { yearStart: string }) {
           <select
             value={day}
             onChange={(event) => setDay(event.target.value)}
-            className="h-10 rounded-lg border border-zinc-200 px-2"
+            className="h-10 rounded-control border border-line px-2"
           >
             {Array.from({ length: MAX_DAY_OF_MONTH }, (_, index) => twoDigits(index + 1)).map(
               (option) => (
@@ -219,7 +219,7 @@ function YearStartSection({ yearStart }: { yearStart: string }) {
           <select
             value={month}
             onChange={(event) => setMonth(event.target.value)}
-            className="h-10 rounded-lg border border-zinc-200 px-2"
+            className="h-10 rounded-control border border-line px-2"
           >
             {copy.settings.months.map((name, index) => (
               <option key={name} value={twoDigits(index + 1)}>

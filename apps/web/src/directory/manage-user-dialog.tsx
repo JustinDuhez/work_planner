@@ -24,7 +24,7 @@ export function fieldErrorsOf(error: unknown): Record<string, string> {
 
 export function ErrorBanner({ message }: { message: string | undefined }) {
   return message === undefined ? null : (
-    <p role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">
+    <p role="alert" className="rounded-control bg-rose-50 px-3 py-2 text-sm text-rose-800">
       {message}
     </p>
   );
@@ -158,7 +158,7 @@ function AccessSection({ entry }: { entry: DirectoryEntry }) {
         {copy.manageUser.resetPassword}
       </Button>
       {pendingAction ? (
-        <div className="space-y-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+        <div className="space-y-2 rounded-control bg-amber-50 p-3 text-sm text-amber-900">
           <p>{confirmationText[pendingAction]}</p>
           <div className="flex gap-2">
             <Button onClick={confirmPendingAction}>{copy.manageUser.confirm}</Button>
@@ -231,7 +231,7 @@ function WorkingTimeSection({
             value={effectiveDate}
             min={toWorkDate(new Date(), APP_TIME_ZONE)}
             onChange={(event) => setEffectiveDate(event.target.value)}
-            className="h-10 w-full rounded-lg border border-zinc-200 px-3"
+            className="h-10 w-full rounded-control border border-line px-3"
           />
           {fieldErrors.effectiveDate ? (
             <span className="text-xs text-rose-700">{fieldErrors.effectiveDate}</span>
@@ -244,7 +244,7 @@ function WorkingTimeSection({
               type="date"
               value={startDate}
               onChange={(event) => setStartDate(event.target.value)}
-              className="h-10 w-full rounded-lg border border-zinc-200 px-3"
+              className="h-10 w-full rounded-control border border-line px-3"
             />
             {fieldErrors.startDate ? (
               <span className="text-xs text-rose-700">{fieldErrors.startDate}</span>
@@ -284,7 +284,7 @@ export function ManageUserDialog({
       ref={dialogRef}
       aria-label={copy.manageUser.title}
       onClose={onClose}
-      className="m-auto max-h-[90dvh] w-[min(32rem,calc(100vw-2rem))] overflow-y-auto rounded-card border border-zinc-200 bg-white p-6 shadow-card backdrop:bg-zinc-900/30"
+      className="m-auto max-h-[90dvh] w-[min(32rem,calc(100vw-2rem))] overflow-y-auto rounded-card border border-line bg-white p-6 shadow-card backdrop:bg-zinc-900/30"
     >
       <div className="space-y-6">
         <div className="flex items-start justify-between gap-4">

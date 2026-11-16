@@ -47,13 +47,10 @@ export function PersonCards({
           <li
             key={id}
             aria-label={name}
-            className="rounded-card border border-zinc-200 bg-white p-3 text-sm"
+            className="rounded-card border border-line bg-white p-3 text-sm"
           >
             <div className="flex items-baseline justify-between gap-2">
-              <Link
-                to={`/calendrier/${id}`}
-                className="font-medium hover:underline focus-visible:outline-2 focus-visible:outline-primary-600"
-              >
+              <Link to={`/calendrier/${id}`} className="font-medium hover:underline">
                 {name}
               </Link>
               <Gap

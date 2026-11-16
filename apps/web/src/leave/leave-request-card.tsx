@@ -48,7 +48,7 @@ export function LeaveRequestCard({
   children?: ReactNode;
 }) {
   return (
-    <li className="space-y-2 rounded-card border border-zinc-200 bg-white p-4">
+    <li className="space-y-2 rounded-card border border-line bg-white p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           {showPerson ? (
@@ -71,7 +71,7 @@ export function LeaveRequestCard({
       </div>
       {request.reason ? <p className="text-sm text-zinc-600">{request.reason}</p> : null}
       {request.ruleNote ? (
-        <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+        <p className="rounded-control bg-amber-50 px-3 py-2 text-sm text-amber-900">
           {request.ruleNote}
         </p>
       ) : null}

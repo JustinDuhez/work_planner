@@ -57,20 +57,20 @@ export function DirectoryPage({
   return (
     <section className="space-y-4">
       <h1 className="text-xl font-semibold tracking-tight">{copy.directory.title}</h1>
-      <div className="sticky top-14 z-10 -mx-4 flex flex-wrap items-center gap-3 border-b border-zinc-200 bg-zinc-50/90 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-card sm:border">
+      <div className="sticky top-14 z-10 -mx-4 flex flex-wrap items-center gap-3 border-b border-line bg-zinc-50/90 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-card sm:border">
         <input
           type="search"
           aria-label={copy.directory.search}
           placeholder={copy.directory.search}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          className="h-9 min-w-48 flex-1 rounded-lg border border-zinc-200 bg-white px-3 text-sm"
+          className="h-9 min-w-48 flex-1 rounded-control border border-line bg-white px-3 text-sm"
         />
         <select
           aria-label={copy.directory.teamFilter}
           value={teamName}
           onChange={(event) => setTeamName(event.target.value)}
-          className="h-9 rounded-lg border border-zinc-200 bg-white px-2 text-sm"
+          className="h-9 rounded-control border border-line bg-white px-2 text-sm"
         >
           <option value="">{copy.directory.allTeams}</option>
           {teamNames.map((name) => (
@@ -82,7 +82,7 @@ export function DirectoryPage({
         {toolbar}
       </div>
       {directory.isError ? (
-        <p role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">
+        <p role="alert" className="rounded-control bg-rose-50 px-3 py-2 text-sm text-rose-800">
           {copy.directory.loadError}
         </p>
       ) : null}
@@ -115,7 +115,7 @@ export function DirectoryPage({
                 <tr
                   key={entry.id}
                   aria-label={name}
-                  className="block rounded-card border border-zinc-200 bg-white p-3 sm:table-row sm:rounded-none sm:border-0 sm:border-b sm:p-0"
+                  className="block rounded-card border border-line bg-white p-3 sm:table-row sm:rounded-none sm:border-0 sm:border-b sm:p-0"
                 >
                   <td className="block py-0.5 sm:table-cell sm:px-3 sm:py-2">
                     {entry.isArchived ? (

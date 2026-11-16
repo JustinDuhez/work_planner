@@ -7,7 +7,7 @@ import { UserMenu } from './user-menu';
 export function AppShell() {
   return (
     <div className="min-h-dvh bg-zinc-50 font-sans text-zinc-900 antialiased">
-      <header className="sticky top-0 z-10 border-b border-zinc-200 bg-white/80 backdrop-blur">
+      <header className="sticky top-0 z-10 border-b border-line bg-white/80 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
           <Link to="/" className="text-sm font-semibold tracking-tight">
             {copy.appName}

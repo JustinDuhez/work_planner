@@ -43,10 +43,7 @@ function PersonRow({
         scope="row"
         className="sticky left-0 z-10 bg-white px-3 py-1 text-left font-normal whitespace-nowrap"
       >
-        <Link
-          to={`/calendrier/${person.id}`}
-          className="font-medium hover:underline focus-visible:outline-2 focus-visible:outline-primary-600"
-        >
+        <Link to={`/calendrier/${person.id}`} className="font-medium hover:underline">
           {`${person.firstName} ${person.lastName}`}
         </Link>
         {isManager ? (
@@ -68,7 +65,7 @@ function PersonRow({
       </th>
       {dates.map((date) => (
         <td key={date} className={`p-0.5 ${date === today ? 'bg-primary-50' : ''}`}>
-          <div className="w-5 overflow-hidden rounded border border-zinc-200">
+          <div className="w-5 overflow-hidden rounded border border-line">
             {(['am', 'pm'] as const).map((half) => (
               <HalfCell
                 key={half}
@@ -102,7 +99,7 @@ export function TeamMonthTable({
   const holidayByDate = new Map(teamMonth.holidays.map((holiday) => [holiday.date, holiday.label]));
   const title = `${copy.planning.tableLabelPrefix} ${monthTitle.format(atNoon(teamMonth.month.startDate))}`;
   return (
-    <div className="overflow-x-auto rounded-card border border-zinc-200 bg-white">
+    <div className="overflow-x-auto rounded-card border border-line bg-white">
       <table aria-label={title} className="border-separate border-spacing-0 text-sm">
         <thead>
           <tr>
@@ -114,7 +111,7 @@ export function TeamMonthTable({
                 key={week.isoWeek}
                 colSpan={week.dates.length}
                 scope="colgroup"
-                className="border-l border-zinc-200 px-1 text-xs text-zinc-600"
+                className="border-l border-line px-1 text-xs text-zinc-600"
               >
                 {`${copy.planning.weekPrefix}${week.weekNumber}`}
               </th>
