@@ -1,7 +1,8 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { PASSWORD_POLICY_MESSAGES } from '@work-planner/domain';
 import userEvent from '@testing-library/user-event';
 import { copy } from '../copy';
+import { expectNoAxeViolations } from '../test/axe';
 import { NO_NOTIFICATIONS } from '../test/clock-fixtures';
 import { mockFetchRoutes, type MockResponse } from '../test/mock-fetch';
 import { renderApp } from '../test/render-app';
@@ -13,11 +14,27 @@ function renderProfile(extraRoutes: Record<string, MockResponse> = {}) {
     'GET /api/v1/notifications': { status: 200, body: NO_NOTIFICATIONS },
     ...extraRoutes,
   });
-  renderApp('/profil');
-  return { fetchMock, user: userEvent.setup() };
+  const rendered = renderApp('/profil');
+  return { ...rendered, fetchMock, user: userEvent.setup() };
 }
 
 describe('ProfilePage', () => {
+  it('spells the e-mail address with a hyphen', async () => {
+    renderProfile();
+
+    expect(await screen.findByLabelText('Adresse e-mail')).toHaveAccessibleDescription(
+      'Seul un administrateur peut modifier votre adresse e-mail.',
+    );
+  });
+
+  it('has no detectable accessibility problems', async () => {
+    const { container, queryClient } = renderProfile();
+    await screen.findByLabelText(copy.profile.firstName);
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+
+    await expectNoAxeViolations(container);
+  });
+
   it('shows the read-only account details', async () => {
     renderProfile();
 

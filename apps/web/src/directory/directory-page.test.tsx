@@ -1,6 +1,7 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { copy } from '../copy';
+import { expectNoAxeViolations } from '../test/axe';
 import { signedInHomeRoutes } from '../test/clock-fixtures';
 import { directoryEntry } from '../test/directory-fixtures';
 import { mockFetchRoutes } from '../test/mock-fetch';
@@ -45,6 +46,41 @@ function renderDirectory(entries = [SOPHIE, LUCAS, HUGO, LEA]) {
 }
 
 describe('DirectoryPage', () => {
+  it('labels every line of a person card', async () => {
+    renderDirectory();
+
+    const row = await screen.findByRole('row', { name: /Hugo Laurent/ });
+
+    for (const label of [
+      copy.directory.columnEmail,
+      copy.directory.columnTeams,
+      copy.directory.columnManagers,
+      copy.directory.columnRole,
+      copy.directory.columnWorkingTime,
+    ]) {
+      expect(within(row).getByText(label)).toBeInTheDocument();
+    }
+  });
+
+  it('offers a retry when the directory cannot be loaded', async () => {
+    mockFetchRoutes({
+      ...signedInHomeRoutes(),
+      'GET /api/v1/users': { status: 500, body: { code: 'INTERNAL', message: 'x' } },
+    });
+    renderApp('/annuaire');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(copy.directory.loadError);
+    expect(screen.getByRole('button', { name: copy.states.retry })).toBeInTheDocument();
+  });
+
+  it('has no detectable accessibility problems', async () => {
+    const { container, queryClient } = renderDirectory();
+    await screen.findByRole('row', { name: /Hugo Laurent/ });
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+
+    await expectNoAxeViolations(container);
+  });
+
   it('lists everyone with email, teams, managers and role', async () => {
     renderDirectory();
 

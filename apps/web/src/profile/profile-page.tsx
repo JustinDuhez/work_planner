@@ -8,7 +8,7 @@ export function ProfilePage() {
   if (!session) return null;
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <h1 className="text-xl font-semibold tracking-tight">{copy.profile.title}</h1>
+      <h1 className="text-xl font-semibold tracking-tight text-balance">{copy.profile.title}</h1>
       <ProfileInfoForm user={session.user} />
       <PasswordForm />
     </div>

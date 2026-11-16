@@ -1,6 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { copy } from '../copy';
+import { expectNoAxeViolations } from '../test/axe';
 import { signedInHomeRoutes } from '../test/clock-fixtures';
 import { mockFetchRoutes, type MockResponse } from '../test/mock-fetch';
 import { renderApp } from '../test/render-app';
@@ -49,6 +50,27 @@ async function sentBody(fetchMock: jest.Mock, method: string, url: string): Prom
 }
 
 describe('SettingsPage', () => {
+  it('has no detectable accessibility problems', async () => {
+    const { container, queryClient } = renderSettings();
+    await screen.findByText('Armistice 1918');
+    await screen.findByRole('button', { name: copy.settings.saveYearStart });
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+
+    await expectNoAxeViolations(container);
+  });
+
+  it('offers a retry when the holidays cannot be loaded', async () => {
+    renderSettings({
+      'GET /api/v1/public-holidays?year=2026': {
+        status: 500,
+        body: { code: 'INTERNAL', message: 'x' },
+      },
+    });
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(copy.settings.loadError);
+    expect(screen.getByRole('button', { name: copy.states.retry })).toBeInTheDocument();
+  });
+
   it('lists the holidays of the year in the URL', async () => {
     renderSettings();
 

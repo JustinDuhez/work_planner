@@ -14,6 +14,9 @@ import { ErrorBanner, fieldErrorsOf } from '../directory/manage-user-dialog';
 import { NotFoundPage } from '../not-found/not-found-page';
 import { useSession } from '../session/session-queries';
 import { Button } from '../ui/button';
+import { ErrorState } from '../ui/error-state';
+import { Field } from '../ui/field';
+import { LoadingRegion, Skeleton } from '../ui/skeleton';
 import { TextField } from '../ui/text-field';
 import {
   useAddPublicHoliday,
@@ -131,6 +134,17 @@ function HolidaysSection({
           </button>
         </div>
       </div>
+      {holidays.isError && !holidays.data ? (
+        <ErrorState message={copy.settings.loadError} onRetry={() => void holidays.refetch()} />
+      ) : null}
+      {holidays.isPending && !holidays.isError ? (
+        <LoadingRegion label={copy.settings.loading}>
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-8 w-full" />
+          </div>
+        </LoadingRegion>
+      ) : null}
       {holidays.data && holidays.data.length === 0 ? (
         <p className="text-sm text-zinc-500">{copy.settings.noHolidays}</p>
       ) : null}
@@ -155,18 +169,17 @@ function HolidaysSection({
         <ErrorBanner message={bannerMessageFor(importHolidays.error, [])} />
       </div>
       <form onSubmit={handleAdd} noValidate className="flex flex-wrap items-end gap-3">
-        <label className="space-y-1 text-sm font-medium">
-          <span>{copy.settings.holidayDate}</span>
-          <input
-            type="date"
-            value={date}
-            onChange={(event) => setDate(event.target.value)}
-            className="h-10 rounded-control border border-line px-3"
-          />
-          {addErrors.date ? (
-            <span className="block text-xs text-rose-700">{addErrors.date}</span>
-          ) : null}
-        </label>
+        <Field label={copy.settings.holidayDate} error={addErrors.date}>
+          {(control) => (
+            <input
+              {...control}
+              type="date"
+              value={date}
+              onChange={(event) => setDate(event.target.value)}
+              className="block h-10 rounded-control border border-line px-3"
+            />
+          )}
+        </Field>
         <TextField
           label={copy.settings.holidayLabel}
           name="label"
@@ -253,12 +266,20 @@ function AdminSettings() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold tracking-tight">{copy.settings.title}</h1>
+      <h1 className="text-xl font-semibold tracking-tight text-balance">{copy.settings.title}</h1>
       <HolidaysSection
         key={year}
         year={year}
         onYearChange={(nextYear) => setSearchParams({ [YEAR_PARAM]: String(nextYear) })}
       />
+      {settings.isError && !settings.data ? (
+        <ErrorState message={copy.settings.loadError} onRetry={() => void settings.refetch()} />
+      ) : null}
+      {settings.isPending && !settings.isError ? (
+        <LoadingRegion label={copy.settings.loading}>
+          <Skeleton className="h-32 w-full" />
+        </LoadingRegion>
+      ) : null}
       {settings.data ? <YearStartSection yearStart={settings.data.yearStart} /> : null}
     </div>
   );

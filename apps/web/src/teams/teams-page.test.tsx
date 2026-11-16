@@ -1,6 +1,7 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { copy } from '../copy';
+import { expectNoAxeViolations } from '../test/axe';
 import { signedInHomeRoutes } from '../test/clock-fixtures';
 import { mockFetchRoutes } from '../test/mock-fetch';
 import { renderApp } from '../test/render-app';
@@ -92,6 +93,15 @@ describe('TeamsPage', () => {
     renderApp('/equipes');
 
     expect(await screen.findByRole('alert')).toHaveTextContent(copy.teams.loadError);
+    expect(screen.getByRole('button', { name: copy.states.retry })).toBeInTheDocument();
+  });
+
+  it('has no detectable accessibility problems', async () => {
+    const { container, queryClient } = renderTeams();
+    await screen.findByRole('listitem', { name: 'Direction' });
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+
+    await expectNoAxeViolations(container);
   });
 
   it('has an Équipes link in the header', async () => {

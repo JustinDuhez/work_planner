@@ -67,11 +67,11 @@ export function ProfileInfoForm({ user }: { user: CurrentUser }) {
         />
         <dl className="grid gap-3 text-sm sm:grid-cols-3">
           <div>
-            <dt className="text-zinc-500">{copy.profile.role}</dt>
+            <dt className="text-xs font-medium text-zinc-500">{copy.profile.role}</dt>
             <dd className="mt-0.5 font-medium">{roleLabel(user.roles)}</dd>
           </div>
           <div>
-            <dt className="text-zinc-500">{copy.profile.teams}</dt>
+            <dt className="text-xs font-medium text-zinc-500">{copy.profile.teams}</dt>
             <dd className="mt-0.5 font-medium">
               {user.teams.length === 0
                 ? copy.profile.noTeam
@@ -83,7 +83,7 @@ export function ProfileInfoForm({ user }: { user: CurrentUser }) {
             </dd>
           </div>
           <div>
-            <dt className="text-zinc-500">
+            <dt className="text-xs font-medium text-zinc-500">
               {user.directManagers.length > 1 ? copy.profile.managers : copy.profile.manager}
             </dt>
             <dd className="mt-0.5 font-medium">

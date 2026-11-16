@@ -307,7 +307,7 @@ export const copy = {
   login: {
     title: 'Connexion',
     subtitle: 'Accédez à votre espace de gestion des temps.',
-    email: 'Adresse email',
+    email: 'Adresse e-mail',
     password: 'Mot de passe',
     showPassword: 'Afficher le mot de passe',
     hidePassword: 'Masquer le mot de passe',
@@ -340,8 +340,8 @@ export const copy = {
     infoTitle: 'Informations',
     firstName: 'Prénom',
     lastName: 'Nom',
-    email: 'Adresse email',
-    emailHint: 'Seul un administrateur peut modifier votre adresse email.',
+    email: 'Adresse e-mail',
+    emailHint: 'Seul un administrateur peut modifier votre adresse e-mail.',
     role: 'Rôle',
     teams: 'Équipes',
     noTeam: 'Aucune équipe',
@@ -384,6 +384,8 @@ export const copy = {
   },
   settings: {
     title: 'Paramètres',
+    loading: 'Chargement des paramètres…',
+    loadError: 'Impossible de charger les paramètres.',
     holidaysTitle: 'Jours fériés',
     previousYear: 'Année précédente',
     nextYear: 'Année suivante',

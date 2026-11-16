@@ -1,8 +1,12 @@
 import { useId, type ReactNode } from 'react';
+import { Users } from 'lucide-react';
 import { Link } from 'react-router';
 import { clockWeekPath, currentIsoWeek } from '../clock/clock-time';
 import { copy } from '../copy';
 import { useSession } from '../session/session-queries';
+import { EmptyState } from '../ui/empty-state';
+import { ErrorState } from '../ui/error-state';
+import { LoadingRegion, Skeleton } from '../ui/skeleton';
 import { useTeams } from './team-queries';
 import { buildTeamTree, type TeamNode } from './team-tree';
 
@@ -87,19 +91,24 @@ export function TeamsPage({
   const isoWeek = currentIsoWeek(new Date());
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold tracking-tight">{copy.teams.title}</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-balance">{copy.teams.title}</h1>
         {toolbar}
       </div>
-      {teams.isError ? (
-        <p role="alert" className="rounded-control bg-rose-50 px-3 py-2 text-sm text-rose-800">
-          {copy.teams.loadError}
-        </p>
+      {teams.isError && !teams.data ? (
+        <ErrorState message={copy.teams.loadError} onRetry={() => void teams.refetch()} />
       ) : null}
-      {teams.isPending ? <p className="text-sm text-zinc-500">{copy.teams.loading}</p> : null}
+      {teams.isPending && !teams.isError ? (
+        <LoadingRegion label={copy.teams.loading}>
+          <div className="space-y-3">
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-20 w-full" />
+          </div>
+        </LoadingRegion>
+      ) : null}
       {teams.data && tree.length === 0 ? (
-        <p className="text-sm text-zinc-500">{copy.teams.empty}</p>
+        <EmptyState icon={Users} message={copy.teams.empty} />
       ) : null}
       {tree.length > 0 ? (
         <ul aria-label={copy.teams.title} className="space-y-2">

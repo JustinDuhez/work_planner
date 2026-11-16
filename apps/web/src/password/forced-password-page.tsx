@@ -24,20 +24,27 @@ export function ForcedPasswordPage() {
   }
 
   return (
-    <main className="mx-auto max-w-md space-y-4 px-4 py-10">
-      <h1 className="text-xl font-semibold tracking-tight">{copy.forcedPassword.title}</h1>
-      <p className="text-sm text-zinc-600">{copy.forcedPassword.intro}</p>
-      <PasswordForm onSuccess={() => void handleChanged()} />
-      <Button
-        variant="secondary"
-        onClick={() =>
-          logout.mutate(undefined, {
-            onSettled: () => void navigate('/connexion', { replace: true }),
-          })
-        }
-      >
-        {copy.userMenu.logout}
-      </Button>
+    <main className="flex min-h-dvh items-center justify-center bg-zinc-50 px-4 py-10 font-sans">
+      <div className="w-full max-w-md space-y-6">
+        <div className="space-y-1">
+          <p className="text-sm font-semibold tracking-tight text-primary-600">{copy.appName}</p>
+          <h1 className="text-xl font-semibold tracking-tight text-balance">
+            {copy.forcedPassword.title}
+          </h1>
+          <p className="text-sm text-zinc-600">{copy.forcedPassword.intro}</p>
+        </div>
+        <PasswordForm onSuccess={() => void handleChanged()} />
+        <Button
+          variant="secondary"
+          onClick={() =>
+            logout.mutate(undefined, {
+              onSettled: () => void navigate('/connexion', { replace: true }),
+            })
+          }
+        >
+          {copy.userMenu.logout}
+        </Button>
+      </div>
     </main>
   );
 }

@@ -1,9 +1,13 @@
 import { compareFrench, formatMinutes, type DirectoryEntry } from '@work-planner/domain';
+import { SearchX } from 'lucide-react';
 import { useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { clockWeekPath, currentIsoWeek, formatLongDate } from '../clock/clock-time';
 import { copy } from '../copy';
 import { roleLabel } from '../session/role-label';
+import { ErrorState } from '../ui/error-state';
+import { EmptyState } from '../ui/empty-state';
+import { LoadingRegion, Skeleton } from '../ui/skeleton';
 import { useSession } from '../session/session-queries';
 import { useDirectory } from './directory-queries';
 
@@ -24,7 +28,8 @@ function matchesSearch(entry: DirectoryEntry, search: string): boolean {
     .includes(needle);
 }
 
-const CELL = 'block py-0.5 text-zinc-600 sm:table-cell sm:px-3 sm:py-2';
+const CELL = 'block py-1 text-zinc-600 sm:table-cell sm:px-3 sm:py-2';
+const CARD_LABEL = 'block text-xs font-medium text-zinc-500 sm:hidden';
 const HEADER = 'px-3 py-2';
 
 export function DirectoryPage({
@@ -55,8 +60,8 @@ export function DirectoryPage({
   );
 
   return (
-    <section className="space-y-4">
-      <h1 className="text-xl font-semibold tracking-tight">{copy.directory.title}</h1>
+    <section className="space-y-6">
+      <h1 className="text-xl font-semibold tracking-tight text-balance">{copy.directory.title}</h1>
       <div className="sticky top-14 z-10 -mx-4 flex flex-wrap items-center gap-3 border-b border-line bg-zinc-50/90 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-card sm:border">
         <input
           type="search"
@@ -81,16 +86,20 @@ export function DirectoryPage({
         </select>
         {toolbar}
       </div>
-      {directory.isError ? (
-        <p role="alert" className="rounded-control bg-rose-50 px-3 py-2 text-sm text-rose-800">
-          {copy.directory.loadError}
-        </p>
+      {directory.isError && !directory.data ? (
+        <ErrorState message={copy.directory.loadError} onRetry={() => void directory.refetch()} />
       ) : null}
-      {directory.isPending ? (
-        <p className="text-sm text-zinc-500">{copy.directory.loading}</p>
+      {directory.isPending && !directory.isError ? (
+        <LoadingRegion label={copy.directory.loading}>
+          <div className="space-y-3">
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
+          </div>
+        </LoadingRegion>
       ) : null}
       {directory.data && entries.length === 0 ? (
-        <p className="text-sm text-zinc-500">{copy.directory.empty}</p>
+        <EmptyState icon={SearchX} message={copy.directory.empty} />
       ) : null}
       {entries.length > 0 ? (
         <table className="w-full text-sm">
@@ -107,7 +116,7 @@ export function DirectoryPage({
               </th>
             </tr>
           </thead>
-          <tbody className="space-y-2 sm:space-y-0">
+          <tbody className="space-y-3 sm:space-y-0">
             {entries.map((entry) => {
               const name = `${entry.firstName} ${entry.lastName}`;
               return (
@@ -115,9 +124,9 @@ export function DirectoryPage({
                 <tr
                   key={entry.id}
                   aria-label={name}
-                  className="block rounded-card border border-line bg-white p-3 sm:table-row sm:rounded-none sm:border-0 sm:border-b sm:p-0"
+                  className="block rounded-card border border-line bg-white p-4 sm:table-row sm:rounded-none sm:border-0 sm:border-b sm:p-0"
                 >
-                  <td className="block py-0.5 sm:table-cell sm:px-3 sm:py-2">
+                  <td className="block py-1 sm:table-cell sm:px-3 sm:py-2">
                     {entry.isArchived ? (
                       <span className="font-medium text-zinc-900">{name}</span>
                     ) : (
@@ -142,15 +151,26 @@ export function DirectoryPage({
                       </span>
                     ) : null}
                   </td>
-                  <td className={CELL}>{entry.email}</td>
-                  <td className={CELL}>{entry.teams.map((team) => team.name).join(', ')}</td>
                   <td className={CELL}>
+                    <span className={CARD_LABEL}>{copy.directory.columnEmail}</span>
+                    {entry.email}
+                  </td>
+                  <td className={CELL}>
+                    <span className={CARD_LABEL}>{copy.directory.columnTeams}</span>
+                    {entry.teams.map((team) => team.name).join(', ')}
+                  </td>
+                  <td className={CELL}>
+                    <span className={CARD_LABEL}>{copy.directory.columnManagers}</span>
                     {entry.managers
                       .map((manager) => `${manager.firstName} ${manager.lastName}`)
                       .join(', ')}
                   </td>
-                  <td className={CELL}>{roleLabel(entry)}</td>
+                  <td className={CELL}>
+                    <span className={CARD_LABEL}>{copy.directory.columnRole}</span>
+                    {roleLabel(entry)}
+                  </td>
                   <td className={`${CELL} tabular-nums`}>
+                    <span className={CARD_LABEL}>{copy.directory.columnWorkingTime}</span>
                     {workingTimeLabel(entry)}
                     {entry.workingTime ? (
                       <span className="block text-xs text-zinc-500">
