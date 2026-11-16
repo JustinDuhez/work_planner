@@ -94,7 +94,7 @@ export function PlanningPage() {
         onShiftMonth={goToMonth}
       />
       <div key={yearMonth} className="motion-safe:animate-[week-in_200ms_ease-out]">
-        {isError ? (
+        {isError && !data ? (
           <ErrorState message={copy.planning.loadError} onRetry={() => void refetch()} />
         ) : null}
         {(isPending || isPlaceholderData) && !isError ? (

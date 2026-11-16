@@ -1,5 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { toWorkDate } from '@work-planner/domain';
+import { APP_TIME_ZONE } from '../clock/clock-time';
 import { copy } from '../copy';
 import { signedInHomeRoutes } from '../test/clock-fixtures';
 import { DAY_TYPES, leaveRequestView } from '../test/leave-fixtures';
@@ -391,7 +393,9 @@ describe('LeaveRequestsPage', () => {
     await user.click(button);
 
     expect(button).toHaveClass('bg-primary-600');
-    expect(screen.getByRole('dialog', { name: copy.leave.dialogTitle })).toBeInTheDocument();
+    const dialog = screen.getByRole('dialog', { name: copy.leave.dialogTitle });
+    const today = toWorkDate(new Date(), APP_TIME_ZONE);
+    expect(within(dialog).getByLabelText(copy.leave.startDate)).toHaveAttribute('min', today);
   });
 
   it('announces the loading as one busy region', async () => {

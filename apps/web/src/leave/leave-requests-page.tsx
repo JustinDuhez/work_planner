@@ -192,7 +192,8 @@ export function LeaveRequestsPage() {
   const { data: session } = useSession();
   const [searchParams, setSearchParams] = useSearchParams();
   const dayTypes = useDayTypes();
-  const [isRequestOpen, setIsRequestOpen] = useState(false);
+  // Set when the dialog opens, so its date does not move while it is open.
+  const [requestDate, setRequestDate] = useState<string | null>(null);
   const canSeeInbox =
     (session?.user.roles.isAdmin ?? false) || (session?.user.roles.isManager ?? false);
   // Same query key as the tab's call: one request feeds both the badge and the list.
@@ -209,7 +210,9 @@ export function LeaveRequestsPage() {
         <h1 className="text-xl font-semibold tracking-tight text-balance">
           {copy.leaveRequests.title}
         </h1>
-        <Button onClick={() => setIsRequestOpen(true)}>{copy.leave.requestButton}</Button>
+        <Button onClick={() => setRequestDate(toWorkDate(new Date(), APP_TIME_ZONE))}>
+          {copy.leave.requestButton}
+        </Button>
       </div>
       <div role="tablist" className="inline-flex gap-1 rounded-card bg-zinc-100 p-1">
         <button
@@ -249,11 +252,12 @@ export function LeaveRequestsPage() {
           <ToReviewTab dayTypes={dayTypes.data ?? []} />
         )}
       </div>
-      {isRequestOpen ? (
+      {requestDate ? (
+        // The browser date is enough here: minDate is only a picker hint, the server refuses past dates.
         <LeaveRequestDialog
-          initialDate={toWorkDate(new Date(), APP_TIME_ZONE)}
-          minDate={toWorkDate(new Date(), APP_TIME_ZONE)}
-          onClose={() => setIsRequestOpen(false)}
+          initialDate={requestDate}
+          minDate={requestDate}
+          onClose={() => setRequestDate(null)}
         />
       ) : null}
     </section>

@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { formatSignedMinutes } from '@work-planner/domain';
 import { copy } from '../copy';
@@ -363,5 +363,23 @@ describe('PlanningPage', () => {
     await waitFor(() => expect(queryClient.isFetching()).toBe(0));
 
     await expectNoAxeViolations(container);
+  });
+
+  it('keeps the month on screen when a background refresh fails', async () => {
+    const { queryClient } = renderPlanning('/planning?mois=2026-11');
+    await table();
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+    mockFetchRoutes({
+      ...signedInHomeRoutes(),
+      'GET /api/v1/team-months/2026-11': { status: 500, body: {} },
+    });
+
+    await act(() => queryClient.refetchQueries({ queryKey: ['team-month'] }));
+    // TanStack Query tells its observers on the next macrotask: let the page render the failure.
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+
+    expect(queryClient.getQueryState(['team-month', '2026-11'])?.status).toBe('error');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByRole('table', { name: /novembre 2026/ })).toBeInTheDocument();
   });
 });
