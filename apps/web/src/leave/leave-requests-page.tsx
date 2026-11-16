@@ -1,13 +1,20 @@
-import type { DayTypeView, LeaveRequestView } from '@work-planner/domain';
+import { toWorkDate, type DayTypeView, type LeaveRequestView } from '@work-planner/domain';
+import { Inbox } from 'lucide-react';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { bannerMessageFor } from '../api/form-errors';
+import { APP_TIME_ZONE } from '../clock/clock-time';
 import { copy } from '../copy';
 import { ErrorBanner, fieldErrorsOf } from '../directory/manage-user-dialog';
 import { useSession } from '../session/session-queries';
 import { Button } from '../ui/button';
+import { EmptyState } from '../ui/empty-state';
+import { ErrorState } from '../ui/error-state';
+import { LoadingRegion } from '../ui/skeleton';
 import { TextField } from '../ui/text-field';
 import { LeaveRequestCard } from './leave-request-card';
+import { LeaveRequestDialog } from './leave-request-dialog';
+import { RequestsSkeleton } from './requests-skeleton';
 import {
   useCancelLeaveRequest,
   useDayTypes,
@@ -111,22 +118,29 @@ function ReviewActions({ request }: { request: LeaveRequestView }) {
   );
 }
 
-function LoadError() {
+function RequestsLoading() {
   return (
-    <p role="alert" className="text-sm text-rose-700">
-      {copy.leaveRequests.loadError}
-    </p>
+    <LoadingRegion label={copy.leaveRequests.loading}>
+      <RequestsSkeleton />
+    </LoadingRegion>
   );
+}
+
+function NoRequests({ message }: { message: string }) {
+  return <EmptyState icon={Inbox} message={message} />;
 }
 
 function MineTab({ dayTypes }: { dayTypes: readonly DayTypeView[] }) {
   const requests = useOwnLeaveRequests();
-  if (requests.isError) return <LoadError />;
-  if (requests.data?.length === 0) {
-    return <p className="text-sm text-zinc-500">{copy.leaveRequests.noRequests}</p>;
+  if (requests.isError && !requests.data) {
+    return (
+      <ErrorState message={copy.leaveRequests.loadError} onRetry={() => void requests.refetch()} />
+    );
   }
+  if (requests.isPending) return <RequestsLoading />;
+  if (requests.data?.length === 0) return <NoRequests message={copy.leaveRequests.noRequests} />;
   return (
-    <ul className="space-y-2">
+    <ul className="space-y-3">
       {(requests.data ?? []).map((request) => (
         <LeaveRequestCard key={request.id} request={request} dayTypes={dayTypes} showPerson={false}>
           <CancelAction request={request} />
@@ -138,14 +152,19 @@ function MineTab({ dayTypes }: { dayTypes: readonly DayTypeView[] }) {
 
 function ToReviewTab({ dayTypes }: { dayTypes: readonly DayTypeView[] }) {
   const inbox = useLeaveInbox(true);
-  if (inbox.isError) return <LoadError />;
+  if (inbox.isError && !inbox.data) {
+    return (
+      <ErrorState message={copy.leaveRequests.loadError} onRetry={() => void inbox.refetch()} />
+    );
+  }
+  if (inbox.isPending) return <RequestsLoading />;
   const recent = inbox.data?.recent ?? [];
   return (
     <div className="space-y-6">
       {inbox.data?.pending.length === 0 ? (
-        <p className="text-sm text-zinc-500">{copy.leaveRequests.noPending}</p>
+        <NoRequests message={copy.leaveRequests.noPending} />
       ) : null}
-      <ul className="space-y-2">
+      <ul className="space-y-3">
         {(inbox.data?.pending ?? []).map((request) => (
           <LeaveRequestCard key={request.id} request={request} dayTypes={dayTypes} showPerson>
             <ReviewActions request={request} />
@@ -154,9 +173,9 @@ function ToReviewTab({ dayTypes }: { dayTypes: readonly DayTypeView[] }) {
         ))}
       </ul>
       {recent.length > 0 ? (
-        <section className="space-y-2">
+        <section className="space-y-3">
           <h2 className="text-sm font-semibold text-zinc-700">{copy.leaveRequests.recentTitle}</h2>
-          <ul className="space-y-2">
+          <ul className="space-y-3">
             {recent.map((request) => (
               <LeaveRequestCard key={request.id} request={request} dayTypes={dayTypes} showPerson>
                 <CancelAction request={request} />
@@ -173,6 +192,7 @@ export function LeaveRequestsPage() {
   const { data: session } = useSession();
   const [searchParams, setSearchParams] = useSearchParams();
   const dayTypes = useDayTypes();
+  const [isRequestOpen, setIsRequestOpen] = useState(false);
   const canSeeInbox =
     (session?.user.roles.isAdmin ?? false) || (session?.user.roles.isManager ?? false);
   // Same query key as the tab's call: one request feeds both the badge and the list.
@@ -184,8 +204,13 @@ export function LeaveRequestsPage() {
     `rounded-inner-sm px-3 py-1.5 text-sm ${isActive ? 'bg-white font-medium text-zinc-900 shadow-card' : 'text-zinc-600'}`;
 
   return (
-    <section className="space-y-4">
-      <h1 className="text-xl font-semibold tracking-tight">{copy.leaveRequests.title}</h1>
+    <section className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-xl font-semibold tracking-tight text-balance">
+          {copy.leaveRequests.title}
+        </h1>
+        <Button onClick={() => setIsRequestOpen(true)}>{copy.leave.requestButton}</Button>
+      </div>
       <div role="tablist" className="inline-flex gap-1 rounded-card bg-zinc-100 p-1">
         <button
           type="button"
@@ -224,6 +249,13 @@ export function LeaveRequestsPage() {
           <ToReviewTab dayTypes={dayTypes.data ?? []} />
         )}
       </div>
+      {isRequestOpen ? (
+        <LeaveRequestDialog
+          initialDate={toWorkDate(new Date(), APP_TIME_ZONE)}
+          minDate={toWorkDate(new Date(), APP_TIME_ZONE)}
+          onClose={() => setIsRequestOpen(false)}
+        />
+      ) : null}
     </section>
   );
 }

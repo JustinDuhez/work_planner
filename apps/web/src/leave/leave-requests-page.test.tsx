@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { copy } from '../copy';
 import { signedInHomeRoutes } from '../test/clock-fixtures';
 import { DAY_TYPES, leaveRequestView } from '../test/leave-fixtures';
+import { expectNoAxeViolations } from '../test/axe';
 import { mockFetchRoutes, type MockResponse } from '../test/mock-fetch';
 import { renderApp } from '../test/render-app';
 import { SIGNED_IN_SESSION } from '../test/sessions';
@@ -360,5 +361,85 @@ describe('LeaveRequestsPage', () => {
       'href',
       '/demandes',
     );
+  });
+
+  it('shows one status chip per card, the type as the title and the rest as plain text', async () => {
+    renderPage('/demandes', {
+      'GET /api/v1/leave-requests?view=mine': {
+        status: 200,
+        body: [
+          leaveRequestView({
+            status: 'approved',
+            declaredBy: { id: 2, firstName: 'Sophie', lastName: 'Dubois' },
+          }),
+        ],
+      },
+    });
+
+    const card = (await within(await screen.findByRole('tabpanel')).findAllByRole('listitem'))[0]!;
+
+    expect(card.querySelectorAll('.rounded-full')).toHaveLength(1);
+    expect(within(card).getByText(copy.leaveRequests.status.approved)).toHaveClass('rounded-full');
+    expect(within(card).getByText('Congé')).not.toHaveClass('rounded-full');
+    expect(within(card).getByText('Déclarée par Sophie Dubois')).toBeInTheDocument();
+  });
+
+  it('offers the request button as the one primary action of the page', async () => {
+    const { user } = renderPage('/demandes');
+
+    const button = await screen.findByRole('button', { name: copy.leave.requestButton });
+    await user.click(button);
+
+    expect(button).toHaveClass('bg-primary-600');
+    expect(screen.getByRole('dialog', { name: copy.leave.dialogTitle })).toBeInTheDocument();
+  });
+
+  it('announces the loading as one busy region', async () => {
+    renderPage('/demandes');
+    const answer = globalThis.fetch;
+    globalThis.fetch = (input, init) =>
+      typeof input === 'string' && input.includes('/leave-requests')
+        ? new Promise<Response>(() => undefined)
+        : answer(input, init);
+
+    renderApp('/demandes');
+
+    const label = await screen.findByText(copy.leaveRequests.loading);
+    expect(label.closest('[aria-busy="true"]')).not.toBeNull();
+  });
+
+  it('says so when the requests cannot be loaded and loads them again on demand', async () => {
+    const url = '/api/v1/leave-requests?view=mine';
+    const { queryClient, container, fetchMock } = renderPage('/demandes', {
+      [`GET ${url}`]: { status: 500, body: {} },
+    });
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(copy.leaveRequests.loadError);
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+    await expectNoAxeViolations(container);
+    await userEvent.setup().click(screen.getByRole('button', { name: copy.states.retry }));
+
+    await waitFor(() => expect(fetchMock.mock.calls.filter(([u]) => u === url)).toHaveLength(2));
+  });
+
+  it('shows an empty state without accessibility violation', async () => {
+    const { queryClient, container } = renderPage('/demandes');
+
+    const message = await screen.findByText(copy.leaveRequests.noRequests);
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+
+    expect(message.closest('div')).toHaveClass('border-dashed');
+    await expectNoAxeViolations(container);
+  });
+
+  it('has no accessibility violation with requests listed', async () => {
+    const { queryClient, container } = renderPage('/demandes', {
+      'GET /api/v1/leave-requests?view=mine': { status: 200, body: [leaveRequestView()] },
+    });
+
+    await screen.findByText('Congé');
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+
+    await expectNoAxeViolations(container);
   });
 });

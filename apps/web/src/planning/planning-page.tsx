@@ -6,13 +6,18 @@ import {
   yearMonthSchema,
   type TeamMonth,
 } from '@work-planner/domain';
+import { Users } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { APP_TIME_ZONE } from '../clock/clock-time';
 import { copy } from '../copy';
 import { useDayTypes } from '../leave/leave-queries';
 import { useSession } from '../session/session-queries';
+import { EmptyState } from '../ui/empty-state';
+import { ErrorState } from '../ui/error-state';
+import { LoadingRegion } from '../ui/skeleton';
 import { PersonCards } from './person-cards';
 import { PlanningFilterBar, type PlanningFilters } from './planning-filter-bar';
+import { PlanningSkeleton } from './planning-skeleton';
 import { ALL_TEAMS, planningPath, useTeamMonth } from './planning-queries';
 import { TeamMonthTable } from './team-month-table';
 
@@ -43,7 +48,7 @@ export function PlanningPage() {
   const yearMonth = parsedMonth.success
     ? parsedMonth.data
     : toWorkDate(new Date(), APP_TIME_ZONE).slice(0, 7);
-  const { data, isPending, isError, isPlaceholderData } = useTeamMonth(yearMonth);
+  const { data, isPending, isError, isPlaceholderData, refetch } = useTeamMonth(yearMonth);
   if (!session) return null;
 
   const isAbsentOnly = searchParams.get('absents') === '1';
@@ -78,8 +83,8 @@ export function PlanningPage() {
     goTo({ yearMonth: shiftMonth(yearMonth, delta), team, isAbsentOnly });
 
   return (
-    <section className="space-y-4">
-      <h1 className="text-xl font-semibold tracking-tight">{copy.planning.title}</h1>
+    <section className="space-y-6">
+      <h1 className="text-xl font-semibold tracking-tight text-balance">{copy.planning.title}</h1>
       <PlanningFilterBar
         filters={{ yearMonth, team, isAbsentOnly }}
         teamMonth={data}
@@ -90,17 +95,18 @@ export function PlanningPage() {
       />
       <div key={yearMonth} className="motion-safe:animate-[week-in_200ms_ease-out]">
         {isError ? (
-          <p role="alert" className="rounded-control bg-rose-50 px-3 py-2 text-sm text-rose-800">
-            {copy.planning.loadError}
-          </p>
+          <ErrorState message={copy.planning.loadError} onRetry={() => void refetch()} />
         ) : null}
         {(isPending || isPlaceholderData) && !isError ? (
-          <p className="text-sm text-zinc-500">{copy.planning.loading}</p>
+          <LoadingRegion label={copy.planning.loading}>
+            <PlanningSkeleton />
+          </LoadingRegion>
         ) : null}
         {data && !isPlaceholderData && sections.length === 0 ? (
-          <p className="text-sm text-zinc-500">
-            {isAbsentOnly ? copy.planning.nobodyAbsent : copy.planning.noPeople}
-          </p>
+          <EmptyState
+            icon={Users}
+            message={isAbsentOnly ? copy.planning.nobodyAbsent : copy.planning.noPeople}
+          />
         ) : null}
         {data && !isPlaceholderData && sections.length > 0 ? (
           <>

@@ -2,7 +2,6 @@ import { formatDayCount, type DayTypeView, type LeaveRequestView } from '@work-p
 import type { ReactNode } from 'react';
 import { formatLongDate } from '../clock/clock-time';
 import { copy } from '../copy';
-import { DAY_TYPE_CHIP_CLASSES, FALLBACK_CHIP_CLASSES } from './half-day-chips';
 
 const STATUS_CLASS: Record<LeaveRequestView['status'], string> = {
   pending: 'bg-amber-50 text-amber-800',
@@ -20,12 +19,6 @@ function statusLabel(request: LeaveRequestView): string {
 
 function typeLabel(request: LeaveRequestView, dayTypes: readonly DayTypeView[]): string {
   return dayTypes.find((type) => type.code === request.dayTypeCode)?.label ?? request.dayTypeCode;
-}
-
-function typeChipClass(request: LeaveRequestView): string {
-  const classes = DAY_TYPE_CHIP_CLASSES[request.dayTypeCode] ?? FALLBACK_CHIP_CLASSES;
-  if (request.status === 'approved') return classes.approved;
-  return request.status === 'pending' ? classes.pending : 'bg-zinc-100 text-zinc-600';
 }
 
 function periodText(request: LeaveRequestView): string {
@@ -49,19 +42,13 @@ export function LeaveRequestCard({
 }) {
   return (
     <li className="space-y-2 rounded-card border border-line bg-white p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           {showPerson ? (
-            <p className="font-medium text-zinc-900">{`${request.user.firstName} ${request.user.lastName}`}</p>
+            <p className="text-xs font-medium text-zinc-500">{`${request.user.firstName} ${request.user.lastName}`}</p>
           ) : null}
-          <p className="flex flex-wrap items-center gap-2 text-sm text-zinc-700">
-            <span
-              className={`rounded-full px-2 py-0.5 text-xs font-medium ${typeChipClass(request)}`}
-            >
-              {typeLabel(request, dayTypes)}
-            </span>
-            <span>{periodText(request)}</span>
-          </p>
+          <p className="font-medium text-zinc-900">{typeLabel(request, dayTypes)}</p>
+          <p className="text-sm text-zinc-600">{periodText(request)}</p>
         </div>
         <span
           className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_CLASS[request.status]}`}

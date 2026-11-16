@@ -47,9 +47,7 @@ function PersonRow({
           {`${person.firstName} ${person.lastName}`}
         </Link>
         {isManager ? (
-          <span className="ml-2 rounded bg-zinc-100 px-1 text-xs text-zinc-600">
-            {copy.planning.manager}
-          </span>
+          <span className="ml-2 text-xs font-medium text-zinc-500">{copy.planning.manager}</span>
         ) : null}
         <span className="ml-2 text-xs">
           <span className="sr-only">{copy.planning.balance} </span>
@@ -65,7 +63,7 @@ function PersonRow({
       </th>
       {dates.map((date) => (
         <td key={date} className={`p-0.5 ${date === today ? 'bg-primary-50' : ''}`}>
-          <div className="w-5 overflow-hidden rounded border border-line">
+          <div className="w-5 overflow-hidden rounded-inner-sm border border-line">
             {(['am', 'pm'] as const).map((half) => (
               <HalfCell
                 key={half}
@@ -132,9 +130,13 @@ export function TeamMonthTable({
           </tr>
         </thead>
         {sections.map((section) => (
-          <tbody key={section.teamId ?? 'none'}>
+          <tbody
+            key={section.teamId ?? 'none'}
+            aria-labelledby={`team-group-${section.teamId ?? 'none'}`}
+          >
             <tr>
               <td
+                id={`team-group-${section.teamId ?? 'none'}`}
                 colSpan={dates.length + 1}
                 className="bg-zinc-50 px-3 py-1 text-left text-xs font-semibold text-zinc-700"
               >

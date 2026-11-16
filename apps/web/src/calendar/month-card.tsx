@@ -47,7 +47,7 @@ export function HalfCell({
   onClick: (() => void) | undefined;
 }) {
   let background = isWeekendDate(date) ? 'bg-zinc-100' : '';
-  let text: string | null = null;
+  const texts: string[] = [];
   if (declared) {
     const chip = DAY_TYPE_CHIP_CLASSES[declared.dayTypeCode] ?? FALLBACK_CHIP_CLASSES;
     const isPending = declared.status === 'pending';
@@ -55,12 +55,15 @@ export function HalfCell({
     const label =
       dayTypes.find((type) => type.code === declared.dayTypeCode)?.label ?? declared.dayTypeCode;
     const halfWord = half === 'am' ? copy.calendar.morning : copy.calendar.afternoon;
-    text = `${formatDayMonth(date)} : ${label} · ${halfWord}${isPending ? ` ${copy.calendar.pending}` : ''}`;
+    texts.push(
+      `${formatDayMonth(date)} : ${label} · ${halfWord}${isPending ? ` ${copy.calendar.pending}` : ''}`,
+    );
   } else if (holidayLabel !== undefined) {
     background = 'bg-amber-50';
-    // Said once per day: the holiday covers both halves.
-    if (half === 'am')
-      text = `${formatDayMonth(date)} : ${copy.calendar.holiday} · ${holidayLabel}`;
+  }
+  // Said once per day (the holiday covers both halves), and kept when a half is declared on it.
+  if (holidayLabel !== undefined && half === 'am') {
+    texts.push(`${formatDayMonth(date)} : ${copy.calendar.holiday} · ${holidayLabel}`);
   }
   if (onClick) {
     // A free half has no label yet: name it by its date and half, like a declared one does.
@@ -71,13 +74,25 @@ export function HalfCell({
         onClick={onClick}
         className={`block h-3 w-full cursor-pointer hover:bg-primary-100 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-600 ${background}`}
       >
-        <span className="sr-only">{text ?? `${formatDayMonth(date)} : ${halfWord}`}</span>
+        {texts.length > 0 ? (
+          texts.map((text) => (
+            <span key={text} className="sr-only">
+              {text}
+            </span>
+          ))
+        ) : (
+          <span className="sr-only">{`${formatDayMonth(date)} : ${halfWord}`}</span>
+        )}
       </button>
     );
   }
   return (
     <span className={`block h-3 ${background}`}>
-      {text ? <span className="sr-only">{text}</span> : null}
+      {texts.map((text) => (
+        <span key={text} className="sr-only">
+          {text}
+        </span>
+      ))}
     </span>
   );
 }
@@ -108,8 +123,9 @@ function DayCell({
       aria-current={isToday ? 'date' : undefined}
       className={`p-0.5 ${isInPeriod ? '' : 'opacity-40'}`}
     >
+      {isToday ? <span className="sr-only">{copy.calendar.today}</span> : null}
       <div
-        className={`overflow-hidden rounded border border-line ${isToday ? 'ring-1 ring-primary-500' : ''}`}
+        className={`overflow-hidden rounded-inner-sm border border-line ${isToday ? 'ring-1 ring-primary-500' : ''}`}
       >
         <span aria-hidden className="block px-0.5 text-[10px] leading-4 text-zinc-600">
           {day}

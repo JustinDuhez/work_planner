@@ -1,9 +1,10 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { copy } from '../copy';
 import { yearCalendar } from '../test/calendar-fixtures';
 import { DAY_TYPE_CHIP_CLASSES } from '../leave/half-day-chips';
 import { signedInHomeRoutes } from '../test/clock-fixtures';
+import { expectNoAxeViolations } from '../test/axe';
 import { mockFetchRoutes, type MockResponse } from '../test/mock-fetch';
 import { renderApp } from '../test/render-app';
 
@@ -181,5 +182,77 @@ describe('YearCalendarPage', () => {
     expect(
       screen.queryByRole('button', { name: copy.leave.requestButton }),
     ).not.toBeInTheDocument();
+  });
+
+  it('keeps the holiday text on a half-day declared on a public holiday', async () => {
+    renderCalendar('/calendrier?periode=2026', {
+      'GET /api/v1/users/7/year-calendars/2026': {
+        status: 200,
+        body: yearCalendar({
+          halfDays: [
+            {
+              date: '2026-12-25',
+              half: 'am',
+              dayTypeCode: 'leave',
+              status: 'approved',
+              leaveRequestId: 4,
+            },
+          ],
+          holidays: [{ date: '2026-12-25', label: 'Noël' }],
+        }),
+      },
+    });
+
+    expect(await screen.findByText('25 déc. : Congé · matin')).toBeInTheDocument();
+    expect(screen.getByText('25 déc. : Férié · Noël')).toBeInTheDocument();
+  });
+
+  it('says today in text on the cell of today', async () => {
+    renderCalendar('/calendrier?periode=2026');
+
+    const november = await screen.findByRole('table', { name: 'novembre 2026' });
+    const today = november.querySelector('td[aria-current="date"]') as HTMLElement;
+
+    expect(within(today).getByText(copy.calendar.today)).toHaveClass('sr-only');
+  });
+
+  it('shows the shape of the calendar while it loads', async () => {
+    renderCalendar('/calendrier?periode=2026');
+    const answer = globalThis.fetch;
+    globalThis.fetch = (input, init) =>
+      typeof input === 'string' && input.includes('/year-calendars/')
+        ? new Promise<Response>(() => undefined)
+        : answer(input, init);
+
+    renderApp('/calendrier?periode=2026');
+
+    const label = await screen.findByText(copy.calendar.loading);
+    expect(label).toHaveClass('sr-only');
+    expect(label.closest('[aria-busy="true"]')).not.toBeNull();
+  });
+
+  it('says so when the calendar cannot be loaded and loads it again on demand', async () => {
+    const url = '/api/v1/users/7/year-calendars/2026';
+    const fetchMock = mockFetchRoutes({
+      ...signedInHomeRoutes(),
+      [`GET ${url}`]: { status: 500, body: { code: 'INTERNAL_ERROR', message: 'Oups' } },
+    });
+    const { queryClient, container } = renderApp('/calendrier?periode=2026');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(copy.calendar.loadError);
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+    await expectNoAxeViolations(container);
+    await userEvent.setup().click(screen.getByRole('button', { name: copy.states.retry }));
+
+    await waitFor(() => expect(fetchMock.mock.calls.filter(([u]) => u === url)).toHaveLength(2));
+  });
+
+  it('has no accessibility violation once loaded', async () => {
+    const { queryClient, container } = renderCalendar('/calendrier?periode=2026');
+
+    await screen.findByRole('table', { name: 'novembre 2026' });
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+
+    await expectNoAxeViolations(container);
   });
 });

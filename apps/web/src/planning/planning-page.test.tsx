@@ -1,8 +1,9 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { formatSignedMinutes } from '@work-planner/domain';
 import { copy } from '../copy';
 import { signedInHomeRoutes } from '../test/clock-fixtures';
+import { expectNoAxeViolations } from '../test/axe';
 import { mockFetchRoutes, type MockResponse } from '../test/mock-fetch';
 import { teamMonth } from '../test/planning-fixtures';
 import { renderApp } from '../test/render-app';
@@ -300,5 +301,67 @@ describe('PlanningPage', () => {
     expect(screen.queryByRole('table', { name: /novembre 2026/ })).not.toBeInTheDocument();
     release();
     expect(await screen.findByRole('table', { name: /décembre 2026/ })).toBeInTheDocument();
+  });
+
+  it('names each team group by its path', async () => {
+    renderPlanning('/planning?mois=2026-11&equipe=toutes');
+
+    await table();
+
+    expect(screen.getByRole('rowgroup', { name: 'Tech › Front' })).toBeInTheDocument();
+    expect(screen.getByRole('rowgroup', { name: 'Tech' })).toBeInTheDocument();
+  });
+
+  it('loads the month again on demand after a failure', async () => {
+    const url = '/api/v1/team-months/2026-11';
+    const { queryClient, container } = renderPlanning('/planning?mois=2026-11', {
+      [`GET ${url}`]: { status: 500, body: {} },
+    });
+    const fetchMock = globalThis.fetch as jest.Mock;
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(copy.planning.loadError);
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+    await expectNoAxeViolations(container);
+    await userEvent.setup().click(screen.getByRole('button', { name: copy.states.retry }));
+
+    await waitFor(() => expect(fetchMock.mock.calls.filter(([u]) => u === url)).toHaveLength(2));
+  });
+
+  it('announces the loading as one busy region', async () => {
+    renderPlanning('/planning?mois=2026-11');
+    const answer = globalThis.fetch;
+    globalThis.fetch = (input, init) =>
+      typeof input === 'string' && input.includes('/team-months/')
+        ? new Promise<Response>(() => undefined)
+        : answer(input, init);
+
+    renderApp('/planning?mois=2026-11');
+
+    const label = await screen.findByText(copy.planning.loading);
+    expect(label.closest('[aria-busy="true"]')).not.toBeNull();
+  });
+
+  it('shows an empty state when nobody is absent, and has no accessibility violation', async () => {
+    const { queryClient, container } = renderPlanning('/planning?mois=2026-11&absents=1', {
+      'GET /api/v1/team-months/2026-11': {
+        status: 200,
+        body: teamMonth({ absentTodayUserIds: [] }),
+      },
+    });
+
+    const message = await screen.findByText(copy.planning.nobodyAbsent);
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+
+    expect(message.closest('div')).toHaveClass('border-dashed');
+    await expectNoAxeViolations(container);
+  });
+
+  it('has no accessibility violation once loaded', async () => {
+    const { queryClient, container } = renderPlanning('/planning?mois=2026-11');
+
+    await table();
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+
+    await expectNoAxeViolations(container);
   });
 });

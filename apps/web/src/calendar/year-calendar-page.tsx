@@ -23,7 +23,10 @@ import { NotFoundPage } from '../not-found/not-found-page';
 import { useSession } from '../session/session-queries';
 import { Button } from '../ui/button';
 import { Dialog } from '../ui/dialog';
+import { ErrorState } from '../ui/error-state';
+import { LoadingRegion } from '../ui/skeleton';
 import { useSettings } from '../settings/settings-queries';
+import { CalendarSkeleton } from './calendar-skeleton';
 import { calendarPath, useYearCalendar } from './calendar-queries';
 import { halfKey, MonthCard, type HalfAction } from './month-card';
 import { UsageSummaryPanel } from './usage-summary-panel';
@@ -66,7 +69,13 @@ export function YearCalendarPage() {
 // Only here is the browser date read: the period comes from the URL otherwise.
 function DefaultPeriod({ render }: { render: (startYear: number) => ReactNode }) {
   const settings = useSettings();
-  if (!settings.data) return <p className="text-sm text-zinc-500">{copy.calendar.loading}</p>;
+  if (!settings.data) {
+    return (
+      <LoadingRegion label={copy.calendar.loading}>
+        <CalendarSkeleton />
+      </LoadingRegion>
+    );
+  }
   return render(
     periodStartYearContaining(toWorkDate(new Date(), APP_TIME_ZONE), settings.data.yearStart),
   );
@@ -150,8 +159,8 @@ function YearCalendarView({
   const goTo = (year: number) => void navigate(calendarPath(pathUserId, year));
 
   return (
-    <section className="space-y-4">
-      <h1 className="text-xl font-semibold tracking-tight">
+    <section className="space-y-6">
+      <h1 className="text-xl font-semibold tracking-tight text-balance">
         {data && ownerId !== viewerId
           ? `${copy.calendar.titleOf} ${data.user.firstName} ${data.user.lastName}`
           : copy.calendar.title}
@@ -196,12 +205,15 @@ function YearCalendarView({
           </Button>
         ) : null}
       </div>
-      {calendar.isError ? (
-        <p role="alert" className="rounded-control bg-rose-50 px-3 py-2 text-sm text-rose-800">
-          {copy.calendar.loadError}
-        </p>
+      {/* A failed background refresh keeps the calendar on screen. */}
+      {calendar.isError && !data ? (
+        <ErrorState message={copy.calendar.loadError} onRetry={() => void calendar.refetch()} />
       ) : null}
-      {calendar.isPending ? <p className="text-sm text-zinc-500">{copy.calendar.loading}</p> : null}
+      {calendar.isPending ? (
+        <LoadingRegion label={copy.calendar.loading}>
+          <CalendarSkeleton />
+        </LoadingRegion>
+      ) : null}
       {data ? (
         <div className="grid gap-4 motion-safe:animate-[week-in_200ms_ease-out] lg:grid-cols-[1fr_16rem]">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
