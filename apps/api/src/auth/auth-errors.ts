@@ -9,7 +9,7 @@ import {
 
 export class InvalidCredentialsError extends UnauthorizedError {
   constructor() {
-    super('INVALID_CREDENTIALS', 'Email ou mot de passe incorrect.');
+    super('INVALID_CREDENTIALS', 'E-mail ou mot de passe incorrect.');
   }
 }
 
