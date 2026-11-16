@@ -1,11 +1,12 @@
 import { toWorkDate, type DayTypeView, type LeaveRequestView } from '@work-planner/domain';
-import { Inbox } from 'lucide-react';
+import { CalendarPlus, Inbox } from 'lucide-react';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { bannerMessageFor } from '../api/form-errors';
 import { APP_TIME_ZONE } from '../clock/clock-time';
 import { copy } from '../copy';
-import { ErrorBanner, fieldErrorsOf } from '../directory/manage-user-dialog';
+import { fieldErrorsOf } from '../directory/manage-user-dialog';
+import { ErrorBanner } from '../ui/error-banner';
 import { useSession } from '../session/session-queries';
 import { Button } from '../ui/button';
 import { EmptyState } from '../ui/empty-state';
@@ -134,7 +135,11 @@ function MineTab({ dayTypes }: { dayTypes: readonly DayTypeView[] }) {
   const requests = useOwnLeaveRequests();
   if (requests.isError && !requests.data) {
     return (
-      <ErrorState message={copy.leaveRequests.loadError} onRetry={() => void requests.refetch()} />
+      <ErrorState
+        message={copy.leaveRequests.loadError}
+        onRetry={() => void requests.refetch()}
+        isRetrying={requests.isFetching}
+      />
     );
   }
   if (requests.isPending) return <RequestsLoading />;
@@ -154,7 +159,11 @@ function ToReviewTab({ dayTypes }: { dayTypes: readonly DayTypeView[] }) {
   const inbox = useLeaveInbox(true);
   if (inbox.isError && !inbox.data) {
     return (
-      <ErrorState message={copy.leaveRequests.loadError} onRetry={() => void inbox.refetch()} />
+      <ErrorState
+        message={copy.leaveRequests.loadError}
+        onRetry={() => void inbox.refetch()}
+        isRetrying={inbox.isFetching}
+      />
     );
   }
   if (inbox.isPending) return <RequestsLoading />;
@@ -174,7 +183,7 @@ function ToReviewTab({ dayTypes }: { dayTypes: readonly DayTypeView[] }) {
       </ul>
       {recent.length > 0 ? (
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-zinc-700">{copy.leaveRequests.recentTitle}</h2>
+          <h2 className="text-sm font-semibold text-zinc-900">{copy.leaveRequests.recentTitle}</h2>
           <ul className="space-y-3">
             {recent.map((request) => (
               <LeaveRequestCard key={request.id} request={request} dayTypes={dayTypes} showPerson>
@@ -211,7 +220,7 @@ export function LeaveRequestsPage() {
           {copy.leaveRequests.title}
         </h1>
         <Button onClick={() => setRequestDate(toWorkDate(new Date(), APP_TIME_ZONE))}>
-          {copy.leave.requestButton}
+          <CalendarPlus size={16} aria-hidden /> {copy.leave.requestButton}
         </Button>
       </div>
       <div role="tablist" className="inline-flex gap-1 rounded-card bg-zinc-100 p-1">

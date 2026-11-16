@@ -14,6 +14,7 @@ import { bannerMessageFor } from '../api/form-errors';
 import { APP_TIME_ZONE, formatLongDate } from '../clock/clock-time';
 import { copy } from '../copy';
 import { Button } from '../ui/button';
+import { ErrorBanner } from '../ui/error-banner';
 import { Dialog } from '../ui/dialog';
 import { useFocusFirstInvalid } from '../ui/field-error';
 import { useCreateClockCorrection } from './correction-queries';
@@ -191,11 +192,7 @@ export function CorrectionDialog({
             className="w-full rounded-control border border-line px-3 py-2 text-sm"
           />
         </label>
-        {bannerMessage ? (
-          <p role="alert" className="rounded-control bg-rose-50 px-3 py-2 text-sm text-rose-800">
-            {bannerMessage}
-          </p>
-        ) : null}
+        <ErrorBanner message={bannerMessage} />
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={onClose}>
             {copy.corrections.cancel}

@@ -5,13 +5,15 @@ import {
   type LeaveRequestView,
   type UserSummary,
 } from '@work-planner/domain';
-import { useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { bannerMessageFor } from '../api/form-errors';
 import { dayLabel } from '../clock/clock-time';
 import { copy } from '../copy';
-import { ErrorBanner, fieldErrorsOf } from '../directory/manage-user-dialog';
+import { fieldErrorsOf } from '../directory/manage-user-dialog';
+import { ErrorBanner } from '../ui/error-banner';
 import { usePublicHolidays } from '../settings/settings-queries';
 import { Button } from '../ui/button';
+import { StatusMessage } from '../ui/status-message';
 import { Dialog } from '../ui/dialog';
 import { Field } from '../ui/field';
 import { useFocusFirstInvalid } from '../ui/field-error';
@@ -58,6 +60,7 @@ export function LeaveRequestDialog({
   onClose: () => void;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
   const dayTypes = useDayTypes();
   const createOwn = useCreateLeaveRequest();
   // Both hooks run (rules of hooks); the declare one stays idle without a target.
@@ -97,6 +100,10 @@ export function LeaveRequestDialog({
     ...(typeError ? { dayTypeCode: typeError } : {}),
   };
 
+  // The focused submit button leaves with the success: the Close button takes the focus over.
+  useEffect(() => {
+    if (create.isSuccess) closeRef.current?.focus();
+  }, [create.isSuccess]);
   useFocusFirstInvalid(formRef, create.error);
   useFocusFirstInvalid(formRef, failedChecks);
 
@@ -232,16 +239,12 @@ export function LeaveRequestDialog({
             isEarlyDeparture ? EARLY_DEPARTURE_RENDERED_FIELDS : RENDERED_FIELDS,
           )}
         />
-        {create.data ? (
-          <p
-            role="status"
-            className="rounded-control bg-emerald-50 px-3 py-2 text-sm text-emerald-800"
-          >
-            {outcomeMessage(create.data, targetUser !== undefined)}
-          </p>
-        ) : null}
+        <StatusMessage
+          message={create.data ? outcomeMessage(create.data, targetUser !== undefined) : null}
+          tone="success"
+        />
         <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={onClose}>
+          <Button ref={closeRef} variant="secondary" onClick={onClose}>
             {create.data ? copy.leave.close : copy.leave.cancel}
           </Button>
           {create.data ? null : (

@@ -8,6 +8,7 @@ import { ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
 import { useState } from 'react';
 import { copy } from '../copy';
 import { Button } from '../ui/button';
+import { StatusMessage } from '../ui/status-message';
 import { CounterResetBatchDialog } from './counter-reset-batch-dialog';
 
 const monthTitle = new Intl.DateTimeFormat('fr-FR', {
@@ -111,11 +112,14 @@ export function PlanningFilterBar({
           {copy.planning.resetButton}
         </Button>
       ) : null}
-      {doneCount === null ? null : (
-        <p role="status" className="basis-full text-sm text-emerald-800">
-          {`${doneCount} ${doneCount === 1 ? copy.planning.counterSingular : copy.planning.counterPlural} ${copy.planning.resetDone}`}
-        </p>
-      )}
+      <StatusMessage
+        message={
+          doneCount === null
+            ? null
+            : `${doneCount} ${doneCount === 1 ? copy.planning.counterSingular : copy.planning.counterPlural} ${copy.planning.resetDone}`
+        }
+        tone="success"
+      />
       {isResetOpen && teamMonth ? (
         <CounterResetBatchDialog
           teamMonth={teamMonth}

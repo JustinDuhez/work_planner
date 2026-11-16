@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Inbox } from 'lucide-react';
-import { useState } from 'react';
+import { StrictMode, useState } from 'react';
 import { expectNoAxeViolations } from '../test/axe';
 import { Dialog } from './dialog';
 import { EmptyState } from './empty-state';
@@ -20,6 +20,21 @@ describe('shared states', () => {
     expect(screen.getByText('Chargement de la semaine…')).toBeInTheDocument();
     expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
     await expectNoAxeViolations(container);
+  });
+
+  it('shows a busy retry button that keeps the focus and ignores clicks while retrying', async () => {
+    const retry = jest.fn();
+    render(<ErrorState message="Impossible de charger." onRetry={retry} isRetrying />);
+    const button = screen.getByRole('button', { name: 'Réessayer' });
+
+    button.focus();
+    await userEvent.setup().click(button);
+
+    expect(button).toHaveAttribute('aria-disabled', 'true');
+    expect(button).toHaveAttribute('aria-busy', 'true');
+    expect(button).not.toBeDisabled();
+    expect(button).toHaveFocus();
+    expect(retry).not.toHaveBeenCalled();
   });
 
   it('offers to try again after an error', async () => {
@@ -97,6 +112,33 @@ describe('Dialog', () => {
     fireEvent(dialog, new Event('close'));
 
     expect(opener).toHaveFocus();
+  });
+
+  it('gives focus back to its opener under StrictMode, where effects run twice', async () => {
+    const user = userEvent.setup();
+    // A real browser moves focus into the modal and ignores focus() on the inert page behind it.
+    const showModal = jest
+      .spyOn(HTMLDialogElement.prototype, 'showModal')
+      .mockImplementation(function showModalWithFocus(this: HTMLDialogElement) {
+        this.open = true;
+        this.querySelector('button')?.focus();
+      });
+    render(
+      <StrictMode>
+        <DialogHarness />
+      </StrictMode>,
+    );
+    const opener = screen.getByRole('button', { name: 'Ouvrir' });
+    const focusOpener = opener.focus.bind(opener);
+    opener.focus = () => {
+      if (!document.querySelector('dialog[open]')) focusOpener();
+    };
+
+    await user.click(opener);
+    await user.click(screen.getByRole('button', { name: 'Fermer' }));
+
+    expect(opener).toHaveFocus();
+    showModal.mockRestore();
   });
 
   it('has no accessibility violations when open', async () => {

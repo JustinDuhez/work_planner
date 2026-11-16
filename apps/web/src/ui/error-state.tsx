@@ -2,7 +2,15 @@ import { CircleAlert, RotateCw } from 'lucide-react';
 import { copy } from '../copy';
 import { Button } from './button';
 
-export function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+export function ErrorState({
+  message,
+  onRetry,
+  isRetrying = false,
+}: {
+  message: string;
+  onRetry: () => void;
+  isRetrying?: boolean;
+}) {
   return (
     <div
       role="alert"
@@ -10,7 +18,7 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry: () 
     >
       <CircleAlert size={20} aria-hidden className="text-rose-600" />
       <p className="text-sm text-zinc-700">{message}</p>
-      <Button variant="secondary" onClick={onRetry}>
+      <Button variant="secondary" isBusy={isRetrying} onClick={isRetrying ? undefined : onRetry}>
         <RotateCw size={16} aria-hidden /> {copy.states.retry}
       </Button>
     </div>

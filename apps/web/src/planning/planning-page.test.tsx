@@ -50,6 +50,14 @@ afterEach(() => {
   globalThis.fetch = realFetch;
 });
 
+// The team group headings are row headers too: only the person rows (scope="row") are names.
+function personNames(grid: HTMLElement) {
+  return within(grid)
+    .getAllByRole('rowheader')
+    .filter((cell) => cell.getAttribute('scope') === 'row')
+    .map((cell) => cell.textContent);
+}
+
 describe('PlanningPage', () => {
   it("starts on the viewer's team, manager first, with week headers and today", async () => {
     renderPlanning('/planning?mois=2026-11');
@@ -61,16 +69,14 @@ describe('PlanningPage', () => {
       within(grid).getByRole('rowheader', { name: /Sophie Dubois.*Responsable/ }),
     ).toBeInTheDocument();
     expect(within(grid).queryByText('Claire Martin')).not.toBeInTheDocument();
-    expect(
-      within(grid)
-        .getAllByRole('rowheader')
-        .map((cell) => cell.textContent),
-    ).toEqual([
+    expect(personNames(grid)).toEqual([
       expect.stringContaining('Sophie Dubois'),
       expect.stringContaining('Hugo Laurent'),
       expect.stringContaining('Léa Moreau'),
     ]);
-    expect(within(grid).getByRole('columnheader', { current: 'date' })).toHaveTextContent('13');
+    const todayHeader = within(grid).getByRole('columnheader', { current: 'date' });
+    expect(todayHeader).toHaveTextContent('13');
+    expect(todayHeader).toHaveTextContent(copy.calendar.today);
   });
 
   it('labels absences and holidays in text and shows balances', async () => {
@@ -107,11 +113,7 @@ describe('PlanningPage', () => {
     await user.click(await screen.findByRole('checkbox', { name: copy.planning.absentToday }));
 
     const grid = await table();
-    expect(
-      within(grid)
-        .getAllByRole('rowheader')
-        .map((cell) => cell.textContent),
-    ).toEqual([expect.stringContaining('Léa Moreau')]);
+    expect(personNames(grid)).toEqual([expect.stringContaining('Léa Moreau')]);
     expect(screen.getByText('1 personne')).toBeInTheDocument();
   });
 
@@ -140,11 +142,7 @@ describe('PlanningPage', () => {
     });
 
     const grid = await screen.findByRole('table', { name: /décembre 2026/ });
-    expect(
-      within(grid)
-        .getAllByRole('rowheader')
-        .map((cell) => cell.textContent),
-    ).toEqual([expect.stringContaining('Léa Moreau')]);
+    expect(personNames(grid)).toEqual([expect.stringContaining('Léa Moreau')]);
   });
 
   it('shows a parent team together with its sub-teams, counting each person once', async () => {

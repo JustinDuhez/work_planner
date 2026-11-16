@@ -9,14 +9,14 @@ import {
   type CalendarHalfDay,
   type Half,
 } from '@work-planner/domain';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useMemo, useState, type ReactNode } from 'react';
+import { CalendarPlus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { bannerMessageFor } from '../api/form-errors';
 import { APP_TIME_ZONE } from '../clock/clock-time';
 import { PersonPicker } from '../clock/person-picker';
 import { copy } from '../copy';
-import { ErrorBanner } from '../directory/manage-user-dialog';
+import { ErrorBanner } from '../ui/error-banner';
 import { LeaveRequestDialog } from '../leave/leave-request-dialog';
 import { useCancelLeaveRequest, useDayTypes } from '../leave/leave-queries';
 import { NotFoundPage } from '../not-found/not-found-page';
@@ -54,30 +54,51 @@ export function YearCalendarPage() {
   const requested = Number(searchParams.get('periode'));
   const hasRequestedYear =
     Number.isInteger(requested) && requested >= HOLIDAY_YEAR_MIN && requested <= HOLIDAY_YEAR_MAX;
-  const view = (startYear: number) => (
-    <YearCalendarView
-      key={`${pathUserId ?? 'me'}-${startYear}`}
+  return (
+    <YearCalendarPeriod
+      key={pathUserId ?? 'me'}
+      requestedYear={hasRequestedYear ? requested : undefined}
       ownerId={pathUserId ?? session.user.id}
       pathUserId={pathUserId}
       viewerId={session.user.id}
-      startYear={startYear}
     />
   );
-  return hasRequestedYear ? view(requested) : <DefaultPeriod render={view} />;
 }
 
+// One view per owner, always at the same tree position: moving between periods (or from the
+// default period to a URL one) keeps the sticky bar mounted, so ‹ › keep their keyboard focus.
 // Only here is the browser date read: the period comes from the URL otherwise.
-function DefaultPeriod({ render }: { render: (startYear: number) => ReactNode }) {
-  const settings = useSettings();
-  if (!settings.data) {
+function YearCalendarPeriod({
+  requestedYear,
+  ownerId,
+  pathUserId,
+  viewerId,
+}: {
+  requestedYear: number | undefined;
+  ownerId: number;
+  pathUserId: number | undefined;
+  viewerId: number;
+}) {
+  const settings = useSettings({ isEnabled: requestedYear === undefined });
+  const startYear =
+    requestedYear ??
+    (settings.data
+      ? periodStartYearContaining(toWorkDate(new Date(), APP_TIME_ZONE), settings.data.yearStart)
+      : undefined);
+  if (startYear === undefined) {
     return (
       <LoadingRegion label={copy.calendar.loading}>
         <CalendarSkeleton />
       </LoadingRegion>
     );
   }
-  return render(
-    periodStartYearContaining(toWorkDate(new Date(), APP_TIME_ZONE), settings.data.yearStart),
+  return (
+    <YearCalendarView
+      ownerId={ownerId}
+      pathUserId={pathUserId}
+      viewerId={viewerId}
+      startYear={startYear}
+    />
   );
 }
 
@@ -196,18 +217,23 @@ function YearCalendarView({
         />
         {data && isOwn ? (
           <Button onClick={() => setDialog({ kind: 'request', date: data.today })}>
-            {copy.leave.requestButton}
+            <CalendarPlus size={16} aria-hidden /> {copy.leave.requestButton}
           </Button>
         ) : null}
         {data && canDeclare ? (
           <Button onClick={() => setDialog({ kind: 'declare', date: data.today })}>
+            <CalendarPlus size={16} aria-hidden />{' '}
             {`${copy.calendar.declareFor} ${data.user.firstName}`}
           </Button>
         ) : null}
       </div>
       {/* A failed background refresh keeps the calendar on screen. */}
       {calendar.isError && !data ? (
-        <ErrorState message={copy.calendar.loadError} onRetry={() => void calendar.refetch()} />
+        <ErrorState
+          message={copy.calendar.loadError}
+          onRetry={() => void calendar.refetch()}
+          isRetrying={calendar.isFetching}
+        />
       ) : null}
       {calendar.isPending ? (
         <LoadingRegion label={copy.calendar.loading}>

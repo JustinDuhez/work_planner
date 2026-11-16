@@ -4,6 +4,7 @@ import { ApiError } from '../api/api-client';
 import { bannerMessageFor } from '../api/form-errors';
 import { copy } from '../copy';
 import { Button } from '../ui/button';
+import { ErrorBanner } from '../ui/error-banner';
 import { Dialog } from '../ui/dialog';
 import { Field } from '../ui/field';
 import { useFocusFirstInvalid } from '../ui/field-error';
@@ -108,11 +109,7 @@ export function PeriodDialog({
             />
           )}
         </Field>
-        {bannerMessage ? (
-          <p role="alert" className="rounded-control bg-rose-50 px-3 py-2 text-sm text-rose-800">
-            {bannerMessage}
-          </p>
-        ) : null}
+        <ErrorBanner message={bannerMessage} />
         <div className="flex flex-wrap justify-end gap-2">
           {period ? (
             <Button

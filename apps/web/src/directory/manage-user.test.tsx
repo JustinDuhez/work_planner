@@ -39,10 +39,13 @@ function renderAsViewer(entries: unknown[], extra: Record<string, MockResponse> 
   return { fetchMock, user: userEvent.setup() };
 }
 
+// The row button and the dialog are named after the person, not only after the action.
+const MANAGE_BUTTON = new RegExp(`^${copy.directory.manage} `);
+
 async function openManage(user: ReturnType<typeof userEvent.setup>, name: RegExp) {
   const row = await screen.findByRole('row', { name });
-  await user.click(within(row).getByRole('button', { name: copy.directory.manage }));
-  return screen.getByRole('dialog', { name: copy.manageUser.title });
+  await user.click(within(row).getByRole('button', { name: MANAGE_BUTTON }));
+  return screen.getByRole('dialog', { name });
 }
 
 function findCall(
@@ -76,6 +79,9 @@ describe('managing users', () => {
     const email = within(dialog).getByLabelText(copy.manageUser.email);
     await user.clear(email);
     await user.type(email, 'hugo.l@example.com');
+    const identity = within(dialog).getByRole('button', { name: copy.manageUser.saveIdentity });
+    // The live region is mounted before the outcome so that the outcome is announced.
+    expect(within(identity.parentElement as HTMLElement).getByRole('status')).toBeEmptyDOMElement();
     await user.click(within(dialog).getByRole('button', { name: copy.manageUser.saveIdentity }));
 
     expect(await sentBody(fetchMock, 'PATCH', '/api/v1/users/9')).toEqual({
@@ -91,9 +97,9 @@ describe('managing users', () => {
   it('gives focus back to the manage button when the dialog is closed', async () => {
     const { user } = renderAsViewer([HUGO]);
     const row = await screen.findByRole('row', { name: /Hugo Laurent/ });
-    const opener = within(row).getByRole('button', { name: copy.directory.manage });
+    const opener = within(row).getByRole('button', { name: 'Gérer Hugo Laurent' });
     await user.click(opener);
-    const dialog = screen.getByRole('dialog', { name: copy.manageUser.title });
+    const dialog = screen.getByRole('dialog', { name: 'Hugo Laurent' });
 
     await user.click(within(dialog).getByRole('button', { name: copy.manageUser.close }));
 
@@ -226,7 +232,7 @@ describe('managing users', () => {
 
     expect(await screen.findByRole('row', { name: /Hugo Laurent/ })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: copy.directory.newUser })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: copy.directory.manage })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: MANAGE_BUTTON })).not.toBeInTheDocument();
   });
 
   it('does not reopen a dialog for someone who left the list when Archivés is ticked', async () => {

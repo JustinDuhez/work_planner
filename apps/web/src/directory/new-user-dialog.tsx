@@ -5,9 +5,10 @@ import { Button } from '../ui/button';
 import { Dialog } from '../ui/dialog';
 import { Field } from '../ui/field';
 import { useFocusFirstInvalid } from '../ui/field-error';
+import { ErrorBanner } from '../ui/error-banner';
 import { TextField } from '../ui/text-field';
 import { parseDuration } from './duration';
-import { ErrorBanner, fieldErrorsOf } from './manage-user-dialog';
+import { fieldErrorsOf } from './manage-user-dialog';
 import { useCreateUser } from './user-mutations';
 
 const DEFAULT_DURATION = '7:00';

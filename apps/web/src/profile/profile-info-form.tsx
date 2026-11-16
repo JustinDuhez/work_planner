@@ -7,6 +7,7 @@ import { copy } from '../copy';
 import { roleLabel } from '../session/role-label';
 import { SESSION_QUERY_KEY } from '../session/session-queries';
 import { Button } from '../ui/button';
+import { StatusMessage } from '../ui/status-message';
 import { TextField } from '../ui/text-field';
 
 export function ProfileInfoForm({ user }: { user: CurrentUser }) {
@@ -35,7 +36,7 @@ export function ProfileInfoForm({ user }: { user: CurrentUser }) {
       aria-labelledby="profile-info-title"
       className="rounded-card border border-line bg-white p-6 shadow-card"
     >
-      <h2 id="profile-info-title" className="text-base font-semibold tracking-tight">
+      <h2 id="profile-info-title" className="text-sm font-semibold text-zinc-900">
         {copy.profile.infoTitle}
       </h2>
       <form className="mt-4 space-y-4" onSubmit={handleSubmit} noValidate>
@@ -101,11 +102,7 @@ export function ProfileInfoForm({ user }: { user: CurrentUser }) {
           <Button type="submit" isPending={save.isPending}>
             {copy.profile.saveInfo}
           </Button>
-          {save.isSuccess ? (
-            <p role="status" className="text-sm text-emerald-700">
-              {copy.profile.infoSaved}
-            </p>
-          ) : null}
+          <StatusMessage message={save.isSuccess ? copy.profile.infoSaved : null} tone="success" />
           {bannerMessage !== undefined ? (
             <p role="alert" className="text-sm text-rose-700">
               {bannerMessage}

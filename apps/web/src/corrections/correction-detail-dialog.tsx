@@ -9,6 +9,7 @@ import { bannerMessageFor } from '../api/form-errors';
 import { APP_TIME_ZONE, formatLongDate } from '../clock/clock-time';
 import { copy } from '../copy';
 import { Button } from '../ui/button';
+import { ErrorBanner } from '../ui/error-banner';
 import { Dialog } from '../ui/dialog';
 import { useAnswerClockCorrection, useClockCorrection } from './correction-queries';
 
@@ -78,11 +79,7 @@ export function CorrectionDetailDialog({
       onClose={onClose}
       widthClass="w-[min(36rem,calc(100vw-2rem))]"
     >
-      {correction.isError ? (
-        <p role="alert" className="rounded-control bg-rose-50 px-3 py-2 text-sm text-rose-800">
-          {copy.corrections.loadError}
-        </p>
-      ) : null}
+      <ErrorBanner message={correction.isError ? copy.corrections.loadError : undefined} />
       {view ? (
         <div className="space-y-3">
           <p className="text-sm text-zinc-600">
@@ -120,11 +117,7 @@ export function CorrectionDetailDialog({
               />
             </label>
           ) : null}
-          {bannerMessage ? (
-            <p role="alert" className="rounded-control bg-rose-50 px-3 py-2 text-sm text-rose-800">
-              {bannerMessage}
-            </p>
-          ) : null}
+          <ErrorBanner message={bannerMessage} />
         </div>
       ) : null}
       <div className="mt-4 flex flex-wrap justify-end gap-2">

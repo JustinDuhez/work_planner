@@ -55,6 +55,9 @@ describe('ProfilePage', () => {
 
     await user.clear(firstName);
     await user.type(firstName, 'Lea');
+    // The live region is mounted before the outcome so that the outcome is announced.
+    const details = screen.getByRole('region', { name: copy.profile.infoTitle });
+    expect(within(details).getByRole('status')).toBeEmptyDOMElement();
     await user.click(screen.getByRole('button', { name: copy.profile.saveInfo }));
 
     expect(await screen.findByText(copy.profile.infoSaved)).toBeInTheDocument();
@@ -144,6 +147,8 @@ describe('ProfilePage', () => {
     );
     await user.type(screen.getByLabelText(copy.password.new), 'a brand new passphrase');
     await user.type(screen.getByLabelText(copy.password.confirm), 'a brand new passphrase');
+    const section = screen.getByRole('region', { name: copy.password.title });
+    expect(within(section).getByRole('status')).toBeEmptyDOMElement();
     await user.click(screen.getByRole('button', { name: copy.password.submit }));
 
     expect(await screen.findByText(copy.password.changed)).toBeInTheDocument();

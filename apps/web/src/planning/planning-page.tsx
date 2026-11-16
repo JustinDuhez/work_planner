@@ -48,7 +48,8 @@ export function PlanningPage() {
   const yearMonth = parsedMonth.success
     ? parsedMonth.data
     : toWorkDate(new Date(), APP_TIME_ZONE).slice(0, 7);
-  const { data, isPending, isError, isPlaceholderData, refetch } = useTeamMonth(yearMonth);
+  const { data, isPending, isError, isPlaceholderData, isFetching, refetch } =
+    useTeamMonth(yearMonth);
   if (!session) return null;
 
   const isAbsentOnly = searchParams.get('absents') === '1';
@@ -95,7 +96,11 @@ export function PlanningPage() {
       />
       <div key={yearMonth} className="motion-safe:animate-[week-in_200ms_ease-out]">
         {isError && !data ? (
-          <ErrorState message={copy.planning.loadError} onRetry={() => void refetch()} />
+          <ErrorState
+            message={copy.planning.loadError}
+            onRetry={() => void refetch()}
+            isRetrying={isFetching}
+          />
         ) : null}
         {(isPending || isPlaceholderData) && !isError ? (
           <LoadingRegion label={copy.planning.loading}>

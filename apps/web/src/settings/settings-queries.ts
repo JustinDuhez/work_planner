@@ -55,9 +55,10 @@ export function useImportPublicHolidays() {
   });
 }
 
-export function useSettings() {
+export function useSettings({ isEnabled = true } = {}) {
   return useQuery({
     queryKey: SETTINGS_QUERY_KEY,
+    enabled: isEnabled,
     queryFn: () => apiGet('/api/v1/settings', settingsSchema),
   });
 }

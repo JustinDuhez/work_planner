@@ -64,6 +64,8 @@ describe('AppShell', () => {
 
     expect(router.state.location.pathname).toBe('/planning');
     expect(screen.queryByRole('navigation', { name: 'Menu' })).not.toBeInTheDocument();
+    // The chosen link leaves with the panel: screen reader users start on the new page.
+    expect(screen.getByRole('main')).toHaveFocus();
   });
 
   it('has no detectable accessibility problems', async () => {

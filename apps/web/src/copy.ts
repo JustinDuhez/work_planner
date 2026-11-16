@@ -118,7 +118,6 @@ export const copy = {
     loadError: "Impossible de charger l'annuaire.",
   },
   manageUser: {
-    title: 'Gérer la personne',
     identityTitle: 'Identité',
     firstName: 'Prénom',
     lastName: 'Nom',

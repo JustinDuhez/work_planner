@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 
 const DEFAULT_WIDTH = 'w-[min(24rem,calc(100vw-2rem))]';
 
@@ -16,14 +16,18 @@ export function Dialog({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
 
+  // The opener gets focus back when the dialog leaves (keyboard users keep their place). Read at
+  // render: under StrictMode the effect runs a second time with focus already inside the dialog.
+  const [opener] = useState(() =>
+    document.activeElement instanceof HTMLElement ? document.activeElement : null,
+  );
+
   useEffect(() => {
-    // The opener gets focus back when the dialog leaves (keyboard users keep their place).
-    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     // A parent re-render must never call showModal twice (it throws on an open dialog).
     const dialog = dialogRef.current;
     if (dialog && !dialog.open) dialog.showModal();
     return () => opener?.focus();
-  }, []);
+  }, [opener]);
 
   return (
     <dialog

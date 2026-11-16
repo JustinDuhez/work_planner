@@ -97,7 +97,11 @@ export function TeamsPage({
         {toolbar}
       </div>
       {teams.isError && !teams.data ? (
-        <ErrorState message={copy.teams.loadError} onRetry={() => void teams.refetch()} />
+        <ErrorState
+          message={copy.teams.loadError}
+          onRetry={() => void teams.refetch()}
+          isRetrying={teams.isFetching}
+        />
       ) : null}
       {teams.isPending && !teams.isError ? (
         <LoadingRegion label={copy.teams.loading}>

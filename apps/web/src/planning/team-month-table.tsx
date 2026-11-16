@@ -63,7 +63,7 @@ function PersonRow({
       </th>
       {dates.map((date) => (
         <td key={date} className={`p-0.5 ${date === today ? 'bg-primary-50' : ''}`}>
-          <div className="w-5 overflow-hidden rounded-inner-sm border border-line">
+          <div className="w-5 overflow-hidden rounded-inner-md border border-line">
             {(['am', 'pm'] as const).map((half) => (
               <HalfCell
                 key={half}
@@ -123,6 +123,9 @@ export function TeamMonthTable({
                 aria-current={date === teamMonth.today ? 'date' : undefined}
                 className={`w-6 px-0.5 text-[10px] font-normal text-zinc-600 ${date === teamMonth.today ? 'bg-primary-50 font-semibold text-primary-700' : ''}`}
               >
+                {date === teamMonth.today ? (
+                  <span className="sr-only">{copy.calendar.today}</span>
+                ) : null}
                 <span aria-hidden>{weekdayInitial.format(atNoon(date))}</span>
                 <span className="block">{Number(date.slice(8))}</span>
               </th>
@@ -135,14 +138,15 @@ export function TeamMonthTable({
             aria-labelledby={`team-group-${section.teamId ?? 'none'}`}
           >
             <tr>
-              <td
+              <th
                 id={`team-group-${section.teamId ?? 'none'}`}
+                scope="rowgroup"
                 colSpan={dates.length + 1}
                 className="bg-zinc-50 px-3 py-1 text-left text-xs font-semibold text-zinc-700"
               >
                 {/* Sticky on the text, not the full-width cell: the title stays in view on scroll. */}
                 <span className="sticky left-3">{section.title}</span>
-              </td>
+              </th>
             </tr>
             {section.rows.flatMap((row) => {
               const person = personById.get(row.personId);

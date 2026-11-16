@@ -87,7 +87,11 @@ export function DirectoryPage({
         {toolbar}
       </div>
       {directory.isError && !directory.data ? (
-        <ErrorState message={copy.directory.loadError} onRetry={() => void directory.refetch()} />
+        <ErrorState
+          message={copy.directory.loadError}
+          onRetry={() => void directory.refetch()}
+          isRetrying={directory.isFetching}
+        />
       ) : null}
       {directory.isPending && !directory.isError ? (
         <LoadingRegion label={copy.directory.loading}>

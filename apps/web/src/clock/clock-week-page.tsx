@@ -1,4 +1,5 @@
 import { datesOfIsoWeek, toWorkDate, type ClockDayView } from '@work-planner/domain';
+import { CalendarPlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router';
 import { copy } from '../copy';
@@ -46,7 +47,7 @@ export function ClockWeekPage() {
   // a keyboard user left on ‹ or ›.
   return (
     <section className="space-y-4">
-      <h1 className="text-xl font-semibold tracking-tight">{copy.clock.title}</h1>
+      <h1 className="text-xl font-semibold tracking-tight text-balance">{copy.clock.title}</h1>
       <WeekHeader isoWeek={isoWeek} pathUserId={pathUserId} viewerId={session.user.id} />
       <ClockWeekView
         key={`${pathUserId ?? 'me'}-${isoWeek}`}
@@ -126,7 +127,11 @@ function ClockWeekView({
     <div className="space-y-4">
       {/* A failed background refresh keeps the week on screen: the next poll or focus recovers. */}
       {week.isError && !week.data ? (
-        <ErrorState message={copy.clock.loadError} onRetry={() => void week.refetch()} />
+        <ErrorState
+          message={copy.clock.loadError}
+          onRetry={() => void week.refetch()}
+          isRetrying={week.isFetching}
+        />
       ) : null}
       {week.isPending ? (
         <LoadingRegion label={copy.clock.loading}>
@@ -181,7 +186,7 @@ function ClockWeekView({
           {isOwnWeek && !heroDay ? (
             <div className="flex justify-end">
               <Button variant="secondary" onClick={() => setLeaveDialogDate(requestDate)}>
-                {copy.leave.requestButton}
+                <CalendarPlus size={16} aria-hidden /> {copy.leave.requestButton}
               </Button>
             </div>
           ) : null}
@@ -200,7 +205,8 @@ function ClockWeekView({
                 actions={
                   <>
                     <HalfDayChips halfDays={day.halfDays} dayTypes={dayTypes.data ?? []} />
-                    {isOwnWeek && canDeclareAbsence(day) ? (
+                    {/* The hero carries today's absence action: one action, one place. */}
+                    {isOwnWeek && day !== heroDay && canDeclareAbsence(day) ? (
                       <button
                         type="button"
                         onClick={() => setLeaveDialogDate(day.date)}

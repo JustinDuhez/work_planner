@@ -220,6 +220,21 @@ describe('LeaveRequestsPage', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('titles a review card with the requester and puts the type under the name', async () => {
+    renderPage('/demandes?onglet=a-valider', {
+      'GET /api/v1/me': { status: 200, body: MANAGER_SESSION },
+      'GET /api/v1/leave-requests?view=to-review': {
+        status: 200,
+        body: { pending: [leaveRequestView({ id: 7 })], recent: [] },
+      },
+    });
+
+    const card = (await within(await screen.findByRole('tabpanel')).findAllByRole('listitem'))[0]!;
+
+    expect(within(card).getByText('Léa Moreau')).toHaveClass('font-medium', 'text-zinc-900');
+    expect(within(card).getByText(/^Congé · /)).not.toHaveClass('font-medium');
+  });
+
   it('shows the rule note held telework carries', async () => {
     const note = 'Il ne resterait que 2,5 jours sur site la semaine du 23 nov.';
     renderPage('/demandes?onglet=a-valider', {

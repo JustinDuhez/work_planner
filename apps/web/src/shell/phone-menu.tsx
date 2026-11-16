@@ -2,7 +2,7 @@ import { Menu, X } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 import { NavLink } from 'react-router';
 import { copy } from '../copy';
-import { NAV_ITEMS } from './nav-items';
+import { MAIN_ID, NAV_ITEMS } from './nav-items';
 
 export function PhoneMenu() {
   const panelId = useId();
@@ -58,6 +58,8 @@ export function PhoneMenu() {
               end={'isEnd' in item}
               onClick={() => {
                 setIsOpen(false);
+                // The clicked link leaves with the panel: start the new page at its main landmark.
+                document.getElementById(MAIN_ID)?.focus();
               }}
               className={({ isActive }) =>
                 `rounded-inner-sm px-3 py-2 text-sm hover:bg-zinc-100 ${isActive ? 'bg-primary-50 font-semibold text-primary-700' : 'text-zinc-700'}`

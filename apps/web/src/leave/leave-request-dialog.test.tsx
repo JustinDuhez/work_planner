@@ -143,11 +143,14 @@ describe('LeaveRequestDialog', () => {
     });
 
     await chooseType(user, dialog, 'telework');
+    // The live region is mounted before the outcome so that the outcome is announced.
+    expect(within(dialog).getByRole('status')).toBeEmptyDOMElement();
     await user.click(within(dialog).getByRole('button', { name: copy.leave.submit }));
 
-    expect(await within(dialog).findByRole('status')).toHaveTextContent(
-      copy.leave.teleworkApproved,
-    );
+    expect(await within(dialog).findByText(copy.leave.teleworkApproved)).toBeInTheDocument();
+    expect(within(dialog).getByRole('status')).toHaveTextContent(copy.leave.teleworkApproved);
+    // The submit button leaves with the success: focus moves to the Close button.
+    expect(within(dialog).getByRole('button', { name: copy.leave.close })).toHaveFocus();
   });
 
   it('explains telework held by the 3-day rule', async () => {

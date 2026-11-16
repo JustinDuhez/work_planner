@@ -1,5 +1,6 @@
 import { copy } from '../copy';
 import { Button } from '../ui/button';
+import { ErrorBanner } from '../ui/error-banner';
 import { Dialog } from '../ui/dialog';
 import { formatDateTime, formatLongDate } from './clock-time';
 import { useCounterResets } from './counter-queries';
@@ -19,11 +20,7 @@ export function CounterResetHistoryDialog({
       onClose={onClose}
       widthClass="w-[min(28rem,calc(100vw-2rem))]"
     >
-      {resets.isError ? (
-        <p role="alert" className="rounded-control bg-rose-50 px-3 py-2 text-sm text-rose-800">
-          {copy.counters.loadError}
-        </p>
-      ) : null}
+      <ErrorBanner message={resets.isError ? copy.counters.loadError : undefined} />
       {resets.data?.length === 0 ? (
         <p className="text-sm text-zinc-500">{copy.counters.historyEmpty}</p>
       ) : null}

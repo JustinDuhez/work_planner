@@ -267,6 +267,18 @@ describe('ClockWeekPage', () => {
     });
   });
 
+  it("leaves today's row without its own absence link while the hero offers one", async () => {
+    mockFetchRoutes(signedInHomeRoutes());
+
+    renderApp('/');
+
+    await screen.findByRole('region', { name: copy.clock.todayTitle });
+    const todayRow = screen.getByRole('listitem', { current: 'date' });
+    expect(
+      within(todayRow).queryByRole('button', { name: copy.leave.declareDay }),
+    ).not.toBeInTheDocument();
+  });
+
   it('keeps the week on screen when a background refresh fails', async () => {
     const week = weekFixture({ isoWeek: WEEK });
     mockFetchRoutes(signedInHomeRoutes(week));

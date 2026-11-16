@@ -7,6 +7,7 @@ import { bannerMessageFor } from '../api/form-errors';
 import { copy } from '../copy';
 import { useLogin, useSession } from '../session/session-queries';
 import { Button } from '../ui/button';
+import { ErrorBanner } from '../ui/error-banner';
 import { TextField } from '../ui/text-field';
 
 const HOME_PATH = '/';
@@ -45,18 +46,15 @@ export function LoginPage() {
     <main className="flex min-h-dvh items-center justify-center bg-zinc-50 px-4 py-10 font-sans">
       <section className="w-full max-w-sm rounded-card border border-line bg-white p-6 shadow-card sm:p-8">
         <p className="text-sm font-semibold tracking-tight text-primary-600">{copy.appName}</p>
-        <h1 className="mt-4 text-xl font-semibold tracking-tight text-zinc-900">
+        <h1 className="mt-4 text-xl font-semibold tracking-tight text-balance text-zinc-900">
           {copy.login.title}
         </h1>
         <p className="mt-1 text-sm text-zinc-500">{copy.login.subtitle}</p>
-        {bannerMessage !== undefined ? (
-          <p
-            role="alert"
-            className="mt-4 rounded-control bg-rose-50 px-3 py-2 text-sm text-rose-800"
-          >
-            {bannerMessage}
-          </p>
-        ) : null}
+        {bannerMessage === undefined ? null : (
+          <div className="mt-4">
+            <ErrorBanner message={bannerMessage} />
+          </div>
+        )}
         <form className="mt-6 space-y-4" onSubmit={handleSubmit} noValidate>
           <TextField
             label={copy.login.email}

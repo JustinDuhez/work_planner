@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ReactNode, Ref } from 'react';
 
 const VARIANT_CLASS = {
   primary: 'bg-primary-600 text-white hover:bg-primary-700',
@@ -19,7 +19,12 @@ export interface ButtonProps {
   size?: keyof typeof SIZE_CLASS;
   isPending?: boolean;
   isDisabled?: boolean;
+  // Busy but still focusable (aria-disabled, not disabled): a retry keeps the user's place.
+  isBusy?: boolean;
   describedBy?: string;
+  // Overrides the visible text as the accessible name, to say what the action applies to.
+  label?: string;
+  ref?: Ref<HTMLButtonElement>;
   onClick?: () => void;
 }
 
@@ -30,17 +35,23 @@ export function Button({
   size = 'md',
   isPending = false,
   isDisabled = false,
+  isBusy = false,
   describedBy,
+  label,
+  ref,
   onClick,
 }: ButtonProps) {
   return (
     <button
+      ref={ref}
       type={type}
       onClick={onClick}
       disabled={isPending || isDisabled}
-      aria-busy={isPending}
+      aria-busy={isPending || isBusy}
+      aria-disabled={isBusy || undefined}
       aria-describedby={describedBy}
-      className={`inline-flex items-center justify-center gap-2 rounded-control font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${SIZE_CLASS[size]} ${VARIANT_CLASS[variant]}`}
+      aria-label={label}
+      className={`inline-flex items-center justify-center gap-2 rounded-control font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-50 ${SIZE_CLASS[size]} ${VARIANT_CLASS[variant]}`}
     >
       {children}
     </button>

@@ -44,11 +44,18 @@ export function LeaveRequestCard({
     <li className="space-y-2 rounded-card border border-line bg-white p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
+          {/* A review card is about the person; "Mes demandes" cards are about the absence. */}
           {showPerson ? (
-            <p className="text-xs font-medium text-zinc-500">{`${request.user.firstName} ${request.user.lastName}`}</p>
-          ) : null}
-          <p className="font-medium text-zinc-900">{typeLabel(request, dayTypes)}</p>
-          <p className="text-sm text-zinc-600">{periodText(request)}</p>
+            <>
+              <p className="font-medium text-zinc-900">{`${request.user.firstName} ${request.user.lastName}`}</p>
+              <p className="text-sm text-zinc-600">{`${typeLabel(request, dayTypes)} · ${periodText(request)}`}</p>
+            </>
+          ) : (
+            <>
+              <p className="font-medium text-zinc-900">{typeLabel(request, dayTypes)}</p>
+              <p className="text-sm text-zinc-600">{periodText(request)}</p>
+            </>
+          )}
         </div>
         <span
           className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_CLASS[request.status]}`}

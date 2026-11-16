@@ -10,10 +10,12 @@ import { useSearchParams } from 'react-router';
 import { bannerMessageFor } from '../api/form-errors';
 import { APP_TIME_ZONE, formatLongDate } from '../clock/clock-time';
 import { copy } from '../copy';
-import { ErrorBanner, fieldErrorsOf } from '../directory/manage-user-dialog';
+import { fieldErrorsOf } from '../directory/manage-user-dialog';
+import { ErrorBanner } from '../ui/error-banner';
 import { NotFoundPage } from '../not-found/not-found-page';
 import { useSession } from '../session/session-queries';
 import { Button } from '../ui/button';
+import { StatusMessage } from '../ui/status-message';
 import { ErrorState } from '../ui/error-state';
 import { Field } from '../ui/field';
 import { LoadingRegion, Skeleton } from '../ui/skeleton';
@@ -111,7 +113,7 @@ function HolidaysSection({
   return (
     <section className="space-y-3 rounded-card border border-line bg-white p-6 shadow-card">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-base font-semibold">{copy.settings.holidaysTitle}</h2>
+        <h2 className="text-sm font-semibold text-zinc-900">{copy.settings.holidaysTitle}</h2>
         <div className="flex items-center gap-1">
           <button
             type="button"
@@ -135,7 +137,11 @@ function HolidaysSection({
         </div>
       </div>
       {holidays.isError && !holidays.data ? (
-        <ErrorState message={copy.settings.loadError} onRetry={() => void holidays.refetch()} />
+        <ErrorState
+          message={copy.settings.loadError}
+          onRetry={() => void holidays.refetch()}
+          isRetrying={holidays.isFetching}
+        />
       ) : null}
       {holidays.isPending && !holidays.isError ? (
         <LoadingRegion label={copy.settings.loading}>
@@ -161,11 +167,10 @@ function HolidaysSection({
         >
           {`${copy.settings.importPrefix} ${year}`}
         </Button>
-        {importHolidays.data ? (
-          <p role="status" className="text-sm text-emerald-700">
-            {importedMessage(importHolidays.data.addedCount)}
-          </p>
-        ) : null}
+        <StatusMessage
+          message={importHolidays.data ? importedMessage(importHolidays.data.addedCount) : null}
+          tone="success"
+        />
         <ErrorBanner message={bannerMessageFor(importHolidays.error, [])} />
       </div>
       <form onSubmit={handleAdd} noValidate className="flex flex-wrap items-end gap-3">
@@ -209,7 +214,7 @@ function YearStartSection({ yearStart }: { yearStart: string }) {
 
   return (
     <section className="space-y-3 rounded-card border border-line bg-white p-6 shadow-card">
-      <h2 className="text-base font-semibold">{copy.settings.yearStartTitle}</h2>
+      <h2 className="text-sm font-semibold text-zinc-900">{copy.settings.yearStartTitle}</h2>
       <form onSubmit={handleSubmit} noValidate className="flex flex-wrap items-end gap-3">
         <label className="space-y-1 text-sm font-medium">
           <span>{copy.settings.yearStartDay}</span>
@@ -244,11 +249,7 @@ function YearStartSection({ yearStart }: { yearStart: string }) {
         <Button type="submit" isPending={update.isPending}>
           {copy.settings.saveYearStart}
         </Button>
-        {update.isSuccess ? (
-          <p role="status" className="text-sm text-emerald-700">
-            {copy.settings.saved}
-          </p>
-        ) : null}
+        <StatusMessage message={update.isSuccess ? copy.settings.saved : null} tone="success" />
       </form>
       <p className="text-sm text-zinc-500">{copy.settings.yearStartHint}</p>
       {/* The day list allows 31 for every month: "30 février" is refused with the server's message. */}
@@ -273,7 +274,11 @@ function AdminSettings() {
         onYearChange={(nextYear) => setSearchParams({ [YEAR_PARAM]: String(nextYear) })}
       />
       {settings.isError && !settings.data ? (
-        <ErrorState message={copy.settings.loadError} onRetry={() => void settings.refetch()} />
+        <ErrorState
+          message={copy.settings.loadError}
+          onRetry={() => void settings.refetch()}
+          isRetrying={settings.isFetching}
+        />
       ) : null}
       {settings.isPending && !settings.isError ? (
         <LoadingRegion label={copy.settings.loading}>

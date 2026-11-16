@@ -1,7 +1,7 @@
 import type { TeamView } from '@work-planner/domain';
 import { bannerMessageFor } from '../api/form-errors';
 import { copy } from '../copy';
-import { ErrorBanner } from '../directory/manage-user-dialog';
+import { ErrorBanner } from '../ui/error-banner';
 import { Button } from '../ui/button';
 import { Dialog } from '../ui/dialog';
 import { useDeleteTeam } from './team-mutations';

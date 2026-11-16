@@ -1,6 +1,7 @@
 import { formatLongDate } from '../clock/clock-time';
 import { copy } from '../copy';
 import { Button } from '../ui/button';
+import { ErrorBanner } from '../ui/error-banner';
 import { Dialog } from '../ui/dialog';
 import { useClockCorrections } from './correction-queries';
 
@@ -21,11 +22,7 @@ export function RefusedCorrectionsDialog({
       onClose={onClose}
       widthClass="w-[min(28rem,calc(100vw-2rem))]"
     >
-      {corrections.isError ? (
-        <p role="alert" className="rounded-control bg-rose-50 px-3 py-2 text-sm text-rose-800">
-          {copy.corrections.loadError}
-        </p>
-      ) : null}
+      <ErrorBanner message={corrections.isError ? copy.corrections.loadError : undefined} />
       {corrections.data?.length === 0 ? (
         <p className="text-sm text-zinc-500">{copy.corrections.refusedEmpty}</p>
       ) : null}

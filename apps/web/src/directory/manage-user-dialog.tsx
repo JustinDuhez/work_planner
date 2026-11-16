@@ -11,6 +11,8 @@ import { APP_TIME_ZONE } from '../clock/clock-time';
 import { copy } from '../copy';
 import { useSession } from '../session/session-queries';
 import { Button } from '../ui/button';
+import { ErrorBanner } from '../ui/error-banner';
+import { StatusMessage } from '../ui/status-message';
 import { Dialog } from '../ui/dialog';
 import { Field } from '../ui/field';
 import { useFocusFirstInvalid } from '../ui/field-error';
@@ -25,20 +27,8 @@ export function fieldErrorsOf(error: unknown): Record<string, string> {
   return error instanceof ApiError ? error.fieldErrors : {};
 }
 
-export function ErrorBanner({ message }: { message: string | undefined }) {
-  return message === undefined ? null : (
-    <p role="alert" className="rounded-control bg-rose-50 px-3 py-2 text-sm text-rose-800">
-      {message}
-    </p>
-  );
-}
-
 function SavedStatus({ isShown }: { isShown: boolean }) {
-  return isShown ? (
-    <p role="status" className="text-sm text-emerald-700">
-      {copy.manageUser.saved}
-    </p>
-  ) : null;
+  return <StatusMessage message={isShown ? copy.manageUser.saved : null} tone="success" />;
 }
 
 function IdentitySection({ entry }: { entry: DirectoryEntry }) {
@@ -289,16 +279,13 @@ export function ManageUserDialog({
 
   return (
     <Dialog
-      title={copy.manageUser.title}
+      title={`${entry.firstName} ${entry.lastName}`}
       onClose={onClose}
       widthClass="w-[min(32rem,calc(100vw-2rem))]"
     >
       <div className="space-y-6">
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-sm font-semibold">{`${entry.firstName} ${entry.lastName}`}</p>
-            <p className="text-sm text-zinc-500">{entry.email}</p>
-          </div>
+          <p className="text-sm text-zinc-500">{entry.email}</p>
           <Button variant="ghost" onClick={onClose}>
             {copy.manageUser.close}
           </Button>

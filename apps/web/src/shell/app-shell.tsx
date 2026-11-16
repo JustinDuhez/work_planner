@@ -2,11 +2,9 @@ import { Link, NavLink, Outlet } from 'react-router';
 import { copy } from '../copy';
 import { HealthStatus } from '../health/health-status';
 import { NotificationBell } from '../notifications/notification-bell';
-import { NAV_ITEMS } from './nav-items';
+import { MAIN_ID, NAV_ITEMS } from './nav-items';
 import { PhoneMenu } from './phone-menu';
 import { UserMenu } from './user-menu';
-
-const MAIN_ID = 'contenu';
 
 export function AppShell() {
   return (

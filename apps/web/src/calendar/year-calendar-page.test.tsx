@@ -106,6 +106,42 @@ describe('YearCalendarPage', () => {
     expect(router.state.location.search).toBe('?periode=2027');
   });
 
+  it('keeps the focus on the period arrow after moving to the next period', async () => {
+    const { user } = renderCalendar('/calendrier?periode=2026', {
+      'GET /api/v1/users/7/year-calendars/2027': {
+        status: 200,
+        body: yearCalendar({ period: { startDate: '2027-07-01', endDate: '2028-06-30' } }),
+      },
+    });
+    const next = await screen.findByRole('button', { name: copy.calendar.nextPeriod });
+
+    await user.click(next);
+
+    await screen.findByText('juil. 2027 – juin 2028');
+    expect(next).toHaveFocus();
+  });
+
+  it('keeps the focus on the arrow when leaving the default period', async () => {
+    const yearRoutes: Record<string, MockResponse> = {};
+    for (let year = 2000; year <= 2100; year += 1) {
+      yearRoutes[`GET /api/v1/users/7/year-calendars/${year}`] = {
+        status: 200,
+        body: yearCalendar({
+          period: { startDate: `${year}-07-01`, endDate: `${year + 1}-06-30` },
+        }),
+      };
+    }
+    // The default period follows the browser date: any year the arrow lands on is answered.
+    const { user, router } = renderCalendar('/calendrier', yearRoutes);
+    const previous = await screen.findByRole('button', { name: copy.calendar.previousPeriod });
+
+    await user.click(previous);
+
+    await waitFor(() => expect(router.state.location.search).toMatch(/^\?periode=\d{4}$/));
+    await screen.findAllByRole('table');
+    expect(previous).toHaveFocus();
+  });
+
   it("opens someone else's calendar from the URL", async () => {
     renderCalendar('/calendrier/9?periode=2026', {
       'GET /api/v1/users/9/year-calendars/2026': {

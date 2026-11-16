@@ -94,9 +94,14 @@ describe('SettingsPage', () => {
       'POST /api/v1/public-holiday-imports': { status: 201, body: { addedCount: 9 } },
     });
 
-    await user.click(
-      await screen.findByRole('button', { name: 'Importer les jours fériés français 2026' }),
-    );
+    const importButton = await screen.findByRole('button', {
+      name: 'Importer les jours fériés français 2026',
+    });
+    // The live region is mounted before the outcome so that the outcome is announced.
+    expect(
+      within(importButton.parentElement as HTMLElement).getByRole('status'),
+    ).toBeEmptyDOMElement();
+    await user.click(importButton);
 
     expect(await screen.findByText('9 jours ajoutés.')).toBeInTheDocument();
   });
@@ -169,7 +174,11 @@ describe('SettingsPage', () => {
     });
 
     await user.selectOptions(await screen.findByLabelText(copy.settings.yearStartMonth), '09');
-    await user.click(screen.getByRole('button', { name: copy.settings.saveYearStart }));
+    const saveButton = screen.getByRole('button', { name: copy.settings.saveYearStart });
+    expect(
+      within(saveButton.parentElement as HTMLElement).getByRole('status'),
+    ).toBeEmptyDOMElement();
+    await user.click(saveButton);
 
     expect(await sentBody(fetchMock, 'PATCH', '/api/v1/settings')).toEqual({ yearStart: '09-01' });
     expect(await screen.findByText(copy.settings.saved)).toBeInTheDocument();
