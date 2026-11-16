@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { copy } from '../copy';
 import { HUGO, signedInHomeRoutes, weekFixture } from '../test/clock-fixtures';
 import { mockFetchRoutes, type MockResponse } from '../test/mock-fetch';
+import { expectNoAxeViolations } from '../test/axe';
 import { renderApp } from '../test/render-app';
 import { APP_TIME_ZONE, currentIsoWeek, shiftIsoWeek } from './clock-time';
 
@@ -25,8 +26,8 @@ const CLOSED_END = toLocalTime(new Date(CLOSED_PERIOD.endedAt), APP_TIME_ZONE);
 function renderHome(extraRoutes: Record<string, MockResponse> = {}, todayOverrides = {}) {
   const week = weekFixture({ days: { [TODAY]: todayOverrides } });
   const fetchMock = mockFetchRoutes({ ...signedInHomeRoutes(week), ...extraRoutes });
-  renderApp('/');
-  return { fetchMock, user: userEvent.setup() };
+  const { queryClient, container } = renderApp('/');
+  return { fetchMock, user: userEvent.setup(), queryClient, container };
 }
 
 function bodyOf(fetchMock: jest.Mock, method: string, url: string): unknown {
@@ -191,6 +192,27 @@ describe('clocking from the week view', () => {
     expect(within(dialog).getByText(copy.clock.startRequired)).toBeInTheDocument();
     expect(bodyOf(fetchMock, 'POST', '/api/v1/clock-periods')).toBeUndefined();
     expect(dialog.querySelector('form')).toHaveAttribute('novalidate');
+  });
+
+  it('puts focus on the empty start, describes it with its error and clears it on typing', async () => {
+    const { user, queryClient, container } = renderHome();
+
+    const opener = await screen.findByRole('button', { name: copy.clock.addPeriod });
+    await user.click(opener);
+    const dialog = screen.getByRole('dialog', { name: copy.clock.addPeriodTitle });
+    const start = within(dialog).getByLabelText(copy.clock.startTime);
+    await user.click(within(dialog).getByRole('button', { name: copy.clock.save }));
+
+    expect(start).toHaveFocus();
+    expect(start).toHaveAccessibleDescription(copy.clock.startRequired);
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+    await expectNoAxeViolations(container);
+    await user.type(start, '09:00');
+    expect(start).toHaveAttribute('aria-invalid', 'false');
+    expect(within(dialog).queryByText(copy.clock.startRequired)).not.toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole('button', { name: copy.clock.cancel }));
+    expect(opener).toHaveFocus();
   });
 
   it('asks for the end of a closed period in French', async () => {

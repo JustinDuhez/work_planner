@@ -5,13 +5,16 @@ import {
   type LeaveRequestView,
   type UserSummary,
 } from '@work-planner/domain';
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { bannerMessageFor } from '../api/form-errors';
 import { dayLabel } from '../clock/clock-time';
 import { copy } from '../copy';
 import { ErrorBanner, fieldErrorsOf } from '../directory/manage-user-dialog';
 import { usePublicHolidays } from '../settings/settings-queries';
 import { Button } from '../ui/button';
+import { Dialog } from '../ui/dialog';
+import { Field } from '../ui/field';
+import { useFocusFirstInvalid } from '../ui/field-error';
 import { TextField } from '../ui/text-field';
 import { useCreateLeaveRequest, useDayTypes, useDeclareLeaveRequest } from './leave-queries';
 
@@ -54,7 +57,7 @@ export function LeaveRequestDialog({
   targetUser?: UserSummary;
   onClose: () => void;
 }) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   const dayTypes = useDayTypes();
   const createOwn = useCreateLeaveRequest();
   // Both hooks run (rules of hooks); the declare one stays idle without a target.
@@ -71,6 +74,7 @@ export function LeaveRequestDialog({
   const [reason, setReason] = useState('');
   const [reasonError, setReasonError] = useState<string>();
   const [typeError, setTypeError] = useState<string>();
+  const [failedChecks, setFailedChecks] = useState(0);
   const isEarlyDeparture = dayTypeCode === EARLY_DEPARTURE;
   // An early departure is exactly one half-day (F6.3): the range collapses to the start half.
   const range = isEarlyDeparture
@@ -93,9 +97,8 @@ export function LeaveRequestDialog({
     ...(typeError ? { dayTypeCode: typeError } : {}),
   };
 
-  useEffect(() => {
-    dialogRef.current?.showModal();
-  }, []);
+  useFocusFirstInvalid(formRef, create.error);
+  useFocusFirstInvalid(formRef, failedChecks);
 
   function summary(): string {
     if (slots.length === 0) return copy.leave.emptyRange;
@@ -115,11 +118,13 @@ export function LeaveRequestDialog({
     create.reset();
     if (dayTypeCode === '') {
       setTypeError(copy.leave.typeRequired);
+      setFailedChecks((count) => count + 1);
       return;
     }
     setTypeError(undefined);
     if (isEarlyDeparture && reason.trim() === '') {
       setReasonError(copy.leave.reasonRequired);
+      setFailedChecks((count) => count + 1);
       return;
     }
     setReasonError(undefined);
@@ -132,51 +137,43 @@ export function LeaveRequestDialog({
 
   const requestableTypes = (dayTypes.data ?? []).filter((type) => type.isRequestable);
   return (
-    <dialog
-      ref={dialogRef}
-      aria-label={dialogTitle}
-      onClose={onClose}
-      className="m-auto max-h-[90dvh] w-[min(30rem,calc(100vw-2rem))] overflow-y-auto rounded-card border border-line bg-white p-6 shadow-card backdrop:bg-zinc-900/30"
-    >
-      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-        <h2 className="text-base font-semibold">{dialogTitle}</h2>
-        <label className="block space-y-1 text-sm font-medium">
-          <span>{copy.leave.type}</span>
-          <select
-            value={dayTypeCode}
-            onChange={(event) => chooseDayType(event.target.value)}
-            className={SELECT_CLASS}
-          >
-            <option value="" disabled>
-              {copy.leave.chooseType}
-            </option>
-            {requestableTypes.map((type) => (
-              <option key={type.code} value={type.code}>
-                {type.label}
+    <Dialog title={dialogTitle} onClose={onClose} widthClass="w-[min(30rem,calc(100vw-2rem))]">
+      <form ref={formRef} onSubmit={handleSubmit} className="space-y-4" noValidate>
+        <Field label={copy.leave.type} error={fieldErrors.dayTypeCode}>
+          {(control) => (
+            <select
+              {...control}
+              value={dayTypeCode}
+              onChange={(event) => chooseDayType(event.target.value)}
+              className={SELECT_CLASS}
+            >
+              <option value="" disabled>
+                {copy.leave.chooseType}
               </option>
-            ))}
-          </select>
-          {fieldErrors.dayTypeCode ? (
-            <span className="block text-xs text-rose-700">{fieldErrors.dayTypeCode}</span>
-          ) : null}
-        </label>
+              {requestableTypes.map((type) => (
+                <option key={type.code} value={type.code}>
+                  {type.label}
+                </option>
+              ))}
+            </select>
+          )}
+        </Field>
         <div className="grid grid-cols-2 gap-3">
-          <label className="space-y-1 text-sm font-medium">
-            <span>{copy.leave.startDate}</span>
-            <input
-              type="date"
-              value={startDate}
-              min={minDate}
-              onChange={(event) => {
-                setStartDate(event.target.value);
-                if (event.target.value > endDate) setEndDate(event.target.value);
-              }}
-              className="h-10 w-full rounded-control border border-line px-3"
-            />
-            {fieldErrors.startDate ? (
-              <span className="block text-xs text-rose-700">{fieldErrors.startDate}</span>
-            ) : null}
-          </label>
+          <Field label={copy.leave.startDate} error={fieldErrors.startDate}>
+            {(control) => (
+              <input
+                {...control}
+                type="date"
+                value={startDate}
+                min={minDate}
+                onChange={(event) => {
+                  setStartDate(event.target.value);
+                  if (event.target.value > endDate) setEndDate(event.target.value);
+                }}
+                className="h-10 w-full rounded-control border border-line px-3"
+              />
+            )}
+          </Field>
           <label className="space-y-1 text-sm font-medium">
             <span>{copy.leave.startHalf}</span>
             <select
@@ -190,19 +187,18 @@ export function LeaveRequestDialog({
           </label>
           {isEarlyDeparture ? null : (
             <>
-              <label className="space-y-1 text-sm font-medium">
-                <span>{copy.leave.endDate}</span>
-                <input
-                  type="date"
-                  value={endDate}
-                  min={startDate}
-                  onChange={(event) => setEndDate(event.target.value)}
-                  className="h-10 w-full rounded-control border border-line px-3"
-                />
-                {fieldErrors.endDate ? (
-                  <span className="block text-xs text-rose-700">{fieldErrors.endDate}</span>
-                ) : null}
-              </label>
+              <Field label={copy.leave.endDate} error={fieldErrors.endDate}>
+                {(control) => (
+                  <input
+                    {...control}
+                    type="date"
+                    value={endDate}
+                    min={startDate}
+                    onChange={(event) => setEndDate(event.target.value)}
+                    className="h-10 w-full rounded-control border border-line px-3"
+                  />
+                )}
+              </Field>
               <label className="space-y-1 text-sm font-medium">
                 <span>{copy.leave.endHalf}</span>
                 <select
@@ -222,7 +218,10 @@ export function LeaveRequestDialog({
             label={copy.leave.reason}
             name="reason"
             value={reason}
-            onChange={setReason}
+            onChange={(value) => {
+              setReason(value);
+              setReasonError(undefined);
+            }}
             error={fieldErrors.reason}
           />
         ) : null}
@@ -252,6 +251,6 @@ export function LeaveRequestDialog({
           )}
         </div>
       </form>
-    </dialog>
+    </Dialog>
   );
 }

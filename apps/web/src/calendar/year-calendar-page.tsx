@@ -10,7 +10,7 @@ import {
   type Half,
 } from '@work-planner/domain';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { bannerMessageFor } from '../api/form-errors';
 import { APP_TIME_ZONE } from '../clock/clock-time';
@@ -22,6 +22,7 @@ import { useCancelLeaveRequest, useDayTypes } from '../leave/leave-queries';
 import { NotFoundPage } from '../not-found/not-found-page';
 import { useSession } from '../session/session-queries';
 import { Button } from '../ui/button';
+import { Dialog } from '../ui/dialog';
 import { useSettings } from '../settings/settings-queries';
 import { calendarPath, useYearCalendar } from './calendar-queries';
 import { halfKey, MonthCard, type HalfAction } from './month-card';
@@ -84,22 +85,12 @@ function CancelDeclaredDialog({
   label: string;
   onClose: () => void;
 }) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
   const cancel = useCancelLeaveRequest(declared.leaveRequestId);
-  useEffect(() => {
-    dialogRef.current?.showModal();
-  }, []);
   // The payload has no request range: the question names the type and the clicked day.
   const question = `${copy.calendar.cancelQuestionPrefix} ${label} ${copy.calendar.cancelQuestionMiddle} ${formatDayMonth(declared.date)} ?`;
   return (
-    <dialog
-      ref={dialogRef}
-      aria-label={question}
-      onClose={onClose}
-      className="m-auto w-[min(26rem,calc(100vw-2rem))] rounded-card border border-line bg-white p-6 shadow-card backdrop:bg-zinc-900/30"
-    >
+    <Dialog title={question} onClose={onClose} widthClass="w-[min(26rem,calc(100vw-2rem))]">
       <div className="space-y-4">
-        <p className="text-sm text-zinc-800">{question}</p>
         <ErrorBanner message={bannerMessageFor(cancel.error, [])} />
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={onClose}>
@@ -113,7 +104,7 @@ function CancelDeclaredDialog({
           </Button>
         </div>
       </div>
-    </dialog>
+    </Dialog>
   );
 }
 

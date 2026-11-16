@@ -1,7 +1,10 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { bannerMessageFor } from '../api/form-errors';
 import { copy } from '../copy';
 import { Button } from '../ui/button';
+import { Dialog } from '../ui/dialog';
+import { Field } from '../ui/field';
+import { useFocusFirstInvalid } from '../ui/field-error';
 import { TextField } from '../ui/text-field';
 import { parseDuration } from './duration';
 import { ErrorBanner, fieldErrorsOf } from './manage-user-dialog';
@@ -18,7 +21,7 @@ const RENDERED_FIELDS = [
 ];
 
 export function NewUserDialog({ onClose }: { onClose: () => void }) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -27,15 +30,15 @@ export function NewUserDialog({ onClose }: { onClose: () => void }) {
   const [startDate, setStartDate] = useState('');
   const [initialPassword, setInitialPassword] = useState('');
   const [durationError, setDurationError] = useState<string>();
+  const [failedChecks, setFailedChecks] = useState(0);
   const create = useCreateUser();
   const fieldErrors: Record<string, string | undefined> = {
     ...fieldErrorsOf(create.error),
     ...(durationError ? { dailyMinutes: durationError } : {}),
   };
 
-  useEffect(() => {
-    dialogRef.current?.showModal();
-  }, []);
+  useFocusFirstInvalid(formRef, create.error);
+  useFocusFirstInvalid(formRef, failedChecks);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -43,6 +46,7 @@ export function NewUserDialog({ onClose }: { onClose: () => void }) {
     const dailyMinutes = parseDuration(duration);
     if (dailyMinutes === null) {
       setDurationError(copy.manageUser.invalidDuration);
+      setFailedChecks((count) => count + 1);
       return;
     }
     setDurationError(undefined);
@@ -61,14 +65,12 @@ export function NewUserDialog({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <dialog
-      ref={dialogRef}
-      aria-label={copy.newUser.title}
+    <Dialog
+      title={copy.newUser.title}
       onClose={onClose}
-      className="m-auto max-h-[90dvh] w-[min(28rem,calc(100vw-2rem))] overflow-y-auto rounded-card border border-line bg-white p-6 shadow-card backdrop:bg-zinc-900/30"
+      widthClass="w-[min(28rem,calc(100vw-2rem))]"
     >
-      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-        <h2 className="text-base font-semibold">{copy.newUser.title}</h2>
+      <form ref={formRef} onSubmit={handleSubmit} className="space-y-4" noValidate>
         <TextField
           label={copy.newUser.firstName}
           name="firstName"
@@ -103,21 +105,23 @@ export function NewUserDialog({ onClose }: { onClose: () => void }) {
           label={copy.newUser.dailyTime}
           name="dailyMinutes"
           value={duration}
-          onChange={setDuration}
+          onChange={(value) => {
+            setDuration(value);
+            setDurationError(undefined);
+          }}
           error={fieldErrors.dailyMinutes}
         />
-        <label className="block space-y-1 text-sm font-medium">
-          <span>{copy.newUser.startDate}</span>
-          <input
-            type="date"
-            value={startDate}
-            onChange={(event) => setStartDate(event.target.value)}
-            className="h-10 w-full rounded-control border border-line px-3"
-          />
-          {fieldErrors.startDate ? (
-            <span className="text-xs text-rose-700">{fieldErrors.startDate}</span>
-          ) : null}
-        </label>
+        <Field label={copy.newUser.startDate} error={fieldErrors.startDate}>
+          {(control) => (
+            <input
+              {...control}
+              type="date"
+              value={startDate}
+              onChange={(event) => setStartDate(event.target.value)}
+              className="h-10 w-full rounded-control border border-line px-3"
+            />
+          )}
+        </Field>
         <TextField
           label={copy.newUser.initialPassword}
           name="initialPassword"
@@ -138,6 +142,6 @@ export function NewUserDialog({ onClose }: { onClose: () => void }) {
           </Button>
         </div>
       </form>
-    </dialog>
+    </Dialog>
   );
 }

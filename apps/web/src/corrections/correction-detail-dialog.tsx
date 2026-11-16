@@ -4,11 +4,12 @@ import {
   toLocalTime,
   type ClockCorrectionView,
 } from '@work-planner/domain';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { bannerMessageFor } from '../api/form-errors';
 import { APP_TIME_ZONE, formatLongDate } from '../clock/clock-time';
 import { copy } from '../copy';
 import { Button } from '../ui/button';
+import { Dialog } from '../ui/dialog';
 import { useAnswerClockCorrection, useClockCorrection } from './correction-queries';
 
 type CorrectionDay = ClockCorrectionView['before'];
@@ -51,16 +52,11 @@ export function CorrectionDetailDialog({
   ownerId: number;
   onClose: () => void;
 }) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
   const correction = useClockCorrection(correctionId);
   const answer = useAnswerClockCorrection(ownerId);
   const [isRefusing, setIsRefusing] = useState(false);
   const [responseComment, setResponseComment] = useState('');
   const bannerMessage = bannerMessageFor(answer.error, []);
-
-  useEffect(() => {
-    dialogRef.current?.showModal();
-  }, []);
 
   function send(status: 'accepted' | 'refused') {
     const comment = responseComment.trim();
@@ -77,20 +73,18 @@ export function CorrectionDetailDialog({
 
   const view = correction.data;
   return (
-    <dialog
-      ref={dialogRef}
-      aria-label={copy.corrections.detailTitle}
+    <Dialog
+      title={copy.corrections.detailTitle}
       onClose={onClose}
-      className="m-auto w-[min(36rem,calc(100vw-2rem))] rounded-card border border-line bg-white p-6 shadow-card backdrop:bg-zinc-900/30"
+      widthClass="w-[min(36rem,calc(100vw-2rem))]"
     >
-      <h2 className="text-base font-semibold">{copy.corrections.detailTitle}</h2>
       {correction.isError ? (
-        <p role="alert" className="mt-3 rounded-control bg-rose-50 px-3 py-2 text-sm text-rose-800">
+        <p role="alert" className="rounded-control bg-rose-50 px-3 py-2 text-sm text-rose-800">
           {copy.corrections.loadError}
         </p>
       ) : null}
       {view ? (
-        <div className="mt-3 space-y-3">
+        <div className="space-y-3">
           <p className="text-sm text-zinc-600">
             {`${formatLongDate(view.workDate)} · ${view.author.firstName} ${view.author.lastName}`}
           </p>
@@ -153,6 +147,6 @@ export function CorrectionDetailDialog({
           </Button>
         ) : null}
       </div>
-    </dialog>
+    </Dialog>
   );
 }

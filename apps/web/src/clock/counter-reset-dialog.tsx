@@ -1,24 +1,24 @@
 import { toWorkDate, type ClockWeek } from '@work-planner/domain';
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { ApiError } from '../api/api-client';
 import { bannerMessageFor } from '../api/form-errors';
 import { copy } from '../copy';
 import { Button } from '../ui/button';
+import { Dialog } from '../ui/dialog';
+import { Field } from '../ui/field';
+import { useFocusFirstInvalid } from '../ui/field-error';
 import { APP_TIME_ZONE, formatLongDate } from './clock-time';
 import { useCreateCounterReset } from './counter-queries';
 
 export function CounterResetDialog({ week, onClose }: { week: ClockWeek; onClose: () => void }) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   const today = toWorkDate(new Date(week.serverNow), APP_TIME_ZONE);
   const [resetDate, setResetDate] = useState(today);
   const createReset = useCreateCounterReset(week.user.id);
   const fieldError =
     createReset.error instanceof ApiError ? createReset.error.fieldErrors.resetDate : undefined;
   const bannerMessage = bannerMessageFor(createReset.error, ['resetDate']);
-
-  useEffect(() => {
-    dialogRef.current?.showModal();
-  }, []);
+  useFocusFirstInvalid(formRef, createReset.error);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -26,27 +26,21 @@ export function CounterResetDialog({ week, onClose }: { week: ClockWeek; onClose
   }
 
   return (
-    <dialog
-      ref={dialogRef}
-      aria-label={copy.counters.resetTitle}
-      onClose={onClose}
-      className="m-auto w-[min(24rem,calc(100vw-2rem))] rounded-card border border-line bg-white p-6 shadow-card backdrop:bg-zinc-900/30"
-    >
-      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-        <h2 className="text-base font-semibold">{copy.counters.resetTitle}</h2>
-        <label className="block space-y-1 text-sm font-medium">
-          <span>{copy.counters.resetDate}</span>
-          <input
-            type="date"
-            value={resetDate}
-            min={week.counters.startDate}
-            max={today}
-            onChange={(event) => setResetDate(event.target.value)}
-            aria-invalid={fieldError !== undefined}
-            className="h-10 w-full rounded-control border border-line px-3"
-          />
-          {fieldError ? <span className="text-xs text-rose-700">{fieldError}</span> : null}
-        </label>
+    <Dialog title={copy.counters.resetTitle} onClose={onClose}>
+      <form ref={formRef} onSubmit={handleSubmit} className="space-y-4" noValidate>
+        <Field label={copy.counters.resetDate} error={fieldError}>
+          {(control) => (
+            <input
+              {...control}
+              type="date"
+              value={resetDate}
+              min={week.counters.startDate}
+              max={today}
+              onChange={(event) => setResetDate(event.target.value)}
+              className="h-10 w-full rounded-control border border-line px-3"
+            />
+          )}
+        </Field>
         <p className="text-sm text-zinc-600">
           {`${copy.counters.resetSentencePrefix} ${week.user.firstName} ${week.user.lastName} ${copy.counters.resetSentenceMiddle} ${resetDate === '' ? '…' : formatLongDate(resetDate)}.`}
         </p>
@@ -64,6 +58,6 @@ export function CounterResetDialog({ week, onClose }: { week: ClockWeek; onClose
           </Button>
         </div>
       </form>
-    </dialog>
+    </Dialog>
   );
 }

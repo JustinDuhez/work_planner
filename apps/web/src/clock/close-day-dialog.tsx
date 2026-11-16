@@ -1,9 +1,12 @@
 import type { ClockDayView } from '@work-planner/domain';
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { ApiError } from '../api/api-client';
 import { bannerMessageFor } from '../api/form-errors';
 import { copy } from '../copy';
 import { Button } from '../ui/button';
+import { Dialog } from '../ui/dialog';
+import { Field } from '../ui/field';
+import { useFocusFirstInvalid } from '../ui/field-error';
 import { useUpdateClockPeriod } from './clock-queries';
 
 export function CloseDayDialog({
@@ -17,17 +20,14 @@ export function CloseDayDialog({
   isoWeek: string;
   onClose: () => void;
 }) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   const [endedAt, setEndedAt] = useState('');
   const update = useUpdateClockPeriod(ownerId, isoWeek);
   const openPeriod = day.periods.find((period) => period.endedAt === null);
   const fieldError =
     update.error instanceof ApiError ? update.error.fieldErrors.endedAt : undefined;
   const bannerMessage = bannerMessageFor(update.error, ['endedAt']);
-
-  useEffect(() => {
-    dialogRef.current?.showModal();
-  }, []);
+  useFocusFirstInvalid(formRef, update.error);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -35,27 +35,21 @@ export function CloseDayDialog({
   }
 
   return (
-    <dialog
-      ref={dialogRef}
-      aria-label={copy.clock.closeDayTitle}
-      onClose={onClose}
-      className="m-auto w-[min(24rem,calc(100vw-2rem))] rounded-card border border-line bg-white p-6 shadow-card backdrop:bg-zinc-900/30"
-    >
-      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-        <h2 className="text-base font-semibold">{copy.clock.closeDayTitle}</h2>
+    <Dialog title={copy.clock.closeDayTitle} onClose={onClose}>
+      <form ref={formRef} onSubmit={handleSubmit} className="space-y-4" noValidate>
         <p className="text-sm text-zinc-500">{copy.clock.closeDayHint}</p>
-        <label className="block space-y-1 text-sm font-medium">
-          <span>{copy.clock.endTime}</span>
-          <input
-            type="time"
-            required
-            value={endedAt}
-            onChange={(event) => setEndedAt(event.target.value)}
-            aria-invalid={fieldError !== undefined}
-            className="h-10 w-full rounded-control border border-line px-3"
-          />
-          {fieldError ? <span className="text-xs text-rose-700">{fieldError}</span> : null}
-        </label>
+        <Field label={copy.clock.endTime} error={fieldError}>
+          {(control) => (
+            <input
+              {...control}
+              type="time"
+              required
+              value={endedAt}
+              onChange={(event) => setEndedAt(event.target.value)}
+              className="h-10 w-full rounded-control border border-line px-3"
+            />
+          )}
+        </Field>
         {bannerMessage ? (
           <p role="alert" className="rounded-control bg-rose-50 px-3 py-2 text-sm text-rose-800">
             {bannerMessage}
@@ -70,6 +64,6 @@ export function CloseDayDialog({
           </Button>
         </div>
       </form>
-    </dialog>
+    </Dialog>
   );
 }

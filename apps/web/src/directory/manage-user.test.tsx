@@ -88,6 +88,18 @@ describe('managing users', () => {
     ).toBeInTheDocument();
   });
 
+  it('gives focus back to the manage button when the dialog is closed', async () => {
+    const { user } = renderAsViewer([HUGO]);
+    const row = await screen.findByRole('row', { name: /Hugo Laurent/ });
+    const opener = within(row).getByRole('button', { name: copy.directory.manage });
+    await user.click(opener);
+    const dialog = screen.getByRole('dialog', { name: copy.manageUser.title });
+
+    await user.click(within(dialog).getByRole('button', { name: copy.manageUser.close }));
+
+    expect(opener).toHaveFocus();
+  });
+
   it('asks before archiving, then archives', async () => {
     const { user, fetchMock } = renderAsViewer([HUGO], {
       'PATCH /api/v1/users/9': { status: 200, body: { ...HUGO, isArchived: true } },

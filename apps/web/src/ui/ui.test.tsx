@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Inbox } from 'lucide-react';
 import { useState } from 'react';
@@ -82,5 +82,29 @@ describe('Dialog', () => {
     await user.click(screen.getByRole('button', { name: 'Fermer' }));
 
     expect(opener).toHaveFocus();
+  });
+
+  it('gives focus back to its opener when the browser closes it (Escape)', async () => {
+    const user = userEvent.setup();
+    render(<DialogHarness />);
+    const opener = screen.getByRole('button', { name: 'Ouvrir' });
+
+    await user.click(opener);
+    const dialog = screen.getByRole<HTMLDialogElement>('dialog', {
+      name: 'Modifier la période',
+    });
+    dialog.close();
+    fireEvent(dialog, new Event('close'));
+
+    expect(opener).toHaveFocus();
+  });
+
+  it('has no accessibility violations when open', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<DialogHarness />);
+
+    await user.click(screen.getByRole('button', { name: 'Ouvrir' }));
+
+    await expectNoAxeViolations(container);
   });
 });

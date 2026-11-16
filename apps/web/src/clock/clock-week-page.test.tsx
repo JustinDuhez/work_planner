@@ -167,11 +167,14 @@ describe('ClockWeekPage', () => {
     mockFetchRoutes(signedInHomeRoutes(weekFixture({ isoWeek: WEEK, serverNow: SERVER_NOW })));
     renderApp(`/?semaine=${WEEK}`);
 
-    await userEvent
-      .setup()
-      .click(await screen.findByRole('button', { name: copy.leave.requestButton }));
+    const user = userEvent.setup();
+    const opener = await screen.findByRole('button', { name: copy.leave.requestButton });
+    await user.click(opener);
 
-    expect(await screen.findByRole('dialog', { name: copy.leave.dialogTitle })).toBeInTheDocument();
+    const dialog = await screen.findByRole('dialog', { name: copy.leave.dialogTitle });
+    expect(dialog).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: copy.leave.cancel }));
+    expect(opener).toHaveFocus();
   });
 
   it("shows a colleague's planned half-days but no request buttons", async () => {

@@ -72,6 +72,18 @@ describe('bulk counter reset', () => {
     );
   });
 
+  it('groups each team as a named group and returns focus to the opener on cancel', async () => {
+    const { user } = renderAsManager();
+
+    const opener = await screen.findByRole('button', { name: copy.planning.resetButton });
+    await user.click(opener);
+    const dialog = screen.getByRole('dialog', { name: copy.planning.resetTitle });
+
+    expect(within(dialog).getByRole('group', { name: 'Tech › Front' })).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: copy.counters.cancel }));
+    expect(opener).toHaveFocus();
+  });
+
   it('says "1 compteur" for a single person, and clears the line on the next filter change', async () => {
     const { user } = renderAsManager({
       'POST /api/v1/counter-resets': { status: 201, body: { resets: [] } },
