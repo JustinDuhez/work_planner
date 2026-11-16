@@ -32,13 +32,14 @@ export function DayRow({
   // The holiday badge stays at full opacity (contrast), so the dimming sits on the other cells.
   const dim =
     !day.isToday && (day.isFuture || isWeekend || day.holidayLabel !== null) ? 'opacity-60' : '';
+  // The rows share one divided card: today is a tint, its actions live in the hero above.
   return (
     <li
       aria-label={`${weekday} ${dayOfMonth}`}
       aria-current={day.isToday ? 'date' : undefined}
-      className={`rounded-card border p-3 transition-colors grid grid-cols-[1fr_auto] items-center gap-x-4 sm:grid-cols-[5rem_1fr_7rem] ${
-        day.isToday ? 'border-primary-500 bg-white shadow-card' : 'border-line bg-white'
-      } `}
+      className={`grid grid-cols-[1fr_auto] items-center gap-x-4 p-3 sm:grid-cols-[5rem_1fr_7rem] sm:px-4 ${
+        day.isToday ? 'bg-primary-50/60' : ''
+      }`}
     >
       <div className="flex items-center gap-3 sm:col-start-1 sm:row-start-1 sm:block">
         <p className="text-xs font-semibold tracking-wide text-zinc-500">

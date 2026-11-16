@@ -6,10 +6,17 @@ const VARIANT_CLASS = {
   ghost: 'text-zinc-700 hover:bg-zinc-100',
 } as const;
 
+// `hero` is the page's one main action: full width on phones, where the thumb reaches it.
+const SIZE_CLASS = {
+  md: 'h-10 px-4 text-sm',
+  hero: 'h-12 w-full px-6 text-base sm:w-auto sm:min-w-48',
+} as const;
+
 export interface ButtonProps {
   children: ReactNode;
   type?: 'button' | 'submit';
   variant?: keyof typeof VARIANT_CLASS;
+  size?: keyof typeof SIZE_CLASS;
   isPending?: boolean;
   isDisabled?: boolean;
   describedBy?: string;
@@ -20,6 +27,7 @@ export function Button({
   children,
   type = 'button',
   variant = 'primary',
+  size = 'md',
   isPending = false,
   isDisabled = false,
   describedBy,
@@ -32,7 +40,7 @@ export function Button({
       disabled={isPending || isDisabled}
       aria-busy={isPending}
       aria-describedby={describedBy}
-      className={`inline-flex h-10 items-center justify-center gap-2 rounded-control px-4 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${VARIANT_CLASS[variant]}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-control font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${SIZE_CLASS[size]} ${VARIANT_CLASS[variant]}`}
     >
       {children}
     </button>

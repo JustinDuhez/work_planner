@@ -1,6 +1,6 @@
 import { toWorkDate } from '@work-planner/domain';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createQueryClient } from '../api/query-client';
 import { copy } from '../copy';
@@ -61,9 +61,23 @@ describe('TodayControls work mode pre-fill', () => {
     const running = { id: 5, startedAt: new Date().toISOString(), endedAt: null };
     mockFetchRoutes({ 'PATCH /api/v1/clock-periods/5': { status: 204 } });
     render(controls(dayWith({ periods: [running], workMode: 'on_site' })));
+    // Mounted before the message: a live region inserted already filled is often not announced.
+    const status = screen.getByRole('status');
+    expect(status).toBeEmptyDOMElement();
 
     await user.click(screen.getByRole('button', { name: copy.clock.stop }));
 
-    expect(await screen.findByRole('status')).toHaveTextContent(copy.clock.periodCancelled);
+    await waitFor(() => expect(status).toHaveTextContent(copy.clock.periodCancelled));
+  });
+
+  it('makes Start the one large primary action, outside any fixed bar', () => {
+    render(controls(dayWith({})));
+
+    const start = screen.getByRole('button', { name: copy.clock.start });
+    expect(start).toHaveClass('bg-primary-600', 'h-12', 'w-full');
+    expect(start.closest('.fixed')).toBeNull();
+    expect(screen.getByRole('button', { name: copy.clock.addPeriod })).not.toHaveClass(
+      'bg-primary-600',
+    );
   });
 });

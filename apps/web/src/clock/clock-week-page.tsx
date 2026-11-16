@@ -12,6 +12,8 @@ import { LeaveRequestDialog } from '../leave/leave-request-dialog';
 import { useDayTypes } from '../leave/leave-queries';
 import { useSession } from '../session/session-queries';
 import { Button } from '../ui/button';
+import { ErrorState } from '../ui/error-state';
+import { LoadingRegion } from '../ui/skeleton';
 import { APP_TIME_ZONE, currentIsoWeek } from './clock-time';
 import { useClockWeek } from './clock-queries';
 import { CountersCard } from './counters-card';
@@ -20,9 +22,10 @@ import { DayRow } from './day-row';
 import { CounterResetDialog } from './counter-reset-dialog';
 import { CounterResetHistoryDialog } from './counter-reset-history-dialog';
 import { PeriodDialog } from './period-dialog';
-import { TodayControls } from './today-controls';
+import { TodayHero } from './today-hero';
 import { useServerClock } from './use-server-clock';
 import { WeekHeader } from './week-header';
+import { WeekSkeleton } from './week-skeleton';
 
 export function ClockWeekPage() {
   const { userId } = useParams();
@@ -39,15 +42,20 @@ export function ClockWeekPage() {
   const requestedWeek = searchParams.get('semaine');
   const isoWeek =
     requestedWeek !== null && datesOfIsoWeek(requestedWeek) ? requestedWeek : followedWeek;
+  // The sticky bar stays outside the keyed view: rebuilt with each week, it would drop the focus
+  // a keyboard user left on ‹ or ›.
   return (
-    <ClockWeekView
-      key={`${pathUserId ?? 'me'}-${isoWeek}`}
-      ownerId={pathUserId ?? session.user.id}
-      pathUserId={pathUserId}
-      viewerId={session.user.id}
-      isoWeek={isoWeek}
-      onTodayWeekChange={setFollowedWeek}
-    />
+    <section className="space-y-4">
+      <h1 className="text-xl font-semibold tracking-tight">{copy.clock.title}</h1>
+      <WeekHeader isoWeek={isoWeek} pathUserId={pathUserId} viewerId={session.user.id} />
+      <ClockWeekView
+        key={`${pathUserId ?? 'me'}-${isoWeek}`}
+        ownerId={pathUserId ?? session.user.id}
+        viewerId={session.user.id}
+        isoWeek={isoWeek}
+        onTodayWeekChange={setFollowedWeek}
+      />
+    </section>
   );
 }
 
@@ -60,13 +68,11 @@ function canDeclareAbsence(day: ClockDayView): boolean {
 
 function ClockWeekView({
   ownerId,
-  pathUserId,
   viewerId,
   isoWeek,
   onTodayWeekChange,
 }: {
   ownerId: number;
-  pathUserId: number | undefined;
   viewerId: number;
   isoWeek: string;
   onTodayWeekChange: (isoWeek: string) => void;
@@ -113,31 +119,71 @@ function ClockWeekView({
     });
   }
   const dialogDay = week.data?.days.find((day) => day.date === dialog?.date);
+  // Only the owner can clock, and only today: any other week shows its counters and rows.
+  const heroDay = week.data?.days.find((day) => day.isToday && day.canEdit);
 
   return (
-    <section className="space-y-4">
-      <h1 className="text-xl font-semibold tracking-tight">{copy.clock.title}</h1>
-      <WeekHeader isoWeek={isoWeek} pathUserId={pathUserId} viewerId={viewerId} />
+    <div className="space-y-4">
       {week.isError ? (
-        <p role="alert" className="rounded-control bg-rose-50 px-3 py-2 text-sm text-rose-800">
-          {copy.clock.loadError}
-        </p>
+        <ErrorState message={copy.clock.loadError} onRetry={() => void week.refetch()} />
       ) : null}
-      {week.isPending ? <p className="text-sm text-zinc-500">{copy.clock.loading}</p> : null}
+      {week.isPending ? (
+        <LoadingRegion label={copy.clock.loading}>
+          <WeekSkeleton hasHero={isOwnWeek && isoWeek === currentIsoWeek(new Date())} />
+        </LoadingRegion>
+      ) : null}
       {week.data ? (
-        <div className="animate-[week-in_200ms_ease-out] space-y-3">
+        <div className="space-y-4 motion-safe:animate-[week-in_200ms_ease-out]">
           {!isOwnWeek ? (
             <p className="rounded-control bg-zinc-100 px-3 py-2 text-sm text-zinc-700">
               {copy.clock.readOnlyPrefix} {week.data.user.firstName} {week.data.user.lastName} —{' '}
               {copy.clock.readOnlySuffix}
             </p>
           ) : null}
-          {isOwnWeek ? (
-            <Button variant="secondary" onClick={() => setLeaveDialogDate(requestDate)}>
-              {copy.leave.requestButton}
-            </Button>
+          {heroDay ? (
+            <TodayHero
+              day={heroDay}
+              now={now}
+              ownerId={ownerId}
+              isoWeek={isoWeek}
+              onAddPeriod={() => setDialog({ kind: 'add', date: heroDay.date })}
+            />
           ) : null}
-          <ol className="space-y-2">
+          <CountersCard
+            week={week.data}
+            now={now}
+            refusalAction={
+              week.data.counters.canViewCorrections ? (
+                <button
+                  type="button"
+                  onClick={() => setCounterDialog('refused')}
+                  className="text-xs font-medium text-rose-700 hover:underline"
+                >
+                  {copy.corrections.refusedLink}
+                </button>
+              ) : undefined
+            }
+            actions={
+              week.data.counters.canResetCounter ? (
+                <>
+                  <Button variant="secondary" onClick={() => setCounterDialog('reset')}>
+                    {copy.counters.resetButton}
+                  </Button>
+                  <Button variant="ghost" onClick={() => setCounterDialog('history')}>
+                    {copy.counters.historyButton}
+                  </Button>
+                </>
+              ) : undefined
+            }
+          />
+          {isOwnWeek ? (
+            <div className="flex justify-end">
+              <Button variant="secondary" onClick={() => setLeaveDialogDate(requestDate)}>
+                {copy.leave.requestButton}
+              </Button>
+            </div>
+          ) : null}
+          <ol className="divide-y divide-line overflow-hidden rounded-card border border-line bg-white">
             {week.data.days.map((day, index) => (
               <DayRow
                 key={day.date}
@@ -167,14 +213,7 @@ function ClockWeekView({
                         onOpen={() => openCorrection(day.latestCorrection!.id)}
                       />
                     ) : null}
-                    {day.canEdit ? (
-                      <TodayControls
-                        day={day}
-                        ownerId={ownerId}
-                        isoWeek={isoWeek}
-                        onAddPeriod={() => setDialog({ kind: 'add', date: day.date })}
-                      />
-                    ) : day.canClose ? (
+                    {day.canEdit ? null : day.canClose ? (
                       <button
                         type="button"
                         onClick={() => setDialog({ kind: 'close', date: day.date })}
@@ -196,33 +235,6 @@ function ClockWeekView({
               />
             ))}
           </ol>
-          <CountersCard
-            week={week.data}
-            now={now}
-            refusalAction={
-              week.data.counters.canViewCorrections ? (
-                <button
-                  type="button"
-                  onClick={() => setCounterDialog('refused')}
-                  className="text-xs font-medium text-rose-700 hover:underline"
-                >
-                  {copy.corrections.refusedLink}
-                </button>
-              ) : undefined
-            }
-            actions={
-              week.data.counters.canResetCounter ? (
-                <>
-                  <Button variant="secondary" onClick={() => setCounterDialog('reset')}>
-                    {copy.counters.resetButton}
-                  </Button>
-                  <Button variant="ghost" onClick={() => setCounterDialog('history')}>
-                    {copy.counters.historyButton}
-                  </Button>
-                </>
-              ) : undefined
-            }
-          />
         </div>
       ) : null}
       {dialog && dialogDay && (dialog.kind === 'add' || dialog.kind === 'edit') ? (
@@ -278,6 +290,6 @@ function ClockWeekView({
           onClose={closeCorrection}
         />
       ) : null}
-    </section>
+    </div>
   );
 }
