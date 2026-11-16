@@ -51,7 +51,7 @@ export function DayTimeline({
         {segments.map((segment) => {
           const isOpen = segment.endedAt === null;
           const label = labelOf(segment);
-          const className = `absolute inset-y-1 rounded-md text-[10px] font-medium transition-colors ${
+          const className = `absolute inset-y-1 rounded-inner-md text-[10px] font-medium transition-colors ${
             isOpen && !day.isToday
               ? 'border border-dashed border-amber-400 bg-amber-50 text-amber-800'
               : 'bg-primary-500/80 text-white hover:bg-primary-600'

@@ -80,7 +80,7 @@ export function LoginPage() {
                 type="button"
                 onClick={() => setIsPasswordVisible((isVisible) => !isVisible)}
                 aria-label={isPasswordVisible ? copy.login.hidePassword : copy.login.showPassword}
-                className="rounded-md p-2 text-zinc-500 hover:text-zinc-800"
+                className="rounded-control p-2 text-zinc-500 hover:text-zinc-800"
               >
                 {isPasswordVisible ? (
                   <EyeOff size={16} aria-hidden />

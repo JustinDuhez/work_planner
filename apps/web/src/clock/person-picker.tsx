@@ -48,7 +48,7 @@ export function PersonPicker({
           placeholder={copy.clock.searchPerson}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          className="h-9 w-full rounded-control border border-line px-3 text-sm outline-none focus:border-primary-500"
+          className="h-9 w-full rounded-control border border-line px-3 text-sm focus:border-primary-500"
         />
         <ul className="mt-2 max-h-64 overflow-y-auto">
           {matches.map((user) => (
@@ -56,7 +56,7 @@ export function PersonPicker({
               <Link
                 to={pathFor(user.id === viewerId ? undefined : user.id)}
                 onClick={closePicker}
-                className="block rounded-control px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100"
+                className="block rounded-inner-md px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100"
               >
                 {user.firstName} {user.lastName} {user.id === viewerId ? copy.clock.you : null}
               </Link>
