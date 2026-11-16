@@ -24,6 +24,7 @@ export const copy = {
     loadError: "Impossible de charger l'historique.",
   },
   appName: 'Work Planner',
+  states: { retry: 'Réessayer' },
   corrections: {
     correctDay: 'Corriger la journée',
     dialogTitle: 'Corriger la journée',
