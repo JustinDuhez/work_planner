@@ -124,7 +124,8 @@ function ClockWeekView({
 
   return (
     <div className="space-y-4">
-      {week.isError ? (
+      {/* A failed background refresh keeps the week on screen: the next poll or focus recovers. */}
+      {week.isError && !week.data ? (
         <ErrorState message={copy.clock.loadError} onRetry={() => void week.refetch()} />
       ) : null}
       {week.isPending ? (
@@ -147,6 +148,7 @@ function ClockWeekView({
               ownerId={ownerId}
               isoWeek={isoWeek}
               onAddPeriod={() => setDialog({ kind: 'add', date: heroDay.date })}
+              onRequestAbsence={() => setLeaveDialogDate(requestDate)}
             />
           ) : null}
           <CountersCard
@@ -176,7 +178,7 @@ function ClockWeekView({
               ) : undefined
             }
           />
-          {isOwnWeek ? (
+          {isOwnWeek && !heroDay ? (
             <div className="flex justify-end">
               <Button variant="secondary" onClick={() => setLeaveDialogDate(requestDate)}>
                 {copy.leave.requestButton}

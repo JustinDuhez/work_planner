@@ -55,6 +55,28 @@ describe('CountersCard', () => {
     screen.getAllByText('0:00').forEach((value) => expect(value).not.toHaveClass(FLASH));
   });
 
+  it('does not highlight the minute-by-minute poll of a running period, only a real change', () => {
+    const runningSince = '2026-11-06T14:00:00.000Z';
+    const answer = (serverNow: string, globalGapMinutes: number) => ({
+      ...weekFixture({ counters: { runningSince, globalGapMinutes } }),
+      serverNow,
+    });
+    // Each poll answers one more minute run, as of its own serverNow.
+    const { rerender } = render(
+      <CountersCard week={answer('2026-11-06T14:30:00.000Z', 30)} now={new Date(SERVER_NOW)} />,
+    );
+    const polled = new Date('2026-11-06T14:31:00.000Z');
+    rerender(<CountersCard week={answer('2026-11-06T14:31:00.000Z', 31)} now={polled} />);
+    expect(screen.getAllByText('+0:31').every((value) => !value.classList.contains(FLASH))).toBe(
+      true,
+    );
+
+    // A period added through the dialog moves the balance beyond the running time: highlight.
+    rerender(<CountersCard week={answer('2026-11-06T14:31:00.000Z', 91)} now={polled} />);
+
+    expect(screen.getByText('+1:31')).toHaveClass(FLASH);
+  });
+
   it('does not highlight the minute-by-minute tick of a running period', () => {
     const counters = { runningSince: '2026-11-06T14:00:00.000Z', globalGapMinutes: 0 };
     const week = { ...weekFixture({ counters }), serverNow: SERVER_NOW };

@@ -2,7 +2,7 @@ import { formatMinutes, formatSignedMinutes, type ClockWeek } from '@work-planne
 import { useId, useState, type ReactNode } from 'react';
 import { copy } from '../copy';
 import { formatLongDate } from './clock-time';
-import { liveGapMinutes } from './live-counters';
+import { liveGapMinutes, settledGapMinutes } from './live-counters';
 
 // Red is reserved for an open refusal: it overrides the gap tone until the day is fixed.
 const REFUSED_TONE = 'text-rose-700';
@@ -43,22 +43,23 @@ function useHasChanged(value: number): boolean {
 }
 
 /**
- * Keyed on the server's value, not the live one: a new answer (a stop, a reset, an approved
- * correction) replays the highlight, the minute-by-minute tick of a running period does not.
+ * Keyed on the settled value, not the live one: a real change (a stop, a reset, an edited period,
+ * an approved correction) replays the highlight; the minute-by-minute tick and poll of a running
+ * period do not.
  */
 function FlashingGap({
-  serverMinutes,
+  settledMinutes,
   liveMinutes,
   isRefused = false,
 }: {
-  serverMinutes: number;
+  settledMinutes: number;
   liveMinutes: number;
   isRefused?: boolean;
 }) {
-  const hasChanged = useHasChanged(serverMinutes);
+  const hasChanged = useHasChanged(settledMinutes);
   return (
     <Gap
-      key={serverMinutes}
+      key={settledMinutes}
       minutes={liveMinutes}
       isRefused={isRefused}
       className={`${STAT_VALUE} ${hasChanged ? VALUE_FLASH : ''}`}
@@ -119,7 +120,16 @@ export function CountersCard({
     <div className="grid gap-3 sm:grid-cols-2">
       <Stat
         title={copy.counters.weekTitle}
-        value={<FlashingGap serverMinutes={counters.weekGapMinutes} liveMinutes={weekGapMinutes} />}
+        value={
+          <FlashingGap
+            settledMinutes={
+              isCurrentWeek
+                ? settledGapMinutes(counters.weekGapMinutes, timing)
+                : counters.weekGapMinutes
+            }
+            liveMinutes={weekGapMinutes}
+          />
+        }
       >
         <p className="flex flex-wrap gap-x-3 text-sm">
           <span>
@@ -140,7 +150,7 @@ export function CountersCard({
         title={copy.counters.globalTitle}
         value={
           <FlashingGap
-            serverMinutes={counters.globalGapMinutes}
+            settledMinutes={settledGapMinutes(counters.globalGapMinutes, timing)}
             liveMinutes={globalGapMinutes}
             isRefused={counters.hasOpenRefusal}
           />

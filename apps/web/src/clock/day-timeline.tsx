@@ -55,7 +55,7 @@ export function DayTimeline({
             isOpen && !day.isToday
               ? 'border border-dashed border-amber-400 bg-amber-50 text-amber-800'
               : 'bg-primary-500/80 text-white hover:bg-primary-600'
-          } ${isOpen && day.isToday ? 'animate-pulse' : ''}`;
+          } ${isOpen && day.isToday ? 'motion-safe:animate-pulse' : ''}`;
           const style = {
             left: `${percentOf(segment.startedAt)}%`,
             width: `${Math.max(percentOf(segment.shownEndAt) - percentOf(segment.startedAt), 1)}%`,

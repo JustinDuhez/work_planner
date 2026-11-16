@@ -65,7 +65,7 @@ export const copy = {
     holiday: 'Férié',
     previousWeek: 'Semaine précédente',
     nextWeek: 'Semaine suivante',
-    today: "Aujourd'hui",
+    today: 'Aujourd’hui',
     todayTitle: 'Aujourd’hui',
     since: 'Depuis',
     readOnlyPrefix: 'Semaine de',

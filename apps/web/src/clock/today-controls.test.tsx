@@ -7,7 +7,7 @@ import { copy } from '../copy';
 import { weekFixture } from '../test/clock-fixtures';
 import { mockFetchRoutes } from '../test/mock-fetch';
 import { APP_TIME_ZONE, currentIsoWeek } from './clock-time';
-import { TodayControls } from './today-controls';
+import { TodayHero } from './today-hero';
 
 const TODAY = toWorkDate(new Date(), APP_TIME_ZONE);
 const ISO_WEEK = currentIsoWeek(new Date());
@@ -24,7 +24,14 @@ function dayWith(overrides: object) {
 function controls(day: ReturnType<typeof dayWith>) {
   return (
     <QueryClientProvider client={createQueryClient({ shouldRetry: false })}>
-      <TodayControls day={day} ownerId={7} isoWeek={ISO_WEEK} onAddPeriod={() => undefined} />
+      <TodayHero
+        day={day}
+        now={new Date()}
+        ownerId={7}
+        isoWeek={ISO_WEEK}
+        onAddPeriod={() => undefined}
+        onRequestAbsence={() => undefined}
+      />
     </QueryClientProvider>
   );
 }
@@ -64,6 +71,8 @@ describe('TodayControls work mode pre-fill', () => {
     // Mounted before the message: a live region inserted already filled is often not announced.
     const status = screen.getByRole('status');
     expect(status).toBeEmptyDOMElement();
+    // It sits under the timer, so the empty line never pushes the CTA off-center.
+    expect(screen.getByText('0:00').parentElement).toContainElement(status);
 
     await user.click(screen.getByRole('button', { name: copy.clock.stop }));
 
@@ -78,6 +87,22 @@ describe('TodayControls work mode pre-fill', () => {
     expect(start.closest('.fixed')).toBeNull();
     expect(screen.getByRole('button', { name: copy.clock.addPeriod })).not.toHaveClass(
       'bg-primary-600',
+    );
+  });
+
+  it('turns Start into Stop on the same focused button, with a short transition', () => {
+    const { rerender } = render(controls(dayWith({})));
+    const start = screen.getByRole('button', { name: copy.clock.start });
+    start.focus();
+
+    const running = { id: 6, startedAt: new Date().toISOString(), endedAt: null };
+    rerender(controls(dayWith({ periods: [running], workMode: 'on_site' })));
+
+    const stop = screen.getByRole('button', { name: copy.clock.stop });
+    expect(stop).toBe(start);
+    expect(stop).toHaveFocus();
+    expect(screen.getByText(copy.clock.stop)).toHaveClass(
+      'motion-safe:animate-[week-in_200ms_ease-out]',
     );
   });
 });

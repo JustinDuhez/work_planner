@@ -6,6 +6,7 @@ import { expectNoAxeViolations } from '../test/axe';
 import { HUGO, LEA, signedInHomeRoutes, weekFixture } from '../test/clock-fixtures';
 import { mockFetchRoutes } from '../test/mock-fetch';
 import { renderApp } from '../test/render-app';
+import { CLOCK_WEEK_QUERY_PREFIX, clockWeekQueryKey } from './clock-queries';
 import { APP_TIME_ZONE, currentIsoWeek, shiftIsoWeek } from './clock-time';
 
 const WEEK = '2026-W45';
@@ -234,7 +235,59 @@ describe('ClockWeekPage', () => {
 
       expect(await screen.findAllByRole('listitem', { name: /^LUN/ })).toHaveLength(1);
       expect(screen.queryByRole('region', { name: copy.clock.todayTitle })).toBeNull();
+      // Without a hero, the absence request stays on its own above the rows.
+      expect(screen.getByRole('button', { name: copy.leave.requestButton })).toBeInTheDocument();
     });
+
+    it("is not shown on a colleague's current week", async () => {
+      const other = weekFixture({ user: HUGO, isOwnWeek: false });
+      mockFetchRoutes({
+        ...signedInHomeRoutes(),
+        [`GET /api/v1/users/${HUGO.id}/clock-weeks/${other.isoWeek}`]: { status: 200, body: other },
+      });
+
+      renderApp(`/pointage/${HUGO.id}`);
+
+      expect(await screen.findByText(/Semaine de Hugo Laurent/)).toBeInTheDocument();
+      expect(screen.queryByRole('region', { name: copy.clock.todayTitle })).toBeNull();
+    });
+
+    it("groups the absence request with the hero's secondary actions", async () => {
+      mockFetchRoutes(signedInHomeRoutes());
+
+      renderApp('/');
+
+      const hero = await screen.findByRole('region', { name: copy.clock.todayTitle });
+      const request = within(hero).getByRole('button', { name: copy.leave.requestButton });
+      expect(request).not.toHaveClass('bg-primary-600');
+      expect(request.parentElement).toBe(
+        within(hero).getByRole('button', { name: copy.clock.addPeriod }).parentElement,
+      );
+      expect(screen.getAllByRole('button', { name: copy.leave.requestButton })).toEqual([request]);
+    });
+  });
+
+  it('keeps the week on screen when a background refresh fails', async () => {
+    const week = weekFixture({ isoWeek: WEEK });
+    mockFetchRoutes(signedInHomeRoutes(week));
+    const { queryClient } = renderApp(`/?semaine=${WEEK}`);
+    await screen.findAllByRole('listitem', { name: /^LUN/ });
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+    mockFetchRoutes({
+      ...signedInHomeRoutes(week),
+      [`GET /api/v1/users/${LEA.id}/clock-weeks/${WEEK}`]: {
+        status: 500,
+        body: { code: 'INTERNAL_ERROR', message: 'Oups' },
+      },
+    });
+
+    await act(() => queryClient.refetchQueries({ queryKey: CLOCK_WEEK_QUERY_PREFIX }));
+    // TanStack Query tells its observers on the next macrotask: let the page render the failure.
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+
+    expect(queryClient.getQueryState(clockWeekQueryKey(LEA.id, WEEK))?.status).toBe('error');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('listitem', { name: /^LUN/ })).toHaveLength(1);
   });
 
   it('offers the owner to declare an absence on a future weekday and opens the dialog', async () => {
