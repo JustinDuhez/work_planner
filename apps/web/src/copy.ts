@@ -163,6 +163,7 @@ export const copy = {
     create: 'Créer',
     cancel: 'Annuler',
   },
+  shell: { skipToContent: 'Aller au contenu', menu: 'Menu', mainNav: 'Navigation principale' },
   nav: {
     clock: 'Pointage',
     directory: 'Annuaire',
