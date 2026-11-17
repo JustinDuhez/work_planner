@@ -32,8 +32,8 @@ function matchesSearch(entry: DirectoryEntry, search: string): boolean {
     .includes(needle);
 }
 
-const CELL = 'block py-1 text-zinc-600 xl:table-cell xl:px-3 xl:py-2';
-const CARD_LABEL = 'block text-xs font-medium text-zinc-500 xl:hidden';
+const CELL = 'block py-1 text-zinc-600 sm:table-cell sm:px-3 sm:py-2';
+const CARD_LABEL = 'block text-xs font-medium text-zinc-500 sm:hidden';
 const HEADER = 'px-3 py-2';
 
 export function DirectoryPage({
@@ -111,10 +111,10 @@ export function DirectoryPage({
         <EmptyState icon={SearchX} message={copy.directory.empty} />
       ) : null}
       {entries.length > 0 ? (
-        // A table only from xl, where the main column beside the side card is wide enough;
-        // e-mails wrap anywhere so no cell can push the row under the side card.
+        // Stacked cards on phones, a table from sm; the side card takes only its content width
+        // beside it, and e-mails wrap anywhere so every column stays in view.
         <table className="w-full text-sm">
-          <thead className="hidden text-left text-xs uppercase tracking-wide text-zinc-500 xl:table-header-group">
+          <thead className="hidden text-left text-xs uppercase tracking-wide text-zinc-500 sm:table-header-group">
             <tr>
               <th className={HEADER}>{copy.directory.columnName}</th>
               <th className={HEADER}>{copy.directory.columnEmail}</th>
@@ -127,7 +127,7 @@ export function DirectoryPage({
               </th>
             </tr>
           </thead>
-          <tbody className="space-y-3 xl:space-y-0">
+          <tbody className="space-y-3 sm:space-y-0">
             {entries.map((entry) => {
               const name = `${entry.firstName} ${entry.lastName}`;
               return (
@@ -135,9 +135,9 @@ export function DirectoryPage({
                 <tr
                   key={entry.id}
                   aria-label={name}
-                  className="block rounded-card border border-line bg-surface p-4 xl:table-row xl:rounded-none xl:border-0 xl:border-b xl:p-0"
+                  className="block rounded-card border border-line bg-surface p-4 sm:table-row sm:rounded-none sm:border-0 sm:border-b sm:p-0"
                 >
-                  <td className="block py-1 xl:table-cell xl:px-3 xl:py-2">
+                  <td className="block py-1 sm:table-cell sm:px-3 sm:py-2">
                     <span className="inline-flex items-center gap-2">
                       <Avatar firstName={entry.firstName} lastName={entry.lastName} />
                       {entry.isArchived ? (

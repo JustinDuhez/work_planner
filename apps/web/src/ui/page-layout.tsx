@@ -18,12 +18,12 @@ export function PageLayout({
       <div className="sticky top-14 z-10 -mx-4 flex flex-wrap items-center justify-between gap-3 border-b border-line bg-zinc-50/90 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-card sm:border">
         {bar}
       </div>
-      <div className={aside ? 'grid gap-6 lg:grid-cols-[1fr_18rem] lg:items-start' : ''}>
+      <div className={aside ? 'grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start' : ''}>
         <div className="min-w-0">{main}</div>
         {aside ? (
           <div
             data-slot="aside"
-            className="order-first lg:sticky lg:top-36 lg:order-none lg:-m-1 lg:max-h-[calc(100dvh-10rem)] lg:overflow-y-auto lg:p-1"
+            className="order-first lg:sticky lg:top-36 lg:order-none lg:-m-1 lg:min-w-48 lg:max-w-72 lg:max-h-[calc(100dvh-10rem)] lg:overflow-y-auto lg:p-1"
           >
             {aside}
           </div>
