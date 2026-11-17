@@ -53,10 +53,85 @@ describe('SettingsPage', () => {
   it('has no detectable accessibility problems', async () => {
     const { container, queryClient } = renderSettings();
     await screen.findByText('Armistice 1918');
-    await screen.findByRole('button', { name: copy.settings.saveYearStart });
+    await screen.findByRole('button', { name: copy.settings.editYearStart });
     await waitFor(() => expect(queryClient.isFetching()).toBe(0));
 
     await expectNoAxeViolations(container);
+  });
+
+  it('has no accessibility problems when the holidays cannot be loaded', async () => {
+    const { container, queryClient } = renderSettings({
+      'GET /api/v1/public-holidays?year=2026': {
+        status: 500,
+        body: { code: 'INTERNAL', message: 'x' },
+      },
+    });
+    await screen.findByRole('alert');
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+
+    await expectNoAxeViolations(container);
+  });
+
+  it('has no accessibility problems when the year start cannot be loaded', async () => {
+    const { container, queryClient } = renderSettings({
+      'GET /api/v1/settings': { status: 500, body: { code: 'INTERNAL', message: 'x' } },
+    });
+    await screen.findByRole('alert');
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+
+    await expectNoAxeViolations(container);
+  });
+
+  it('holds the title and the year in the bar', async () => {
+    const { container } = renderSettings();
+    await screen.findByText('Armistice 1918');
+
+    const bar = container.querySelector('.top-14') as HTMLElement;
+    expect(within(bar).getByRole('heading', { name: copy.settings.title })).toBeInTheDocument();
+    expect(within(bar).getByText('2026')).toBeInTheDocument();
+    expect(
+      within(bar).getByRole('button', { name: copy.settings.previousYear }),
+    ).toBeInTheDocument();
+  });
+
+  it('shows the year start as a big stat in the side card', async () => {
+    const { container } = renderSettings();
+
+    const card = await screen.findByRole('region', { name: copy.settings.yearStartTitle });
+    expect(container.querySelector('[data-slot="aside"]')).toContainElement(card);
+    expect(within(card).getByText('1 juillet')).toBeInTheDocument();
+    expect(within(card).queryByLabelText(copy.settings.yearStartMonth)).not.toBeInTheDocument();
+  });
+
+  it('keeps the side card placeholder while the year start loads', async () => {
+    mockFetchRoutes({
+      ...signedInHomeRoutes(),
+      'GET /api/v1/me': { status: 200, body: ADMIN_SESSION },
+      'GET /api/v1/public-holidays?year=2026': { status: 200, body: HOLIDAYS_2026 },
+    });
+    const initialFetch = globalThis.fetch;
+    globalThis.fetch = jest.fn((input: RequestInfo | URL, init?: RequestInit) =>
+      input === '/api/v1/settings'
+        ? new Promise<Response>(() => undefined)
+        : initialFetch(input, init),
+    ) as typeof fetch;
+    const { container } = renderApp('/parametres?annee=2026');
+
+    await waitFor(() =>
+      expect(
+        container.querySelectorAll('[data-slot="aside"] [aria-hidden]').length,
+      ).toBeGreaterThan(0),
+    );
+    expect(container.querySelector('[data-slot="aside"] section')).toBeNull();
+  });
+
+  it('keeps the import action inside the holidays section', async () => {
+    renderSettings();
+
+    const section = await screen.findByRole('region', { name: copy.settings.holidaysTitle });
+    expect(
+      within(section).getByRole('button', { name: 'Importer les jours fériés français 2026' }),
+    ).toBeInTheDocument();
   });
 
   it('offers a retry when the holidays cannot be loaded', async () => {
@@ -173,7 +248,8 @@ describe('SettingsPage', () => {
       'PATCH /api/v1/settings': { status: 200, body: { yearStart: '09-01' } },
     });
 
-    await user.selectOptions(await screen.findByLabelText(copy.settings.yearStartMonth), '09');
+    await user.click(await screen.findByRole('button', { name: copy.settings.editYearStart }));
+    await user.selectOptions(screen.getByLabelText(copy.settings.yearStartMonth), '09');
     const saveButton = screen.getByRole('button', { name: copy.settings.saveYearStart });
     expect(
       within(saveButton.parentElement as HTMLElement).getByRole('status'),
@@ -182,6 +258,7 @@ describe('SettingsPage', () => {
 
     expect(await sentBody(fetchMock, 'PATCH', '/api/v1/settings')).toEqual({ yearStart: '09-01' });
     expect(await screen.findByText(copy.settings.saved)).toBeInTheDocument();
+    expect(screen.getByText('1 septembre')).toBeInTheDocument();
   });
 
   it('shows the not-found page to a non-admin and no menu link', async () => {
@@ -226,7 +303,8 @@ describe('SettingsPage', () => {
       },
     });
 
-    await user.click(await screen.findByRole('button', { name: copy.settings.saveYearStart }));
+    await user.click(await screen.findByRole('button', { name: copy.settings.editYearStart }));
+    await user.click(screen.getByRole('button', { name: copy.settings.saveYearStart }));
 
     expect(
       await screen.findByText('Choisissez un jour qui existe chaque année.'),

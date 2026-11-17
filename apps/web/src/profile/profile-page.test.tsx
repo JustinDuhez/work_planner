@@ -19,12 +19,14 @@ function renderProfile(extraRoutes: Record<string, MockResponse> = {}) {
 }
 
 describe('ProfilePage', () => {
-  it('spells the e-mail address with a hyphen', async () => {
+  it('says in the identity card that only an administrator changes the e-mail address', async () => {
     renderProfile();
 
-    expect(await screen.findByLabelText('Adresse e-mail')).toHaveAccessibleDescription(
-      'Seul un administrateur peut modifier votre adresse e-mail.',
-    );
+    const card = await screen.findByRole('region', { name: copy.profile.identityTitle });
+    expect(within(card).getByText('lea.moreau@example.com')).toBeInTheDocument();
+    expect(
+      within(card).getByText('Seul un administrateur peut modifier votre adresse e-mail.'),
+    ).toBeInTheDocument();
   });
 
   it('has no detectable accessibility problems', async () => {
@@ -35,16 +37,35 @@ describe('ProfilePage', () => {
     await expectNoAxeViolations(container);
   });
 
-  it('shows the read-only account details', async () => {
+  it('shows the identity from /me in a side card', async () => {
+    const { container } = renderProfile();
+
+    const card = await screen.findByRole('region', { name: copy.profile.identityTitle });
+    expect(container.querySelector('[data-slot="aside"]')).toContainElement(card);
+    expect(within(card).getByText('Léa Moreau')).toBeInTheDocument();
+    expect(within(card).getByText('LM')).toBeInTheDocument();
+    expect(within(card).getByText('Collaborateur')).toBeInTheDocument();
+    expect(within(card).getByText('Front')).toBeInTheDocument();
+    expect(within(card).getByText('Sophie Dubois')).toBeInTheDocument();
+    expect(within(card).getByText('7:00')).toBeInTheDocument();
+  });
+
+  it('puts the editable fields first, then the password form, with one save button', async () => {
     renderProfile();
 
-    const details = await screen.findByRole('region', { name: copy.profile.infoTitle });
-    expect(within(details).getByLabelText(copy.profile.email)).toHaveValue(
-      'lea.moreau@example.com',
-    );
-    expect(within(details).getByText('Collaborateur')).toBeInTheDocument();
-    expect(within(details).getByText('Front')).toBeInTheDocument();
-    expect(within(details).getByText('Sophie Dubois')).toBeInTheDocument();
+    const info = await screen.findByRole('region', { name: copy.profile.infoTitle });
+    const password = screen.getByRole('region', { name: copy.password.title });
+    expect(info.compareDocumentPosition(password) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: copy.profile.saveInfo })).toHaveLength(1);
+    expect(within(info).getByLabelText(copy.profile.firstName)).toBeInTheDocument();
+  });
+
+  it('holds the title in the bar', async () => {
+    const { container } = renderProfile();
+    await screen.findByLabelText(copy.profile.firstName);
+
+    const bar = container.querySelector('.top-14') as HTMLElement;
+    expect(within(bar).getByRole('heading', { name: copy.profile.title })).toBeInTheDocument();
   });
 
   it('saves new names with the CSRF token and confirms it', async () => {

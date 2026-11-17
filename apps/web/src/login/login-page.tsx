@@ -43,10 +43,10 @@ export function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-zinc-50 px-4 py-10 font-sans">
+    <main className="flex min-h-dvh items-center justify-center bg-zinc-50 px-4 py-8 font-sans">
       <section className="w-full max-w-sm rounded-card border border-line bg-white p-6 shadow-card sm:p-8">
         <p className="text-sm font-semibold tracking-tight text-primary-600">{copy.appName}</p>
-        <h1 className="mt-4 text-xl font-semibold tracking-tight text-balance text-zinc-900">
+        <h1 className="mt-3 text-xl font-semibold tracking-tight text-balance text-zinc-900">
           {copy.login.title}
         </h1>
         <p className="mt-1 text-sm text-zinc-500">{copy.login.subtitle}</p>
@@ -55,7 +55,7 @@ export function LoginPage() {
             <ErrorBanner message={bannerMessage} />
           </div>
         )}
-        <form className="mt-6 space-y-4" onSubmit={handleSubmit} noValidate>
+        <form className="mt-5 space-y-4" onSubmit={handleSubmit} noValidate>
           <TextField
             label={copy.login.email}
             name="email"
