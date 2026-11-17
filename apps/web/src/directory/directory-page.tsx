@@ -112,94 +112,92 @@ export function DirectoryPage({
       ) : null}
       {entries.length > 0 ? (
         // A table only from xl, where the main column beside the side card is wide enough;
-        // the scroll wrapper keeps a long e-mail from pushing the row under the side card.
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="hidden text-left text-xs uppercase tracking-wide text-zinc-500 xl:table-header-group">
-              <tr>
-                <th className={HEADER}>{copy.directory.columnName}</th>
-                <th className={HEADER}>{copy.directory.columnEmail}</th>
-                <th className={HEADER}>{copy.directory.columnTeams}</th>
-                <th className={HEADER}>{copy.directory.columnManagers}</th>
-                <th className={HEADER}>{copy.directory.columnRole}</th>
-                <th className={HEADER}>{copy.directory.columnWorkingTime}</th>
-                <th className={HEADER}>
-                  <span className="sr-only">{copy.directory.manage}</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody className="space-y-3 xl:space-y-0">
-              {entries.map((entry) => {
-                const name = `${entry.firstName} ${entry.lastName}`;
-                return (
-                  // Stacked cards on phones (block layout), a table row from `sm`.
-                  <tr
-                    key={entry.id}
-                    aria-label={name}
-                    className="block rounded-card border border-line bg-surface p-4 xl:table-row xl:rounded-none xl:border-0 xl:border-b xl:p-0"
-                  >
-                    <td className="block py-1 xl:table-cell xl:px-3 xl:py-2">
-                      <span className="inline-flex items-center gap-2">
-                        <Avatar firstName={entry.firstName} lastName={entry.lastName} />
-                        {entry.isArchived ? (
-                          <span className="font-medium text-zinc-900">{name}</span>
-                        ) : (
-                          <Link
-                            to={clockWeekPath(
-                              entry.id === session?.user.id ? undefined : entry.id,
-                              isoWeek,
-                            )}
-                            className="font-medium text-zinc-900 hover:text-primary-600"
-                          >
-                            {name}
-                          </Link>
-                        )}
-                      </span>
-                      {entry.isBlocked ? (
-                        <span className="ml-2 rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600">
-                          {copy.directory.blocked}
-                        </span>
-                      ) : null}
+        // e-mails wrap anywhere so no cell can push the row under the side card.
+        <table className="w-full text-sm">
+          <thead className="hidden text-left text-xs uppercase tracking-wide text-zinc-500 xl:table-header-group">
+            <tr>
+              <th className={HEADER}>{copy.directory.columnName}</th>
+              <th className={HEADER}>{copy.directory.columnEmail}</th>
+              <th className={HEADER}>{copy.directory.columnTeams}</th>
+              <th className={HEADER}>{copy.directory.columnManagers}</th>
+              <th className={HEADER}>{copy.directory.columnRole}</th>
+              <th className={HEADER}>{copy.directory.columnWorkingTime}</th>
+              <th className={HEADER}>
+                <span className="sr-only">{copy.directory.manage}</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody className="space-y-3 xl:space-y-0">
+            {entries.map((entry) => {
+              const name = `${entry.firstName} ${entry.lastName}`;
+              return (
+                // Stacked cards on phones (block layout), a table row from `sm`.
+                <tr
+                  key={entry.id}
+                  aria-label={name}
+                  className="block rounded-card border border-line bg-surface p-4 xl:table-row xl:rounded-none xl:border-0 xl:border-b xl:p-0"
+                >
+                  <td className="block py-1 xl:table-cell xl:px-3 xl:py-2">
+                    <span className="inline-flex items-center gap-2">
+                      <Avatar firstName={entry.firstName} lastName={entry.lastName} />
                       {entry.isArchived ? (
-                        <span className="ml-2 rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600">
-                          {copy.directory.archivedBadge}
-                        </span>
-                      ) : null}
-                    </td>
-                    <td className={CELL}>
-                      <span className={CARD_LABEL}>{copy.directory.columnEmail}</span>
-                      {entry.email}
-                    </td>
-                    <td className={CELL}>
-                      <span className={CARD_LABEL}>{copy.directory.columnTeams}</span>
-                      {entry.teams.map((team) => team.name).join(', ')}
-                    </td>
-                    <td className={CELL}>
-                      <span className={CARD_LABEL}>{copy.directory.columnManagers}</span>
-                      {entry.managers
-                        .map((manager) => `${manager.firstName} ${manager.lastName}`)
-                        .join(', ')}
-                    </td>
-                    <td className={CELL}>
-                      <span className={CARD_LABEL}>{copy.directory.columnRole}</span>
-                      {roleLabel(entry)}
-                    </td>
-                    <td className={`${CELL} tabular-nums`}>
-                      <span className={CARD_LABEL}>{copy.directory.columnWorkingTime}</span>
-                      {workingTimeLabel(entry)}
-                      {entry.workingTime ? (
-                        <span className="block text-xs text-zinc-500">
-                          {copy.directory.startDate} {formatLongDate(entry.workingTime.startDate)}
-                        </span>
-                      ) : null}
-                    </td>
-                    <td className={`${CELL} text-right`}>{rowAction?.(entry)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                        <span className="font-medium text-zinc-900">{name}</span>
+                      ) : (
+                        <Link
+                          to={clockWeekPath(
+                            entry.id === session?.user.id ? undefined : entry.id,
+                            isoWeek,
+                          )}
+                          className="font-medium text-zinc-900 hover:text-primary-600"
+                        >
+                          {name}
+                        </Link>
+                      )}
+                    </span>
+                    {entry.isBlocked ? (
+                      <span className="ml-2 rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600">
+                        {copy.directory.blocked}
+                      </span>
+                    ) : null}
+                    {entry.isArchived ? (
+                      <span className="ml-2 rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600">
+                        {copy.directory.archivedBadge}
+                      </span>
+                    ) : null}
+                  </td>
+                  <td className={`${CELL} wrap-anywhere`}>
+                    <span className={CARD_LABEL}>{copy.directory.columnEmail}</span>
+                    {entry.email}
+                  </td>
+                  <td className={CELL}>
+                    <span className={CARD_LABEL}>{copy.directory.columnTeams}</span>
+                    {entry.teams.map((team) => team.name).join(', ')}
+                  </td>
+                  <td className={CELL}>
+                    <span className={CARD_LABEL}>{copy.directory.columnManagers}</span>
+                    {entry.managers
+                      .map((manager) => `${manager.firstName} ${manager.lastName}`)
+                      .join(', ')}
+                  </td>
+                  <td className={CELL}>
+                    <span className={CARD_LABEL}>{copy.directory.columnRole}</span>
+                    {roleLabel(entry)}
+                  </td>
+                  <td className={`${CELL} tabular-nums`}>
+                    <span className={CARD_LABEL}>{copy.directory.columnWorkingTime}</span>
+                    {workingTimeLabel(entry)}
+                    {entry.workingTime ? (
+                      <span className="block text-xs text-zinc-500">
+                        {copy.directory.startDate} {formatLongDate(entry.workingTime.startDate)}
+                      </span>
+                    ) : null}
+                  </td>
+                  <td className={`${CELL} text-right`}>{rowAction?.(entry)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       ) : null}
     </>
   );
