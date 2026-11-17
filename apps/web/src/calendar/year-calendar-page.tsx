@@ -26,7 +26,7 @@ import { Dialog } from '../ui/dialog';
 import { ErrorState } from '../ui/error-state';
 import { LoadingRegion } from '../ui/skeleton';
 import { useSettings } from '../settings/settings-queries';
-import { CalendarSkeleton, SummarySkeleton } from './calendar-skeleton';
+import { CalendarPageSkeleton, CalendarSkeleton, SummarySkeleton } from './calendar-skeleton';
 import { calendarPath, useYearCalendar } from './calendar-queries';
 import { halfKey, MonthCard, type HalfAction } from './month-card';
 import { PageLayout } from '../ui/page-layout';
@@ -87,11 +87,7 @@ function YearCalendarPeriod({
       ? periodStartYearContaining(toWorkDate(new Date(), APP_TIME_ZONE), settings.data.yearStart)
       : undefined);
   if (startYear === undefined) {
-    return (
-      <LoadingRegion label={copy.calendar.loading}>
-        <CalendarSkeleton />
-      </LoadingRegion>
-    );
+    return <CalendarPageSkeleton />;
   }
   return (
     <YearCalendarView

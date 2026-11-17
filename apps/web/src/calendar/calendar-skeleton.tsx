@@ -1,4 +1,6 @@
-import { Skeleton } from '../ui/skeleton';
+import { copy } from '../copy';
+import { PageLayout } from '../ui/page-layout';
+import { LoadingRegion, Skeleton } from '../ui/skeleton';
 
 const MONTHS_PER_PERIOD = 12;
 
@@ -27,5 +29,23 @@ export function SummarySkeleton() {
       <Skeleton className="mt-4 h-4 w-40" />
       <Skeleton className="mt-2 h-4 w-32" />
     </div>
+  );
+}
+
+/** The whole page before the period is known: same layout as the loaded calendar. */
+export function CalendarPageSkeleton() {
+  return (
+    <section className="space-y-6">
+      <h1 className="text-xl font-semibold tracking-tight text-balance">{copy.calendar.title}</h1>
+      <PageLayout
+        bar={<Skeleton className="h-9 w-56" />}
+        main={
+          <LoadingRegion label={copy.calendar.loading}>
+            <CalendarSkeleton />
+          </LoadingRegion>
+        }
+        aside={<SummarySkeleton />}
+      />
+    </section>
   );
 }

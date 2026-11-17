@@ -332,6 +332,21 @@ describe('YearCalendarPage', () => {
     expect(screen.queryByRole('region', { name: copy.calendar.yearTitle })).not.toBeInTheDocument();
   });
 
+  it('keeps the summary slot while the settings decide the period', async () => {
+    mockFetchRoutes(signedInHomeRoutes());
+    const answer = globalThis.fetch;
+    globalThis.fetch = (input, init) =>
+      typeof input === 'string' && input.includes('/settings')
+        ? new Promise<Response>(() => undefined)
+        : answer(input, init);
+    renderApp('/calendrier');
+
+    expect(await screen.findByText(copy.calendar.loading)).toHaveClass('sr-only');
+    expect(document.querySelectorAll('[data-slot="aside"] [aria-hidden]').length).toBeGreaterThan(
+      0,
+    );
+  });
+
   it('says so when the calendar cannot be loaded and loads it again on demand', async () => {
     const url = '/api/v1/users/7/year-calendars/2026';
     const fetchMock = mockFetchRoutes({
