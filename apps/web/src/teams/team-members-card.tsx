@@ -15,31 +15,32 @@ export function TeamMembersCard({
   isoWeek: string;
 }) {
   const { manager } = team;
+  // The manager is shown once, first and tagged, even when also a member.
+  const people = [
+    ...(manager ? [{ person: manager, isManager: true }] : []),
+    ...team.members
+      .filter((member) => member.id !== manager?.id)
+      .map((person) => ({ person, isManager: false })),
+  ];
   return (
     <SummaryCard title={team.name}>
       <ul className="space-y-2 text-sm">
-        {manager ? (
-          <li className="flex items-center gap-2">
-            <Avatar firstName={manager.firstName} lastName={manager.lastName} />
-            <span className="font-medium text-zinc-900">{`${manager.firstName} ${manager.lastName}`}</span>
-            <span className="text-xs font-medium text-zinc-500">{copy.teams.managerTag}</span>
-          </li>
-        ) : null}
-        {team.members.map((member) => (
-          <li key={member.id} className="flex items-center gap-2">
-            <Avatar firstName={member.firstName} lastName={member.lastName} />
+        {people.map(({ person, isManager }) => (
+          <li key={person.id} className="flex items-center gap-2">
+            <Avatar firstName={person.firstName} lastName={person.lastName} />
             <Link
-              to={clockWeekPath(member.id === ownUserId ? undefined : member.id, isoWeek)}
+              to={clockWeekPath(person.id === ownUserId ? undefined : person.id, isoWeek)}
               className="text-zinc-800 hover:text-primary-600"
             >
-              {`${member.firstName} ${member.lastName}`}
+              {`${person.firstName} ${person.lastName}`}
             </Link>
+            {isManager ? (
+              <span className="text-xs font-medium text-zinc-500">{copy.teams.managerTag}</span>
+            ) : null}
           </li>
         ))}
       </ul>
-      {team.members.length === 0 ? (
-        <p className="text-sm text-zinc-600">{copy.teams.noMembers}</p>
-      ) : null}
+      {people.length === 0 ? <p className="text-sm text-zinc-600">{copy.teams.noMembers}</p> : null}
     </SummaryCard>
   );
 }

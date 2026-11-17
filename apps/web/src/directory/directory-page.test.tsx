@@ -241,9 +241,21 @@ describe('DirectoryPage summary and layout', () => {
     await waitFor(() => expect(container.querySelector('[data-slot="aside"]')).toBeInTheDocument());
   });
 
-  it('has no accessibility problems when empty or failing', async () => {
+  it('has no accessibility problems when empty', async () => {
     const { container, queryClient } = renderDirectory([]);
     await screen.findByText(copy.directory.empty);
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+
+    await expectNoAxeViolations(container);
+  });
+
+  it('has no accessibility problems when the directory fails to load', async () => {
+    mockFetchRoutes({
+      ...signedInHomeRoutes(),
+      'GET /api/v1/users': { status: 500, body: { code: 'INTERNAL', message: 'x' } },
+    });
+    const { container, queryClient } = renderApp('/annuaire');
+    await screen.findByRole('alert');
     await waitFor(() => expect(queryClient.isFetching()).toBe(0));
 
     await expectNoAxeViolations(container);

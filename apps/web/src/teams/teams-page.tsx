@@ -48,9 +48,15 @@ function TeamItem({
               {team.name}
             </button>
             <span className="text-sm text-zinc-600">
-              {`· ${team.manager ? `${team.manager.firstName} ${team.manager.lastName}` : copy.teams.noManager}`}
+              <span aria-hidden="true">· </span>
+              {team.manager
+                ? `${team.manager.firstName} ${team.manager.lastName}`
+                : copy.teams.noManager}
             </span>
-            <span className="text-sm text-zinc-600">{`· ${memberCountLabel(team.members.length)}`}</span>
+            <span className="text-sm text-zinc-600">
+              <span aria-hidden="true">· </span>
+              {memberCountLabel(team.members.length)}
+            </span>
           </div>
           <div className="flex gap-2">{teamActions?.(node)}</div>
         </div>

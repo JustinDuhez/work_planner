@@ -38,15 +38,15 @@ describe('TeamsPage', () => {
     const direction = await screen.findByRole('listitem', { name: 'Direction' });
     const front = within(direction).getByRole('listitem', { name: 'Front' });
 
-    expect(within(direction).getByText('· Claire Martin')).toBeInTheDocument();
-    expect(within(front).getByText('· Sophie Dubois')).toBeInTheDocument();
-    expect(within(front).getByText('· 2 membres')).toBeInTheDocument();
+    expect(within(direction).getByText('Claire Martin')).toBeInTheDocument();
+    expect(within(front).getByText('Sophie Dubois')).toBeInTheDocument();
+    expect(within(front).getByText('2 membres')).toBeInTheDocument();
   });
 
   it('says when a team has no manager', async () => {
     renderTeams([teamView({ name: 'Commercial' })]);
 
-    expect(await screen.findByText(`· ${copy.teams.noManager}`)).toBeInTheDocument();
+    expect(await screen.findByText(copy.teams.noManager)).toBeInTheDocument();
   });
 
   it("opens a member's week from their name", async () => {
@@ -67,8 +67,8 @@ describe('TeamsPage', () => {
       teamView({ id: 2, name: 'Vide' }),
     ]);
 
-    expect(await screen.findByText('· 1 membre')).toBeInTheDocument();
-    expect(screen.getByText('· 0 membre')).toBeInTheDocument();
+    expect(await screen.findByText('1 membre')).toBeInTheDocument();
+    expect(screen.getByText('0 membre')).toBeInTheDocument();
   });
 
   it('opens your own week from your own name', async () => {
@@ -120,8 +120,8 @@ describe('TeamsPage selection and side card', () => {
 
     const front = await screen.findByRole('listitem', { name: 'Front' });
 
-    expect(within(front).getByText('· Sophie Dubois')).toBeInTheDocument();
-    expect(within(front).getByText('· 2 membres')).toBeInTheDocument();
+    expect(within(front).getByText('Sophie Dubois')).toBeInTheDocument();
+    expect(within(front).getByText('2 membres')).toBeInTheDocument();
   });
 
   it('selects the team you belong to first and lists its manager and members', async () => {
@@ -194,5 +194,37 @@ describe('TeamsPage selection and side card', () => {
     const { container } = renderApp('/equipes');
 
     await waitFor(() => expect(container.querySelector('[data-slot="aside"]')).toBeInTheDocument());
+  });
+});
+
+describe('TeamsPage accessibility and card', () => {
+  it('has no accessibility problems with a team selected', async () => {
+    const { container, queryClient, user } = renderTeams();
+    await user.click(await screen.findByRole('button', { name: 'Direction' }));
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+
+    await expectNoAxeViolations(container);
+  });
+
+  it('has no accessibility problems when the teams fail to load', async () => {
+    mockFetchRoutes({
+      ...signedInHomeRoutes(),
+      'GET /api/v1/teams': { status: 500, body: { code: 'INTERNAL', message: 'x' } },
+    });
+    const { container, queryClient } = renderApp('/equipes');
+    await screen.findByRole('alert');
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+
+    await expectNoAxeViolations(container);
+  });
+
+  it('lists a manager who is also a member once', async () => {
+    const sophie = { id: 2, firstName: 'Sophie', lastName: 'Dubois' };
+    renderTeams([teamView({ id: 1, name: 'Front', manager: sophie, members: [sophie] })]);
+
+    const card = await screen.findByRole('region', { name: 'Front' });
+
+    expect(within(card).getAllByText('Sophie Dubois')).toHaveLength(1);
+    expect(within(card).getByText(copy.teams.managerTag)).toBeInTheDocument();
   });
 });
