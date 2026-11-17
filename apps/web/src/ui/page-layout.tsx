@@ -23,7 +23,7 @@ export function PageLayout({
         {aside ? (
           <div
             data-slot="aside"
-            className="order-first lg:sticky lg:top-36 lg:order-none lg:max-h-[calc(100dvh-10rem)] lg:overflow-y-auto"
+            className="order-first lg:sticky lg:top-36 lg:order-none lg:-m-1 lg:max-h-[calc(100dvh-10rem)] lg:overflow-y-auto lg:p-1"
           >
             {aside}
           </div>
