@@ -21,7 +21,7 @@ export function AppShell() {
         {copy.shell.skipToContent}
       </a>
       <header className="sticky top-0 z-20 border-b border-line bg-surface/80 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
+        <div className="mx-auto flex h-14 max-w-(--breakpoint-2xl) items-center justify-between px-4 sm:px-6">
           <Link to="/" className="text-sm font-semibold tracking-tight">
             {copy.appName}
           </Link>
@@ -49,11 +49,11 @@ export function AppShell() {
       <main
         id={MAIN_ID}
         tabIndex={-1}
-        className="mx-auto max-w-6xl px-4 py-6 focus:outline-none sm:px-6 sm:py-10"
+        className="mx-auto max-w-(--breakpoint-2xl) px-4 py-6 focus:outline-none sm:px-6 sm:py-10"
       >
         <Outlet />
       </main>
-      <footer className="mx-auto flex max-w-6xl justify-end px-4 pb-6 sm:px-6">
+      <footer className="mx-auto flex max-w-(--breakpoint-2xl) justify-end px-4 pb-6 sm:px-6">
         <HealthStatus />
       </footer>
     </div>
