@@ -557,4 +557,51 @@ describe('LeaveRequestsPage layout', () => {
 
     await expectNoAxeViolations(container);
   });
+
+  it('shows no summary skeleton when a collaborator’s own list cannot be loaded', async () => {
+    const { container } = renderPage('/demandes', {
+      'GET /api/v1/leave-requests?view=mine': { status: 500, body: {} },
+    });
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(copy.leaveRequests.loadError);
+    await waitFor(() => expect(container.querySelector('[data-slot="aside"]')).toBeNull());
+  });
+
+  it('counts an approval exactly 30 days old but not one a moment older', async () => {
+    const approved = (id: number, reviewedAt: string) =>
+      leaveRequestView({ id, status: 'approved', reviewedAt, canCancel: false });
+    renderPage('/demandes', {
+      'GET /api/v1/leave-requests?view=mine': {
+        status: 200,
+        body: [
+          leaveRequestView({ id: 1, createdAt: '2026-11-12T09:00:00.000Z' }),
+          approved(2, '2026-10-13T09:00:00.000Z'),
+          approved(3, '2026-10-13T08:59:59.999Z'),
+        ],
+      },
+    });
+
+    const card = await screen.findByRole('region', { name: copy.leaveRequests.summary.title });
+
+    expect(
+      within(card).getByText(copy.leaveRequests.summary.approved).nextSibling,
+    ).toHaveTextContent('1');
+  });
+
+  it('dates an automatic approval by its creation', async () => {
+    renderPage('/demandes', {
+      'GET /api/v1/leave-requests?view=mine': {
+        status: 200,
+        body: [
+          leaveRequestView({ id: 1, status: 'approved', isAutoApproved: true, canCancel: false }),
+        ],
+      },
+    });
+
+    const card = await screen.findByRole('region', { name: copy.leaveRequests.summary.title });
+
+    expect(
+      within(card).getByText(copy.leaveRequests.summary.approved).nextSibling,
+    ).toHaveTextContent('1');
+  });
 });

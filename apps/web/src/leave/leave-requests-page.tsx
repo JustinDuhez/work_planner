@@ -284,7 +284,7 @@ export function LeaveRequestsPage() {
               mine={mine.data}
               toReviewCount={canSeeInbox ? pendingCount : null}
             />
-          ) : mine.isPending || inbox.isPending ? (
+          ) : mine.isPending || (canSeeInbox && inbox.isPending) ? (
             <SummarySkeleton />
           ) : undefined
         }
