@@ -185,7 +185,7 @@ export const copy = {
     teamFilter: 'Équipe',
     allTeams: 'Toutes les équipes',
     absentToday: 'Absents aujourd’hui',
-    absentCount: 'Personnes absentes',
+    absentCount: 'Parmi les personnes affichées',
     person: 'Personne',
     personSingular: 'personne',
     personPlural: 'personnes',
@@ -353,7 +353,6 @@ export const copy = {
   profile: {
     title: 'Mon profil',
     identityTitle: 'Identité',
-    dailyTime: 'Temps de travail par jour',
     infoTitle: 'Informations',
     firstName: 'Prénom',
     lastName: 'Nom',

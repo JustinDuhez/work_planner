@@ -175,6 +175,12 @@ describe('TeamsPage selection and side card', () => {
       'true',
     );
     expect(screen.getByRole('region', { name: 'Direction' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Direction' }).closest('[data-selected]'),
+    ).toHaveAttribute('data-selected', 'true');
+    expect(
+      screen.getByRole('button', { name: 'Front' }).closest('[data-selected]'),
+    ).toHaveAttribute('data-selected', 'false');
   });
 
   it('says when the selected team has no member', async () => {

@@ -1,8 +1,7 @@
-import { formatMinutes, type CurrentUser } from '@work-planner/domain';
+import type { CurrentUser } from '@work-planner/domain';
 import { copy } from '../copy';
 import { roleLabel } from '../session/role-label';
 import { Avatar } from '../ui/avatar';
-import { Stat } from '../ui/stat';
 import { SummaryCard } from '../ui/summary-card';
 
 /** Read-only account facts from /me; the editable names live in the form. */
@@ -51,7 +50,6 @@ export function IdentityCard({ user }: { user: CurrentUser }) {
           </dd>
         </div>
       </dl>
-      <Stat label={copy.profile.dailyTime} value={formatMinutes(user.dailyMinutes)} size="md" />
     </SummaryCard>
   );
 }

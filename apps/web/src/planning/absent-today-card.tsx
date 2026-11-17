@@ -32,9 +32,7 @@ export function AbsentTodayCard({
   return (
     <SummaryCard title={copy.planning.absentToday}>
       <Stat label={copy.planning.absentCount} value={String(absentees.length)} />
-      {absentees.length === 0 ? (
-        <p className="text-sm text-zinc-600">{copy.planning.nobodyAbsent}</p>
-      ) : (
+      {absentees.length === 0 ? null : (
         <ul className="space-y-2 text-sm">
           {absentees.map((person) => (
             <li key={person.id} className="flex items-center gap-2">

@@ -1,4 +1,4 @@
-import { useId, useState, type ReactNode } from 'react';
+import { useId, useRef, useState, type ReactNode } from 'react';
 import { Users } from 'lucide-react';
 import { currentIsoWeek } from '../clock/clock-time';
 import { copy } from '../copy';
@@ -35,7 +35,10 @@ function TeamItem({
   const { team, children } = node;
   return (
     <li aria-labelledby={nameId} className="space-y-2">
-      <div className="rounded-card border border-line bg-white p-3">
+      <div
+        data-selected={team.id === selectedId}
+        className="rounded-card border border-line bg-white p-3 data-[selected=true]:border-primary-500 data-[selected=true]:ring-1 data-[selected=true]:ring-primary-500"
+      >
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-baseline gap-x-2">
             <button
@@ -43,7 +46,7 @@ function TeamItem({
               type="button"
               aria-pressed={team.id === selectedId}
               onClick={() => onSelect(team.id)}
-              className="font-medium text-zinc-900 hover:text-primary-600 aria-pressed:text-primary-700"
+              className="font-medium text-zinc-900 hover:text-primary-600 hover:underline aria-pressed:font-semibold aria-pressed:text-primary-700"
             >
               {team.name}
             </button>
@@ -88,6 +91,12 @@ export function TeamsPage({
   const { data: session } = useSession();
   const teams = useTeams();
   const [pickedId, setPickedId] = useState<number>();
+  const asideRef = useRef<HTMLDivElement>(null);
+  // Below lg the members card sits above the tree: bring it into view after a pick.
+  const pick = (id: number) => {
+    setPickedId(id);
+    asideRef.current?.scrollIntoView?.({ block: 'nearest' });
+  };
   const tree = buildTeamTree(teams.data ?? []);
   const isoWeek = currentIsoWeek(new Date());
   const ownUserId = session?.user.id;
@@ -132,7 +141,7 @@ export function TeamsPage({
               node={node}
               teamActions={teamActions}
               selectedId={selected?.id}
-              onSelect={setPickedId}
+              onSelect={pick}
             />
           ))}
         </ul>
@@ -140,7 +149,9 @@ export function TeamsPage({
     </>
   );
   const aside = selected ? (
-    <TeamMembersCard team={selected} ownUserId={ownUserId} isoWeek={isoWeek} />
+    <div ref={asideRef} className="scroll-mt-32">
+      <TeamMembersCard team={selected} ownUserId={ownUserId} isoWeek={isoWeek} />
+    </div>
   ) : teams.isPending && !teams.isError ? (
     <SummarySkeleton />
   ) : null;

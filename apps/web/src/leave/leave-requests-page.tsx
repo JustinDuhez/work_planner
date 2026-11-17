@@ -283,6 +283,7 @@ export function LeaveRequestsPage() {
             <RequestsSummaryCard
               mine={mine.data}
               toReviewCount={canSeeInbox ? pendingCount : null}
+              now={Date.now()}
             />
           ) : mine.isPending || (canSeeInbox && inbox.isPending) ? (
             <SummarySkeleton />

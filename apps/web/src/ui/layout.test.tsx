@@ -30,9 +30,9 @@ describe('PageLayout', () => {
   });
 
   it('renders without a side card', () => {
-    render(<PageLayout bar={<h1>Profil</h1>} main={<p>Formulaire</p>} />);
+    const { container } = render(<PageLayout bar={<h1>Profil</h1>} main={<p>Formulaire</p>} />);
 
-    expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-slot="aside"]')).toBeNull();
   });
 });
 

@@ -47,7 +47,7 @@ describe('ProfilePage', () => {
     expect(within(card).getByText('Collaborateur')).toBeInTheDocument();
     expect(within(card).getByText('Front')).toBeInTheDocument();
     expect(within(card).getByText('Sophie Dubois')).toBeInTheDocument();
-    expect(within(card).getByText('7:00')).toBeInTheDocument();
+    expect(within(card).queryByText('7:00')).not.toBeInTheDocument();
   });
 
   it('puts the editable fields first, then the password form, with one save button', async () => {

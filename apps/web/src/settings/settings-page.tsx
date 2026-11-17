@@ -36,7 +36,7 @@ import {
 const YEAR_PARAM = 'annee';
 const MAX_DAY_OF_MONTH = 31;
 const YEAR_BUTTON_CLASS =
-  'flex size-9 items-center justify-center rounded-control text-zinc-700 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50';
+  'rounded-control p-2 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50';
 
 function yearFromUrl(value: string | null): number {
   const year = Number(value);
@@ -89,9 +89,9 @@ function YearNav({ year, onYearChange }: { year: number; onYearChange: (year: nu
         onClick={() => onYearChange(year - 1)}
         className={YEAR_BUTTON_CLASS}
       >
-        <ChevronLeft size={16} aria-hidden />
+        <ChevronLeft size={18} aria-hidden />
       </button>
-      <span className="tabular-nums text-sm font-medium">{year}</span>
+      <span className="min-w-16 text-center text-base font-semibold tabular-nums">{year}</span>
       <button
         type="button"
         aria-label={copy.settings.nextYear}
@@ -99,7 +99,7 @@ function YearNav({ year, onYearChange }: { year: number; onYearChange: (year: nu
         onClick={() => onYearChange(year + 1)}
         className={YEAR_BUTTON_CLASS}
       >
-        <ChevronRight size={16} aria-hidden />
+        <ChevronRight size={18} aria-hidden />
       </button>
     </div>
   );

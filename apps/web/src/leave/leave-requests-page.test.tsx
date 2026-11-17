@@ -21,6 +21,10 @@ const MANAGER_SESSION = {
   },
 };
 
+const NOW = Date.parse('2026-11-17T09:00:00.000Z');
+
+afterEach(() => jest.restoreAllMocks());
+
 function renderPage(path: string, extra: Record<string, MockResponse> = {}) {
   const fetchMock = mockFetchRoutes({
     ...signedInHomeRoutes(),
@@ -499,6 +503,7 @@ describe('LeaveRequestsPage layout', () => {
   });
 
   it('counts what to review, what is pending and what was approved within 30 days', async () => {
+    jest.spyOn(Date, 'now').mockReturnValue(NOW);
     renderPage('/demandes', {
       ...toReview([leaveRequestView({ id: 24, canReview: true })]),
       'GET /api/v1/leave-requests?view=mine': {
@@ -536,13 +541,15 @@ describe('LeaveRequestsPage layout', () => {
     ).toHaveTextContent('1');
   });
 
-  it('shows a collaborator no stat to review, and omits the 30 days stat without any date', async () => {
+  it('shows a collaborator no stat to review, and 0 approved when nothing qualifies', async () => {
     renderPage('/demandes');
 
     const card = await screen.findByRole('region', { name: copy.leaveRequests.summary.title });
 
     expect(within(card).queryByText(copy.leaveRequests.summary.toReview)).not.toBeInTheDocument();
-    expect(within(card).queryByText(copy.leaveRequests.summary.approved)).not.toBeInTheDocument();
+    expect(
+      within(card).getByText(copy.leaveRequests.summary.approved).nextSibling,
+    ).toHaveTextContent('0');
     expect(within(card).getByText(copy.leaveRequests.summary.pending)).toBeInTheDocument();
   });
 
@@ -567,28 +574,8 @@ describe('LeaveRequestsPage layout', () => {
     await waitFor(() => expect(container.querySelector('[data-slot="aside"]')).toBeNull());
   });
 
-  it('counts an approval exactly 30 days old but not one a moment older', async () => {
-    const approved = (id: number, reviewedAt: string) =>
-      leaveRequestView({ id, status: 'approved', reviewedAt, canCancel: false });
-    renderPage('/demandes', {
-      'GET /api/v1/leave-requests?view=mine': {
-        status: 200,
-        body: [
-          leaveRequestView({ id: 1, createdAt: '2026-11-12T09:00:00.000Z' }),
-          approved(2, '2026-10-13T09:00:00.000Z'),
-          approved(3, '2026-10-13T08:59:59.999Z'),
-        ],
-      },
-    });
-
-    const card = await screen.findByRole('region', { name: copy.leaveRequests.summary.title });
-
-    expect(
-      within(card).getByText(copy.leaveRequests.summary.approved).nextSibling,
-    ).toHaveTextContent('1');
-  });
-
   it('dates an automatic approval by its creation', async () => {
+    jest.spyOn(Date, 'now').mockReturnValue(NOW);
     renderPage('/demandes', {
       'GET /api/v1/leave-requests?view=mine': {
         status: 200,

@@ -125,7 +125,7 @@ describe('PlanningPage', () => {
       },
     });
 
-    expect(await screen.findAllByText(copy.planning.nobodyAbsent)).toHaveLength(2);
+    expect(await screen.findByText(copy.planning.nobodyAbsent)).toBeInTheDocument();
   });
 
   it("keeps today's absentees whatever month is shown", async () => {
@@ -347,12 +347,10 @@ describe('PlanningPage', () => {
       },
     });
 
-    const messages = await screen.findAllByText(copy.planning.nobodyAbsent);
+    const message = await screen.findByText(copy.planning.nobodyAbsent);
     await waitFor(() => expect(queryClient.isFetching()).toBe(0));
 
-    expect(messages.some((message) => message.closest('div')?.matches('.border-dashed'))).toBe(
-      true,
-    );
+    expect(message.closest('div')).toHaveClass('border-dashed');
     await expectNoAxeViolations(container);
   });
 
@@ -407,7 +405,7 @@ describe('PlanningPage', () => {
     expect(within(card).queryByText('Inès Bernard')).not.toBeInTheDocument();
   });
 
-  it('says in the card when nobody is absent', async () => {
+  it('shows 0 and no sentence in the card when nobody is absent', async () => {
     renderPlanning('/planning?mois=2026-11', {
       'GET /api/v1/team-months/2026-11': {
         status: 200,
@@ -418,7 +416,7 @@ describe('PlanningPage', () => {
     const card = await screen.findByRole('region', { name: copy.planning.absentToday });
 
     expect(within(card).getByText('0')).toBeInTheDocument();
-    expect(within(card).getByText(copy.planning.nobodyAbsent)).toBeInTheDocument();
+    expect(within(card).queryByText(copy.planning.nobodyAbsent)).not.toBeInTheDocument();
   });
 
   it('puts an initials avatar next to each name without changing the name', async () => {
@@ -435,14 +433,19 @@ describe('PlanningPage', () => {
   });
 
   it('keeps the card slot in the layout while loading', async () => {
-    const { container } = renderPlanning('/planning?mois=2026-11');
-    const answer = globalThis.fetch;
-    globalThis.fetch = (input, init) =>
+    mockFetchRoutes({ ...signedInHomeRoutes() });
+    const initialFetch = globalThis.fetch;
+    globalThis.fetch = jest.fn((input: RequestInfo | URL, init?: RequestInit) =>
       typeof input === 'string' && input.includes('/team-months/')
         ? new Promise<Response>(() => undefined)
-        : answer(input, init);
+        : initialFetch(input, init),
+    ) as typeof fetch;
+    const { container } = renderApp('/planning?mois=2026-11');
 
     await screen.findByText(copy.planning.loading);
-    expect(container.querySelector('[data-slot="aside"]')).not.toBeNull();
+    expect(container.querySelectorAll('[data-slot="aside"] [aria-hidden]').length).toBeGreaterThan(
+      0,
+    );
+    expect(container.querySelector('[data-slot="aside"] section')).toBeNull();
   });
 });

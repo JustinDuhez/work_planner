@@ -21,7 +21,10 @@ export function PageLayout({
       <div className={aside ? 'grid gap-6 lg:grid-cols-[1fr_18rem] lg:items-start' : ''}>
         <div className="min-w-0">{main}</div>
         {aside ? (
-          <div data-slot="aside" className="order-first lg:sticky lg:top-36 lg:order-none">
+          <div
+            data-slot="aside"
+            className="order-first lg:sticky lg:top-36 lg:order-none lg:max-h-[calc(100dvh-10rem)] lg:overflow-y-auto"
+          >
             {aside}
           </div>
         ) : null}
