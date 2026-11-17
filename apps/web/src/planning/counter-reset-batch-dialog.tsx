@@ -4,9 +4,13 @@ import { ApiError } from '../api/api-client';
 import { bannerMessageFor } from '../api/form-errors';
 import { copy } from '../copy';
 import { Button } from '../ui/button';
+import { ErrorBanner } from '../ui/error-banner';
+import { Dialog } from '../ui/dialog';
+import { Field } from '../ui/field';
+import { useFocusFirstInvalid } from '../ui/field-error';
 import { useCreateCounterResets } from './planning-queries';
 
-const checkboxClass = 'size-4 focus-visible:outline-2 focus-visible:outline-primary-600';
+const checkboxClass = 'size-4';
 
 function SectionCheckbox({
   title,
@@ -53,7 +57,7 @@ export function CounterResetBatchDialog({
   onClose: () => void;
   onDone: (count: number) => void;
 }) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [resetDate, setResetDate] = useState(teamMonth.today);
   const createResets = useCreateCounterResets();
@@ -72,9 +76,7 @@ export function CounterResetBatchDialog({
     createResets.error instanceof ApiError ? createResets.error.fieldErrors.resetDate : undefined;
   const bannerMessage = bannerMessageFor(createResets.error, ['resetDate']);
 
-  useEffect(() => {
-    dialogRef.current?.showModal();
-  }, []);
+  useFocusFirstInvalid(formRef, createResets.error);
 
   function setPeople(ids: number[], isChecked: boolean) {
     setSelected((previous) => {
@@ -101,19 +103,18 @@ export function CounterResetBatchDialog({
   }
 
   return (
-    <dialog
-      ref={dialogRef}
-      aria-label={copy.planning.resetTitle}
+    <Dialog
+      title={copy.planning.resetTitle}
       onClose={onClose}
-      className="m-auto max-h-[90dvh] w-[min(28rem,calc(100vw-2rem))] rounded-card border border-zinc-200 bg-white p-6 shadow-card backdrop:bg-zinc-900/30"
+      widthClass="w-[min(28rem,calc(100vw-2rem))]"
     >
-      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-        <h2 className="text-base font-semibold">{copy.planning.resetTitle}</h2>
+      <form ref={formRef} onSubmit={handleSubmit} className="space-y-4" noValidate>
         <div className="max-h-[50dvh] space-y-3 overflow-y-auto">
           {resettableSections.map((section) => {
             const sectionIds = section.rows.map((row) => row.personId);
             return (
-              <div key={section.teamId ?? 'none'} className="space-y-1">
+              <fieldset key={section.teamId ?? 'none'} className="space-y-1">
+                <legend className="sr-only">{section.title}</legend>
                 <SectionCheckbox
                   title={section.title}
                   personIds={sectionIds}
@@ -136,27 +137,23 @@ export function CounterResetBatchDialog({
                     </label>
                   );
                 })}
-              </div>
+              </fieldset>
             );
           })}
         </div>
-        <label className="block space-y-1 text-sm font-medium">
-          <span>{copy.counters.resetDate}</span>
-          <input
-            type="date"
-            value={resetDate}
-            max={teamMonth.today}
-            onChange={(event) => setResetDate(event.target.value)}
-            aria-invalid={fieldError !== undefined}
-            className="h-10 w-full rounded-lg border border-zinc-200 px-3 focus-visible:outline-2 focus-visible:outline-primary-600"
-          />
-          {fieldError ? <span className="text-xs text-rose-700">{fieldError}</span> : null}
-        </label>
-        {bannerMessage ? (
-          <p role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">
-            {bannerMessage}
-          </p>
-        ) : null}
+        <Field label={copy.counters.resetDate} error={fieldError}>
+          {(control) => (
+            <input
+              {...control}
+              type="date"
+              value={resetDate}
+              max={teamMonth.today}
+              onChange={(event) => setResetDate(event.target.value)}
+              className="h-10 w-full rounded-control border border-line px-3"
+            />
+          )}
+        </Field>
+        <ErrorBanner message={bannerMessage} />
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={onClose}>
             {copy.counters.cancel}
@@ -166,6 +163,6 @@ export function CounterResetBatchDialog({
           </Button>
         </div>
       </form>
-    </dialog>
+    </Dialog>
   );
 }

@@ -3,8 +3,8 @@ import { copy } from '../copy';
 
 export function NotFoundPage() {
   return (
-    <section className="rounded-card border border-zinc-200 bg-white p-6 shadow-card">
-      <h1 className="text-xl font-semibold tracking-tight">{copy.notFound.title}</h1>
+    <section className="rounded-card border border-line bg-surface p-6 shadow-card">
+      <h1 className="text-xl font-semibold tracking-tight text-balance">{copy.notFound.title}</h1>
       <p className="mt-1 text-sm text-zinc-500">{copy.notFound.description}</p>
       <Link
         to="/"

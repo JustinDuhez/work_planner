@@ -47,15 +47,15 @@ export function DayTimeline({
           {segments.map(labelOf).join(' · ')}
         </p>
       ) : null}
-      <div className="relative h-10 rounded-lg bg-zinc-100/70">
+      <div className="relative h-10 rounded-control bg-zinc-100/70">
         {segments.map((segment) => {
           const isOpen = segment.endedAt === null;
           const label = labelOf(segment);
-          const className = `absolute inset-y-1 rounded-md text-[10px] font-medium transition-colors ${
+          const className = `absolute inset-y-1 rounded-inner-md text-[10px] font-medium transition-colors ${
             isOpen && !day.isToday
               ? 'border border-dashed border-amber-400 bg-amber-50 text-amber-800'
-              : 'bg-primary-500/80 text-white hover:bg-primary-600'
-          } ${isOpen && day.isToday ? 'animate-pulse' : ''}`;
+              : 'bg-primary-500/80 text-on-primary hover:bg-primary-600'
+          } ${isOpen && day.isToday ? 'motion-safe:animate-pulse' : ''}`;
           const style = {
             left: `${percentOf(segment.startedAt)}%`,
             width: `${Math.max(percentOf(segment.shownEndAt) - percentOf(segment.startedAt), 1)}%`,

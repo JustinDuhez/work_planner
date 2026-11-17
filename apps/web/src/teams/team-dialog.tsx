@@ -1,16 +1,20 @@
 import { isInSubtree, type TeamView } from '@work-planner/domain';
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useId, useRef, useState, type FormEvent } from 'react';
 import { bannerMessageFor } from '../api/form-errors';
 import { copy } from '../copy';
 import { useDirectory } from '../directory/directory-queries';
-import { ErrorBanner, fieldErrorsOf } from '../directory/manage-user-dialog';
+import { fieldErrorsOf } from '../directory/manage-user-dialog';
+import { ErrorBanner } from '../ui/error-banner';
 import { Button } from '../ui/button';
+import { Dialog } from '../ui/dialog';
+import { Field } from '../ui/field';
+import { useFocusFirstInvalid } from '../ui/field-error';
 import { TextField } from '../ui/text-field';
 import { useCreateTeam, useUpdateTeam } from './team-mutations';
 
 const RENDERED_FIELDS = ['name', 'parentTeamId', 'managerId', 'memberIds'];
 const NO_TEAM_ID = 0;
-const SELECT_CLASS = 'h-10 w-full rounded-lg border border-zinc-200 px-2';
+const SELECT_CLASS = 'h-10 w-full rounded-control border border-line px-2';
 
 function toOptionalId(value: string): number | null {
   return value === '' ? null : Number(value);
@@ -29,7 +33,8 @@ export function TeamDialog({
   teams: readonly TeamView[];
   onClose: () => void;
 }) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const membersErrorId = useId();
   const people = useDirectory(false);
   const [name, setName] = useState(team?.name ?? '');
   const [parentTeamId, setParentTeamId] = useState(team?.parentTeamId?.toString() ?? '');
@@ -51,9 +56,7 @@ export function TeamDialog({
     fullName(person).toLocaleLowerCase('fr-FR').includes(needle),
   );
 
-  useEffect(() => {
-    dialogRef.current?.showModal();
-  }, []);
+  useFocusFirstInvalid(formRef, mutation.error);
 
   function toggleMember(personId: number) {
     setMemberIds((current) => {
@@ -78,14 +81,8 @@ export function TeamDialog({
 
   const title = team ? copy.teamDialog.editTitle : copy.teamDialog.createTitle;
   return (
-    <dialog
-      ref={dialogRef}
-      aria-label={title}
-      onClose={onClose}
-      className="m-auto max-h-[90dvh] w-[min(32rem,calc(100vw-2rem))] overflow-y-auto rounded-card border border-zinc-200 bg-white p-6 shadow-card backdrop:bg-zinc-900/30"
-    >
-      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-        <h2 className="text-base font-semibold">{title}</h2>
+    <Dialog title={title} onClose={onClose} widthClass="w-[min(32rem,calc(100vw-2rem))]">
+      <form ref={formRef} onSubmit={handleSubmit} className="space-y-4" noValidate>
         <TextField
           label={copy.teamDialog.name}
           name="name"
@@ -93,42 +90,40 @@ export function TeamDialog({
           onChange={setName}
           error={fieldErrors.name}
         />
-        <label className="block space-y-1 text-sm font-medium">
-          <span>{copy.teamDialog.parent}</span>
-          <select
-            value={parentTeamId}
-            onChange={(event) => setParentTeamId(event.target.value)}
-            className={SELECT_CLASS}
-          >
-            <option value="">{copy.teamDialog.noParent}</option>
-            {parentOptions.map((candidate) => (
-              <option key={candidate.id} value={candidate.id}>
-                {candidate.name}
-              </option>
-            ))}
-          </select>
-          {fieldErrors.parentTeamId ? (
-            <span className="text-xs text-rose-700">{fieldErrors.parentTeamId}</span>
-          ) : null}
-        </label>
-        <label className="block space-y-1 text-sm font-medium">
-          <span>{copy.teamDialog.manager}</span>
-          <select
-            value={managerId}
-            onChange={(event) => setManagerId(event.target.value)}
-            className={SELECT_CLASS}
-          >
-            <option value="">{copy.teamDialog.noManager}</option>
-            {(people.data ?? []).map((person) => (
-              <option key={person.id} value={person.id}>
-                {fullName(person)}
-              </option>
-            ))}
-          </select>
-          {fieldErrors.managerId ? (
-            <span className="text-xs text-rose-700">{fieldErrors.managerId}</span>
-          ) : null}
-        </label>
+        <Field label={copy.teamDialog.parent} error={fieldErrors.parentTeamId}>
+          {(control) => (
+            <select
+              {...control}
+              value={parentTeamId}
+              onChange={(event) => setParentTeamId(event.target.value)}
+              className={SELECT_CLASS}
+            >
+              <option value="">{copy.teamDialog.noParent}</option>
+              {parentOptions.map((candidate) => (
+                <option key={candidate.id} value={candidate.id}>
+                  {candidate.name}
+                </option>
+              ))}
+            </select>
+          )}
+        </Field>
+        <Field label={copy.teamDialog.manager} error={fieldErrors.managerId}>
+          {(control) => (
+            <select
+              {...control}
+              value={managerId}
+              onChange={(event) => setManagerId(event.target.value)}
+              className={SELECT_CLASS}
+            >
+              <option value="">{copy.teamDialog.noManager}</option>
+              {(people.data ?? []).map((person) => (
+                <option key={person.id} value={person.id}>
+                  {fullName(person)}
+                </option>
+              ))}
+            </select>
+          )}
+        </Field>
         <fieldset className="space-y-2">
           <legend className="text-sm font-medium">{`${copy.teamDialog.members} · ${memberIds.size} ${memberIds.size > 1 ? copy.teamDialog.selectedMany : copy.teamDialog.selectedOne}`}</legend>
           <input
@@ -137,7 +132,9 @@ export function TeamDialog({
             placeholder={copy.teamDialog.memberFilter}
             value={filter}
             onChange={(event) => setFilter(event.target.value)}
-            className="h-9 w-full rounded-lg border border-zinc-200 px-3 text-sm"
+            aria-invalid={fieldErrors.memberIds !== undefined}
+            aria-describedby={fieldErrors.memberIds ? membersErrorId : undefined}
+            className="h-9 w-full rounded-control border border-line px-3 text-sm"
           />
           <ul className="max-h-48 space-y-1 overflow-y-auto">
             {visiblePeople.map((person) => (
@@ -154,7 +151,9 @@ export function TeamDialog({
             ))}
           </ul>
           {fieldErrors.memberIds ? (
-            <span className="text-xs text-rose-700">{fieldErrors.memberIds}</span>
+            <p id={membersErrorId} className="text-xs text-rose-700">
+              {fieldErrors.memberIds}
+            </p>
           ) : null}
         </fieldset>
         <ErrorBanner message={bannerMessageFor(mutation.error, RENDERED_FIELDS)} />
@@ -167,6 +166,6 @@ export function TeamDialog({
           </Button>
         </div>
       </form>
-    </dialog>
+    </Dialog>
   );
 }

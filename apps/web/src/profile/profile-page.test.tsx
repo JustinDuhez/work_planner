@@ -1,7 +1,8 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { PASSWORD_POLICY_MESSAGES } from '@work-planner/domain';
 import userEvent from '@testing-library/user-event';
 import { copy } from '../copy';
+import { expectNoAxeViolations } from '../test/axe';
 import { NO_NOTIFICATIONS } from '../test/clock-fixtures';
 import { mockFetchRoutes, type MockResponse } from '../test/mock-fetch';
 import { renderApp } from '../test/render-app';
@@ -13,21 +14,58 @@ function renderProfile(extraRoutes: Record<string, MockResponse> = {}) {
     'GET /api/v1/notifications': { status: 200, body: NO_NOTIFICATIONS },
     ...extraRoutes,
   });
-  renderApp('/profil');
-  return { fetchMock, user: userEvent.setup() };
+  const rendered = renderApp('/profil');
+  return { ...rendered, fetchMock, user: userEvent.setup() };
 }
 
 describe('ProfilePage', () => {
-  it('shows the read-only account details', async () => {
+  it('says in the identity card that only an administrator changes the e-mail address', async () => {
     renderProfile();
 
-    const details = await screen.findByRole('region', { name: copy.profile.infoTitle });
-    expect(within(details).getByLabelText(copy.profile.email)).toHaveValue(
-      'lea.moreau@example.com',
-    );
-    expect(within(details).getByText('Collaborateur')).toBeInTheDocument();
-    expect(within(details).getByText('Front')).toBeInTheDocument();
-    expect(within(details).getByText('Sophie Dubois')).toBeInTheDocument();
+    const card = await screen.findByRole('region', { name: copy.profile.identityTitle });
+    expect(within(card).getByText('lea.moreau@example.com')).toBeInTheDocument();
+    expect(
+      within(card).getByText('Seul un administrateur peut modifier votre adresse e-mail.'),
+    ).toBeInTheDocument();
+  });
+
+  it('has no detectable accessibility problems', async () => {
+    const { container, queryClient } = renderProfile();
+    await screen.findByLabelText(copy.profile.firstName);
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+
+    await expectNoAxeViolations(container);
+  });
+
+  it('shows the identity from /me in a side card', async () => {
+    const { container } = renderProfile();
+
+    const card = await screen.findByRole('region', { name: copy.profile.identityTitle });
+    expect(container.querySelector('[data-slot="aside"]')).toContainElement(card);
+    expect(within(card).getByText('Léa Moreau')).toBeInTheDocument();
+    expect(within(card).getByText('LM')).toBeInTheDocument();
+    expect(within(card).getByText('Collaborateur')).toBeInTheDocument();
+    expect(within(card).getByText('Front')).toBeInTheDocument();
+    expect(within(card).getByText('Sophie Dubois')).toBeInTheDocument();
+    expect(within(card).queryByText('7:00')).not.toBeInTheDocument();
+  });
+
+  it('puts the editable fields first, then the password form, with one save button', async () => {
+    renderProfile();
+
+    const info = await screen.findByRole('region', { name: copy.profile.infoTitle });
+    const password = screen.getByRole('region', { name: copy.password.title });
+    expect(info.compareDocumentPosition(password) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: copy.profile.saveInfo })).toHaveLength(1);
+    expect(within(info).getByLabelText(copy.profile.firstName)).toBeInTheDocument();
+  });
+
+  it('holds the title in the bar', async () => {
+    const { container } = renderProfile();
+    await screen.findByLabelText(copy.profile.firstName);
+
+    const bar = container.querySelector('.top-14') as HTMLElement;
+    expect(within(bar).getByRole('heading', { name: copy.profile.title })).toBeInTheDocument();
   });
 
   it('saves new names with the CSRF token and confirms it', async () => {
@@ -38,6 +76,9 @@ describe('ProfilePage', () => {
 
     await user.clear(firstName);
     await user.type(firstName, 'Lea');
+    // The live region is mounted before the outcome so that the outcome is announced.
+    const details = screen.getByRole('region', { name: copy.profile.infoTitle });
+    expect(within(details).getByRole('status')).toBeEmptyDOMElement();
     await user.click(screen.getByRole('button', { name: copy.profile.saveInfo }));
 
     expect(await screen.findByText(copy.profile.infoSaved)).toBeInTheDocument();
@@ -127,6 +168,8 @@ describe('ProfilePage', () => {
     );
     await user.type(screen.getByLabelText(copy.password.new), 'a brand new passphrase');
     await user.type(screen.getByLabelText(copy.password.confirm), 'a brand new passphrase');
+    const section = screen.getByRole('region', { name: copy.password.title });
+    expect(within(section).getByRole('status')).toBeEmptyDOMElement();
     await user.click(screen.getByRole('button', { name: copy.password.submit }));
 
     expect(await screen.findByText(copy.password.changed)).toBeInTheDocument();

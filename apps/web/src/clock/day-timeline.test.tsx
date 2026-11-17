@@ -27,7 +27,7 @@ describe('DayTimeline', () => {
     render(<DayTimeline day={{ ...DAY, isToday: true, isUnclosed: false }} now={NOW} />);
 
     const band = screen.getByRole('img', BAND);
-    expect(band).toHaveClass('animate-pulse');
+    expect(band).toHaveClass('motion-safe:animate-pulse');
     expect(band).toHaveStyle({ left: '37.5%' });
     expect(Number.parseFloat(band.style.width)).toBeCloseTo((2 / 24) * 100);
   });
@@ -37,7 +37,7 @@ describe('DayTimeline', () => {
 
     const band = screen.getByRole('img', BAND);
     expect(band).toHaveClass('border-dashed');
-    expect(band).not.toHaveClass('animate-pulse');
+    expect(band).not.toHaveClass('motion-safe:animate-pulse');
     expect(band).toHaveStyle({ left: '37.5%', width: '62.5%' });
   });
 

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import type { WeekCounters } from '@work-planner/domain';
 import { copy } from '../copy';
 import { weekFixture } from '../test/clock-fixtures';
@@ -12,6 +12,8 @@ function renderCard(counters: Partial<WeekCounters>, now = new Date(SERVER_NOW))
   render(<CountersCard week={week} now={now} />);
 }
 
+const FLASH = 'motion-safe:animate-[value-flash_600ms_ease-out]';
+
 describe('CountersCard', () => {
   it("shows the week's worked time, target and gap", () => {
     renderCard({ weekCountedWorkedMinutes: 1880, weekTargetMinutes: 2100, weekGapMinutes: -100 });
@@ -19,6 +21,70 @@ describe('CountersCard', () => {
     expect(screen.getByText('31:20')).toBeInTheDocument();
     expect(screen.getByText('35:00')).toBeInTheDocument();
     expect(screen.getByText('−1:40')).toHaveClass('text-amber-700');
+  });
+
+  it('shows the week and global balances as two labelled stats', () => {
+    renderCard({ weekGapMinutes: -100, globalGapMinutes: 255 });
+
+    const weekStat = screen.getByRole('region', { name: copy.counters.weekTitle });
+    expect(within(weekStat).getByText('Semaine')).toBeInTheDocument();
+    expect(within(weekStat).getByText('−1:40')).toHaveClass('text-3xl');
+    const globalStat = screen.getByRole('region', { name: copy.counters.globalTitle });
+    expect(within(globalStat).getByText('Solde global')).toBeInTheDocument();
+    expect(within(globalStat).getByText('+4:15')).toHaveClass('text-3xl');
+    // "Semaine" already names the value: no second "week gap" label.
+    expect(screen.queryByText(/Écart/)).not.toBeInTheDocument();
+  });
+
+  it('highlights a balance when the server answers a new value', () => {
+    const now = new Date(SERVER_NOW);
+    const before = {
+      ...weekFixture({ counters: { globalGapMinutes: 255 } }),
+      serverNow: SERVER_NOW,
+    };
+    const after = {
+      ...weekFixture({ counters: { globalGapMinutes: 300 } }),
+      serverNow: SERVER_NOW,
+    };
+    const { rerender } = render(<CountersCard week={before} now={now} />);
+    expect(screen.getByText('+4:15')).not.toHaveClass(FLASH);
+
+    rerender(<CountersCard week={after} now={now} />);
+
+    expect(screen.getByText('+5:00')).toHaveClass(FLASH);
+    screen.getAllByText('0:00').forEach((value) => expect(value).not.toHaveClass(FLASH));
+  });
+
+  it('does not highlight the minute-by-minute poll of a running period, only a real change', () => {
+    const runningSince = '2026-11-06T14:00:00.000Z';
+    const answer = (serverNow: string, globalGapMinutes: number) => ({
+      ...weekFixture({ counters: { runningSince, globalGapMinutes } }),
+      serverNow,
+    });
+    // Each poll answers one more minute run, as of its own serverNow.
+    const { rerender } = render(
+      <CountersCard week={answer('2026-11-06T14:30:00.000Z', 30)} now={new Date(SERVER_NOW)} />,
+    );
+    const polled = new Date('2026-11-06T14:31:00.000Z');
+    rerender(<CountersCard week={answer('2026-11-06T14:31:00.000Z', 31)} now={polled} />);
+    expect(screen.getAllByText('+0:31').every((value) => !value.classList.contains(FLASH))).toBe(
+      true,
+    );
+
+    // A period added through the dialog moves the balance beyond the running time: highlight.
+    rerender(<CountersCard week={answer('2026-11-06T14:31:00.000Z', 91)} now={polled} />);
+
+    expect(screen.getByText('+1:31')).toHaveClass(FLASH);
+  });
+
+  it('does not highlight the minute-by-minute tick of a running period', () => {
+    const counters = { runningSince: '2026-11-06T14:00:00.000Z', globalGapMinutes: 0 };
+    const week = { ...weekFixture({ counters }), serverNow: SERVER_NOW };
+    const { rerender } = render(<CountersCard week={week} now={new Date(SERVER_NOW)} />);
+
+    rerender(<CountersCard week={week} now={new Date('2026-11-06T14:45:00.000Z')} />);
+
+    expect(screen.getAllByText('+0:15')[0]).not.toHaveClass(FLASH);
   });
 
   it('shows a positive global gap in green, with its counting start', () => {

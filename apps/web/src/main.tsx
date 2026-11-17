@@ -5,6 +5,9 @@ import { RouterProvider } from 'react-router/dom';
 import { createQueryClient } from './api/query-client';
 import { createAppRouter } from './router';
 import './styles.css';
+import { initTheme } from './ui/theme';
+
+initTheme();
 
 const queryClient = createQueryClient();
 const router = createAppRouter();

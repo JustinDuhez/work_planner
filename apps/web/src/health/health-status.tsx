@@ -27,7 +27,7 @@ export function HealthStatus() {
   return (
     <p
       role="status"
-      className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1 text-sm text-zinc-700 shadow-card"
+      className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-sm text-zinc-700 shadow-card"
     >
       <span aria-hidden="true" className={`size-2 rounded-full ${DOT_CLASS_BY_STATE[state]}`} />
       {copy.health[state]}

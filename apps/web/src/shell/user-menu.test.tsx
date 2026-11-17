@@ -6,6 +6,29 @@ import { mockFetchRoutes } from '../test/mock-fetch';
 import { renderApp } from '../test/render-app';
 
 describe('UserMenu', () => {
+  afterEach(() => {
+    delete document.documentElement.dataset.theme;
+    localStorage.clear();
+  });
+
+  it('switches to dark mode and back, and remembers the choice', async () => {
+    mockFetchRoutes({ ...signedInHomeRoutes() });
+    renderApp('/');
+    const user = userEvent.setup();
+
+    const toggle = await screen.findByRole('switch', { name: copy.userMenu.darkMode });
+    expect(toggle).toHaveAttribute('aria-checked', 'false');
+
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute('aria-checked', 'true');
+    expect(document.documentElement.dataset.theme).toBe('dark');
+    expect(localStorage.getItem('theme')).toBe('dark');
+
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute('aria-checked', 'false');
+    expect(document.documentElement.dataset.theme).toBe('light');
+  });
+
   it("shows the user's initials", async () => {
     mockFetchRoutes({
       ...signedInHomeRoutes(),

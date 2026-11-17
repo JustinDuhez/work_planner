@@ -14,3 +14,16 @@ export function liveGapMinutes(
     periodMinutes(startedAt, timing.now) - periodMinutes(startedAt, new Date(timing.serverNow));
   return gapMinutes + Math.max(0, minutesSinceAnswer);
 }
+
+/**
+ * The gap without the running period's minutes as of `serverNow`: it stays put across the
+ * minute-by-minute polls of a running period and moves only on a real change (a stop, a reset,
+ * an edited period, an approved correction).
+ */
+export function settledGapMinutes(
+  gapMinutes: number,
+  timing: { runningSince: string | null; serverNow: string },
+): number {
+  if (timing.runningSince === null) return gapMinutes;
+  return gapMinutes - periodMinutes(new Date(timing.runningSince), new Date(timing.serverNow));
+}

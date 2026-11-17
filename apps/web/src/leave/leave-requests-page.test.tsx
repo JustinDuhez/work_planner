@@ -1,8 +1,11 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { toWorkDate } from '@work-planner/domain';
+import { APP_TIME_ZONE } from '../clock/clock-time';
 import { copy } from '../copy';
 import { signedInHomeRoutes } from '../test/clock-fixtures';
 import { DAY_TYPES, leaveRequestView } from '../test/leave-fixtures';
+import { expectNoAxeViolations } from '../test/axe';
 import { mockFetchRoutes, type MockResponse } from '../test/mock-fetch';
 import { renderApp } from '../test/render-app';
 import { SIGNED_IN_SESSION } from '../test/sessions';
@@ -17,6 +20,10 @@ const MANAGER_SESSION = {
     roles: { isAdmin: false, isManager: true },
   },
 };
+
+const NOW = Date.parse('2026-11-17T09:00:00.000Z');
+
+afterEach(() => jest.restoreAllMocks());
 
 function renderPage(path: string, extra: Record<string, MockResponse> = {}) {
   const fetchMock = mockFetchRoutes({
@@ -217,6 +224,21 @@ describe('LeaveRequestsPage', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('titles a review card with the requester and puts the type under the name', async () => {
+    renderPage('/demandes?onglet=a-valider', {
+      'GET /api/v1/me': { status: 200, body: MANAGER_SESSION },
+      'GET /api/v1/leave-requests?view=to-review': {
+        status: 200,
+        body: { pending: [leaveRequestView({ id: 7 })], recent: [] },
+      },
+    });
+
+    const card = (await within(await screen.findByRole('tabpanel')).findAllByRole('listitem'))[0]!;
+
+    expect(within(card).getByText('Léa Moreau')).toHaveClass('font-medium', 'text-zinc-900');
+    expect(within(card).getByText(/^Congé · /)).not.toHaveClass('font-medium');
+  });
+
   it('shows the rule note held telework carries', async () => {
     const note = 'Il ne resterait que 2,5 jours sur site la semaine du 23 nov.';
     renderPage('/demandes?onglet=a-valider', {
@@ -360,5 +382,213 @@ describe('LeaveRequestsPage', () => {
       'href',
       '/demandes',
     );
+  });
+
+  it('shows one status chip per card, the type as the title and the rest as plain text', async () => {
+    renderPage('/demandes', {
+      'GET /api/v1/leave-requests?view=mine': {
+        status: 200,
+        body: [
+          leaveRequestView({
+            status: 'approved',
+            declaredBy: { id: 2, firstName: 'Sophie', lastName: 'Dubois' },
+          }),
+        ],
+      },
+    });
+
+    const card = (await within(await screen.findByRole('tabpanel')).findAllByRole('listitem'))[0]!;
+
+    expect(card.querySelectorAll('.rounded-full')).toHaveLength(1);
+    expect(within(card).getByText(copy.leaveRequests.status.approved)).toHaveClass('rounded-full');
+    expect(within(card).getByText('Congé')).not.toHaveClass('rounded-full');
+    expect(within(card).getByText('Déclarée par Sophie Dubois')).toBeInTheDocument();
+  });
+
+  it('offers the request button as the one primary action of the page', async () => {
+    const { user } = renderPage('/demandes');
+
+    const button = await screen.findByRole('button', { name: copy.leave.requestButton });
+    await user.click(button);
+
+    expect(button).toHaveClass('bg-primary-600');
+    const dialog = screen.getByRole('dialog', { name: copy.leave.dialogTitle });
+    const today = toWorkDate(new Date(), APP_TIME_ZONE);
+    expect(within(dialog).getByLabelText(copy.leave.startDate)).toHaveAttribute('min', today);
+  });
+
+  it('announces the loading as one busy region', async () => {
+    renderPage('/demandes');
+    const answer = globalThis.fetch;
+    globalThis.fetch = (input, init) =>
+      typeof input === 'string' && input.includes('/leave-requests')
+        ? new Promise<Response>(() => undefined)
+        : answer(input, init);
+
+    renderApp('/demandes');
+
+    const label = await screen.findByText(copy.leaveRequests.loading);
+    expect(label.closest('[aria-busy="true"]')).not.toBeNull();
+  });
+
+  it('says so when the requests cannot be loaded and loads them again on demand', async () => {
+    const url = '/api/v1/leave-requests?view=mine';
+    const { queryClient, container, fetchMock } = renderPage('/demandes', {
+      [`GET ${url}`]: { status: 500, body: {} },
+    });
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(copy.leaveRequests.loadError);
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+    await expectNoAxeViolations(container);
+    await userEvent.setup().click(screen.getByRole('button', { name: copy.states.retry }));
+
+    await waitFor(() => expect(fetchMock.mock.calls.filter(([u]) => u === url)).toHaveLength(2));
+  });
+
+  it('shows an empty state without accessibility violation', async () => {
+    const { queryClient, container } = renderPage('/demandes');
+
+    const message = await screen.findByText(copy.leaveRequests.noRequests);
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+
+    expect(message.closest('div')).toHaveClass('border-dashed');
+    await expectNoAxeViolations(container);
+  });
+
+  it('has no accessibility violation with requests listed', async () => {
+    const { queryClient, container } = renderPage('/demandes', {
+      'GET /api/v1/leave-requests?view=mine': { status: 200, body: [leaveRequestView()] },
+    });
+
+    await screen.findByText('Congé');
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+
+    await expectNoAxeViolations(container);
+  });
+});
+
+describe('LeaveRequestsPage layout', () => {
+  const toReview = (pending: ReturnType<typeof leaveRequestView>[]) => ({
+    'GET /api/v1/me': { status: 200, body: MANAGER_SESSION },
+    'GET /api/v1/leave-requests?view=to-review': { status: 200, body: { pending, recent: [] } },
+  });
+
+  it('moves between the tabs with the arrow keys and keeps the pending count in the label', async () => {
+    const { user, router } = renderPage(
+      '/demandes',
+      toReview([
+        leaveRequestView({ id: 21, canReview: true }),
+        leaveRequestView({ id: 22, canReview: true }),
+      ]),
+    );
+
+    const mine = await screen.findByRole('tab', { name: copy.leaveRequests.mineTab });
+    const review = await screen.findByRole('tab', { name: 'À valider · 2' });
+    mine.focus();
+    await user.keyboard('{ArrowRight}');
+
+    expect(review).toHaveFocus();
+    expect(review).toHaveAttribute('aria-selected', 'true');
+    expect(router.state.location.search).toBe('?onglet=a-valider');
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', 'tab-a-valider');
+  });
+
+  it('shows the requester with an avatar on the review tab', async () => {
+    renderPage('/demandes?onglet=a-valider', toReview([leaveRequestView({ id: 23 })]));
+
+    const card = (await within(await screen.findByRole('tabpanel')).findAllByRole('listitem'))[0]!;
+
+    expect(within(card).getByText('LM')).toBeInTheDocument();
+    expect(within(card).getByText('Léa Moreau')).toBeInTheDocument();
+  });
+
+  it('counts what to review, what is pending and what was approved within 30 days', async () => {
+    jest.spyOn(Date, 'now').mockReturnValue(NOW);
+    renderPage('/demandes', {
+      ...toReview([leaveRequestView({ id: 24, canReview: true })]),
+      'GET /api/v1/leave-requests?view=mine': {
+        status: 200,
+        body: [
+          leaveRequestView({ id: 1 }),
+          leaveRequestView({ id: 2 }),
+          leaveRequestView({
+            id: 3,
+            status: 'approved',
+            reviewedAt: '2026-11-10T09:00:00.000Z',
+            canCancel: false,
+          }),
+          leaveRequestView({
+            id: 4,
+            status: 'approved',
+            reviewedAt: '2026-09-01T09:00:00.000Z',
+            canCancel: false,
+          }),
+        ],
+      },
+    });
+
+    const card = await screen.findByRole('region', { name: copy.leaveRequests.summary.title });
+    await waitFor(() =>
+      expect(
+        within(card).getByText(copy.leaveRequests.summary.toReview).nextSibling,
+      ).toHaveTextContent('1'),
+    );
+    expect(
+      within(card).getByText(copy.leaveRequests.summary.pending).nextSibling,
+    ).toHaveTextContent('2');
+    expect(
+      within(card).getByText(copy.leaveRequests.summary.approved).nextSibling,
+    ).toHaveTextContent('1');
+  });
+
+  it('shows a collaborator no stat to review, and 0 approved when nothing qualifies', async () => {
+    renderPage('/demandes');
+
+    const card = await screen.findByRole('region', { name: copy.leaveRequests.summary.title });
+
+    expect(within(card).queryByText(copy.leaveRequests.summary.toReview)).not.toBeInTheDocument();
+    expect(
+      within(card).getByText(copy.leaveRequests.summary.approved).nextSibling,
+    ).toHaveTextContent('0');
+    expect(within(card).getByText(copy.leaveRequests.summary.pending)).toBeInTheDocument();
+  });
+
+  it('has no accessibility violation on the review tab', async () => {
+    const { queryClient, container } = renderPage(
+      '/demandes?onglet=a-valider',
+      toReview([leaveRequestView({ id: 25, canReview: true })]),
+    );
+
+    await screen.findByText('Léa Moreau');
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+
+    await expectNoAxeViolations(container);
+  });
+
+  it('shows no summary skeleton when a collaborator’s own list cannot be loaded', async () => {
+    const { container } = renderPage('/demandes', {
+      'GET /api/v1/leave-requests?view=mine': { status: 500, body: {} },
+    });
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(copy.leaveRequests.loadError);
+    await waitFor(() => expect(container.querySelector('[data-slot="aside"]')).toBeNull());
+  });
+
+  it('dates an automatic approval by its creation', async () => {
+    jest.spyOn(Date, 'now').mockReturnValue(NOW);
+    renderPage('/demandes', {
+      'GET /api/v1/leave-requests?view=mine': {
+        status: 200,
+        body: [
+          leaveRequestView({ id: 1, status: 'approved', isAutoApproved: true, canCancel: false }),
+        ],
+      },
+    });
+
+    const card = await screen.findByRole('region', { name: copy.leaveRequests.summary.title });
+
+    expect(
+      within(card).getByText(copy.leaveRequests.summary.approved).nextSibling,
+    ).toHaveTextContent('1');
   });
 });

@@ -6,13 +6,21 @@ import {
   yearMonthSchema,
   type TeamMonth,
 } from '@work-planner/domain';
+import { Users } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { APP_TIME_ZONE } from '../clock/clock-time';
 import { copy } from '../copy';
 import { useDayTypes } from '../leave/leave-queries';
 import { useSession } from '../session/session-queries';
+import { EmptyState } from '../ui/empty-state';
+import { ErrorState } from '../ui/error-state';
+import { PageLayout } from '../ui/page-layout';
+import { LoadingRegion } from '../ui/skeleton';
+import { SummarySkeleton } from '../ui/summary-skeleton';
+import { AbsentTodayCard } from './absent-today-card';
 import { PersonCards } from './person-cards';
 import { PlanningFilterBar, type PlanningFilters } from './planning-filter-bar';
+import { PlanningSkeleton } from './planning-skeleton';
 import { ALL_TEAMS, planningPath, useTeamMonth } from './planning-queries';
 import { TeamMonthTable } from './team-month-table';
 
@@ -43,7 +51,8 @@ export function PlanningPage() {
   const yearMonth = parsedMonth.success
     ? parsedMonth.data
     : toWorkDate(new Date(), APP_TIME_ZONE).slice(0, 7);
-  const { data, isPending, isError, isPlaceholderData } = useTeamMonth(yearMonth);
+  const { data, isPending, isError, isPlaceholderData, isFetching, refetch } =
+    useTeamMonth(yearMonth);
   if (!session) return null;
 
   const isAbsentOnly = searchParams.get('absents') === '1';
@@ -77,42 +86,74 @@ export function PlanningPage() {
   const goToMonth = (delta: number) =>
     goTo({ yearMonth: shiftMonth(yearMonth, delta), team, isAbsentOnly });
 
+  const isReady = data && !isPlaceholderData;
+  const isLoading = (isPending || isPlaceholderData) && !isError;
+
   return (
-    <section className="space-y-4">
-      <h1 className="text-xl font-semibold tracking-tight">{copy.planning.title}</h1>
-      <PlanningFilterBar
-        filters={{ yearMonth, team, isAbsentOnly }}
-        teamMonth={data}
-        sections={sections}
-        peopleCount={peopleCount}
-        onChange={goTo}
-        onShiftMonth={goToMonth}
+    <section className="space-y-6">
+      <h1 className="text-xl font-semibold tracking-tight text-balance">{copy.planning.title}</h1>
+      <PageLayout
+        bar={
+          <PlanningFilterBar
+            filters={{ yearMonth, team, isAbsentOnly }}
+            teamMonth={data}
+            peopleCount={peopleCount}
+            onChange={goTo}
+            onShiftMonth={goToMonth}
+          />
+        }
+        main={
+          <div key={yearMonth} className="motion-safe:animate-[week-in_200ms_ease-out]">
+            {isError && !data ? (
+              <ErrorState
+                message={copy.planning.loadError}
+                onRetry={() => void refetch()}
+                isRetrying={isFetching}
+              />
+            ) : null}
+            {isLoading ? (
+              <LoadingRegion label={copy.planning.loading}>
+                <PlanningSkeleton />
+              </LoadingRegion>
+            ) : null}
+            {isReady && sections.length === 0 ? (
+              <EmptyState
+                icon={Users}
+                message={isAbsentOnly ? copy.planning.nobodyAbsent : copy.planning.noPeople}
+              />
+            ) : null}
+            {isReady && sections.length > 0 ? (
+              <>
+                <div className="hidden md:block">
+                  <TeamMonthTable
+                    teamMonth={data}
+                    sections={sections}
+                    dayTypes={dayTypes.data ?? []}
+                  />
+                </div>
+                <div className="md:hidden">
+                  <PersonCards
+                    teamMonth={data}
+                    sections={sections}
+                    dayTypes={dayTypes.data ?? []}
+                  />
+                </div>
+              </>
+            ) : null}
+          </div>
+        }
+        aside={
+          isReady ? (
+            <AbsentTodayCard
+              teamMonth={data}
+              sections={sections}
+              filterKey={`${yearMonth}|${team}|${isAbsentOnly}`}
+            />
+          ) : isLoading ? (
+            <SummarySkeleton />
+          ) : undefined
+        }
       />
-      <div key={yearMonth} className="motion-safe:animate-[week-in_200ms_ease-out]">
-        {isError ? (
-          <p role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">
-            {copy.planning.loadError}
-          </p>
-        ) : null}
-        {(isPending || isPlaceholderData) && !isError ? (
-          <p className="text-sm text-zinc-500">{copy.planning.loading}</p>
-        ) : null}
-        {data && !isPlaceholderData && sections.length === 0 ? (
-          <p className="text-sm text-zinc-500">
-            {isAbsentOnly ? copy.planning.nobodyAbsent : copy.planning.noPeople}
-          </p>
-        ) : null}
-        {data && !isPlaceholderData && sections.length > 0 ? (
-          <>
-            <div className="hidden md:block">
-              <TeamMonthTable teamMonth={data} sections={sections} dayTypes={dayTypes.data ?? []} />
-            </div>
-            <div className="md:hidden">
-              <PersonCards teamMonth={data} sections={sections} dayTypes={dayTypes.data ?? []} />
-            </div>
-          </>
-        ) : null}
-      </div>
     </section>
   );
 }

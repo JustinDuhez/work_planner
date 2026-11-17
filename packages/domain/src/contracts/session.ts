@@ -33,8 +33,8 @@ export const emailSchema = z
   .string()
   .trim()
   .toLowerCase()
-  .max(MAX_EMAIL_LENGTH, 'Adresse email invalide.')
-  .pipe(z.email('Adresse email invalide.'));
+  .max(MAX_EMAIL_LENGTH, 'Adresse e-mail invalide.')
+  .pipe(z.email('Adresse e-mail invalide.'));
 
 export const loginRequestSchema = z.object({
   email: emailSchema,

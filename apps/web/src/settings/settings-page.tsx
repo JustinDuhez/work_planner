@@ -5,15 +5,24 @@ import {
   type PublicHoliday,
 } from '@work-planner/domain';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { useId, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router';
 import { bannerMessageFor } from '../api/form-errors';
 import { APP_TIME_ZONE, formatLongDate } from '../clock/clock-time';
 import { copy } from '../copy';
-import { ErrorBanner, fieldErrorsOf } from '../directory/manage-user-dialog';
+import { fieldErrorsOf } from '../directory/manage-user-dialog';
+import { ErrorBanner } from '../ui/error-banner';
 import { NotFoundPage } from '../not-found/not-found-page';
 import { useSession } from '../session/session-queries';
 import { Button } from '../ui/button';
+import { StatusMessage } from '../ui/status-message';
+import { ErrorState } from '../ui/error-state';
+import { Field } from '../ui/field';
+import { PageLayout } from '../ui/page-layout';
+import { LoadingRegion, Skeleton } from '../ui/skeleton';
+import { Stat } from '../ui/stat';
+import { SummaryCard } from '../ui/summary-card';
+import { SummarySkeleton } from '../ui/summary-skeleton';
 import { TextField } from '../ui/text-field';
 import {
   useAddPublicHoliday,
@@ -27,7 +36,7 @@ import {
 const YEAR_PARAM = 'annee';
 const MAX_DAY_OF_MONTH = 31;
 const YEAR_BUTTON_CLASS =
-  'flex size-9 items-center justify-center rounded-lg text-zinc-700 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50';
+  'rounded-control p-2 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50';
 
 function yearFromUrl(value: string | null): number {
   const year = Number(value);
@@ -70,13 +79,34 @@ function HolidayRow({ holiday }: { holiday: PublicHoliday }) {
   );
 }
 
-function HolidaysSection({
-  year,
-  onYearChange,
-}: {
-  year: number;
-  onYearChange: (year: number) => void;
-}) {
+function YearNav({ year, onYearChange }: { year: number; onYearChange: (year: number) => void }) {
+  return (
+    <div className="flex items-center gap-1">
+      <button
+        type="button"
+        aria-label={copy.settings.previousYear}
+        disabled={year <= HOLIDAY_YEAR_MIN}
+        onClick={() => onYearChange(year - 1)}
+        className={YEAR_BUTTON_CLASS}
+      >
+        <ChevronLeft size={18} aria-hidden />
+      </button>
+      <span className="min-w-16 text-center text-base font-semibold tabular-nums">{year}</span>
+      <button
+        type="button"
+        aria-label={copy.settings.nextYear}
+        disabled={year >= HOLIDAY_YEAR_MAX}
+        onClick={() => onYearChange(year + 1)}
+        className={YEAR_BUTTON_CLASS}
+      >
+        <ChevronRight size={18} aria-hidden />
+      </button>
+    </div>
+  );
+}
+
+function HolidaysSection({ year }: { year: number }) {
+  const titleId = useId();
   const holidays = usePublicHolidays(year);
   const importHolidays = useImportPublicHolidays();
   const add = useAddPublicHoliday();
@@ -106,67 +136,64 @@ function HolidaysSection({
   }
 
   return (
-    <section className="space-y-3 rounded-card border border-zinc-200 bg-white p-6 shadow-card">
+    <section
+      aria-labelledby={titleId}
+      className="space-y-3 rounded-card border border-line bg-surface p-6 shadow-card"
+    >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-base font-semibold">{copy.settings.holidaysTitle}</h2>
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            aria-label={copy.settings.previousYear}
-            disabled={year <= HOLIDAY_YEAR_MIN}
-            onClick={() => onYearChange(year - 1)}
-            className={YEAR_BUTTON_CLASS}
+        <h2 id={titleId} className="text-sm font-semibold text-zinc-900">
+          {copy.settings.holidaysTitle}
+        </h2>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            variant="secondary"
+            isPending={importHolidays.isPending}
+            onClick={() => importHolidays.mutate(year)}
           >
-            <ChevronLeft size={16} aria-hidden />
-          </button>
-          <span className="tabular-nums text-sm font-medium">{year}</span>
-          <button
-            type="button"
-            aria-label={copy.settings.nextYear}
-            disabled={year >= HOLIDAY_YEAR_MAX}
-            onClick={() => onYearChange(year + 1)}
-            className={YEAR_BUTTON_CLASS}
-          >
-            <ChevronRight size={16} aria-hidden />
-          </button>
+            {`${copy.settings.importPrefix} ${year}`}
+          </Button>
+          <StatusMessage
+            message={importHolidays.data ? importedMessage(importHolidays.data.addedCount) : null}
+            tone="success"
+          />
+          <ErrorBanner message={bannerMessageFor(importHolidays.error, [])} />
         </div>
       </div>
+      {holidays.isError && !holidays.data ? (
+        <ErrorState
+          message={copy.settings.loadError}
+          onRetry={() => void holidays.refetch()}
+          isRetrying={holidays.isFetching}
+        />
+      ) : null}
+      {holidays.isPending && !holidays.isError ? (
+        <LoadingRegion label={copy.settings.loading}>
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-8 w-full" />
+          </div>
+        </LoadingRegion>
+      ) : null}
       {holidays.data && holidays.data.length === 0 ? (
         <p className="text-sm text-zinc-500">{copy.settings.noHolidays}</p>
       ) : null}
-      <ul className="divide-y divide-zinc-100">
+      <ul className="divide-y divide-line">
         {(holidays.data ?? []).map((holiday) => (
           <HolidayRow key={holiday.date} holiday={holiday} />
         ))}
       </ul>
-      <div className="flex flex-wrap items-center gap-3">
-        <Button
-          variant="secondary"
-          isPending={importHolidays.isPending}
-          onClick={() => importHolidays.mutate(year)}
-        >
-          {`${copy.settings.importPrefix} ${year}`}
-        </Button>
-        {importHolidays.data ? (
-          <p role="status" className="text-sm text-emerald-700">
-            {importedMessage(importHolidays.data.addedCount)}
-          </p>
-        ) : null}
-        <ErrorBanner message={bannerMessageFor(importHolidays.error, [])} />
-      </div>
       <form onSubmit={handleAdd} noValidate className="flex flex-wrap items-end gap-3">
-        <label className="space-y-1 text-sm font-medium">
-          <span>{copy.settings.holidayDate}</span>
-          <input
-            type="date"
-            value={date}
-            onChange={(event) => setDate(event.target.value)}
-            className="h-10 rounded-lg border border-zinc-200 px-3"
-          />
-          {addErrors.date ? (
-            <span className="block text-xs text-rose-700">{addErrors.date}</span>
-          ) : null}
-        </label>
+        <Field label={copy.settings.holidayDate} error={addErrors.date}>
+          {(control) => (
+            <input
+              {...control}
+              type="date"
+              value={date}
+              onChange={(event) => setDate(event.target.value)}
+              className="block h-10 rounded-control border border-line px-3"
+            />
+          )}
+        </Field>
         <TextField
           label={copy.settings.holidayLabel}
           name="label"
@@ -183,11 +210,13 @@ function HolidaysSection({
   );
 }
 
-function YearStartSection({ yearStart }: { yearStart: string }) {
+function YearStartCard({ yearStart }: { yearStart: string }) {
   const update = useUpdateSettings();
+  const [isEditing, setIsEditing] = useState(false);
   const [month, setMonth] = useState(yearStart.slice(0, 2));
   const [day, setDay] = useState(yearStart.slice(3, 5));
   const value = `${month}-${day}`;
+  const current = `${Number(yearStart.slice(3, 5))} ${copy.settings.months[Number(yearStart.slice(0, 2)) - 1]}`;
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -195,54 +224,59 @@ function YearStartSection({ yearStart }: { yearStart: string }) {
   }
 
   return (
-    <section className="space-y-3 rounded-card border border-zinc-200 bg-white p-6 shadow-card">
-      <h2 className="text-base font-semibold">{copy.settings.yearStartTitle}</h2>
-      <form onSubmit={handleSubmit} noValidate className="flex flex-wrap items-end gap-3">
-        <label className="space-y-1 text-sm font-medium">
-          <span>{copy.settings.yearStartDay}</span>
-          <select
-            value={day}
-            onChange={(event) => setDay(event.target.value)}
-            className="h-10 rounded-lg border border-zinc-200 px-2"
-          >
-            {Array.from({ length: MAX_DAY_OF_MONTH }, (_, index) => twoDigits(index + 1)).map(
-              (option) => (
-                <option key={option} value={option}>
-                  {Number(option)}
+    <SummaryCard title={copy.settings.yearStartTitle}>
+      <Stat
+        label={copy.settings.yearStartCurrent}
+        value={current}
+        hint={copy.settings.yearStartHint}
+      />
+      {isEditing ? (
+        <form onSubmit={handleSubmit} noValidate className="flex flex-wrap items-end gap-3">
+          <label className="space-y-1 text-sm font-medium">
+            <span>{copy.settings.yearStartDay}</span>
+            <select
+              value={day}
+              onChange={(event) => setDay(event.target.value)}
+              className="h-10 rounded-control border border-line px-2"
+            >
+              {Array.from({ length: MAX_DAY_OF_MONTH }, (_, index) => twoDigits(index + 1)).map(
+                (option) => (
+                  <option key={option} value={option}>
+                    {Number(option)}
+                  </option>
+                ),
+              )}
+            </select>
+          </label>
+          <label className="space-y-1 text-sm font-medium">
+            <span>{copy.settings.yearStartMonth}</span>
+            <select
+              value={month}
+              onChange={(event) => setMonth(event.target.value)}
+              className="h-10 rounded-control border border-line px-2"
+            >
+              {copy.settings.months.map((name, index) => (
+                <option key={name} value={twoDigits(index + 1)}>
+                  {name}
                 </option>
-              ),
-            )}
-          </select>
-        </label>
-        <label className="space-y-1 text-sm font-medium">
-          <span>{copy.settings.yearStartMonth}</span>
-          <select
-            value={month}
-            onChange={(event) => setMonth(event.target.value)}
-            className="h-10 rounded-lg border border-zinc-200 px-2"
-          >
-            {copy.settings.months.map((name, index) => (
-              <option key={name} value={twoDigits(index + 1)}>
-                {name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <Button type="submit" isPending={update.isPending}>
-          {copy.settings.saveYearStart}
+              ))}
+            </select>
+          </label>
+          <Button type="submit" isPending={update.isPending}>
+            {copy.settings.saveYearStart}
+          </Button>
+          <StatusMessage message={update.isSuccess ? copy.settings.saved : null} tone="success" />
+        </form>
+      ) : (
+        <Button variant="secondary" onClick={() => setIsEditing(true)}>
+          {copy.settings.editYearStart}
         </Button>
-        {update.isSuccess ? (
-          <p role="status" className="text-sm text-emerald-700">
-            {copy.settings.saved}
-          </p>
-        ) : null}
-      </form>
-      <p className="text-sm text-zinc-500">{copy.settings.yearStartHint}</p>
+      )}
       {/* The day list allows 31 for every month: "30 février" is refused with the server's message. */}
       <ErrorBanner
         message={fieldErrorsOf(update.error).yearStart ?? bannerMessageFor(update.error, [])}
       />
-    </section>
+    </SummaryCard>
   );
 }
 
@@ -251,16 +285,34 @@ function AdminSettings() {
   const settings = useSettings();
   const year = yearFromUrl(searchParams.get(YEAR_PARAM));
 
+  const aside = settings.data ? (
+    <YearStartCard yearStart={settings.data.yearStart} />
+  ) : settings.isError ? (
+    <ErrorState
+      message={copy.settings.loadError}
+      onRetry={() => void settings.refetch()}
+      isRetrying={settings.isFetching}
+    />
+  ) : (
+    <SummarySkeleton />
+  );
+
   return (
-    <div className="space-y-6">
-      <h1 className="text-xl font-semibold tracking-tight">{copy.settings.title}</h1>
-      <HolidaysSection
-        key={year}
-        year={year}
-        onYearChange={(nextYear) => setSearchParams({ [YEAR_PARAM]: String(nextYear) })}
-      />
-      {settings.data ? <YearStartSection yearStart={settings.data.yearStart} /> : null}
-    </div>
+    <PageLayout
+      bar={
+        <>
+          <h1 className="text-xl font-semibold tracking-tight text-balance">
+            {copy.settings.title}
+          </h1>
+          <YearNav
+            year={year}
+            onYearChange={(nextYear) => setSearchParams({ [YEAR_PARAM]: String(nextYear) })}
+          />
+        </>
+      }
+      main={<HolidaysSection key={year} year={year} />}
+      aside={aside}
+    />
   );
 }
 

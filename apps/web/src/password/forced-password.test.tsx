@@ -1,6 +1,7 @@
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { copy } from '../copy';
+import { expectNoAxeViolations } from '../test/axe';
 import { signedInHomeRoutes } from '../test/clock-fixtures';
 import { mockFetchRoutes } from '../test/mock-fetch';
 import { renderApp } from '../test/render-app';
@@ -12,6 +13,18 @@ const MUST_CHANGE = {
 };
 
 describe('forced password change', () => {
+  it('has no detectable accessibility problems', async () => {
+    mockFetchRoutes({
+      ...signedInHomeRoutes(),
+      'GET /api/v1/me': { status: 200, body: MUST_CHANGE },
+    });
+    const { container, queryClient } = renderApp('/mot-de-passe');
+    await screen.findByLabelText(copy.password.current);
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+
+    await expectNoAxeViolations(container);
+  });
+
   it('sends the person to the password screen before anything else', async () => {
     mockFetchRoutes({
       ...signedInHomeRoutes(),

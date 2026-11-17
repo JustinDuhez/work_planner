@@ -41,7 +41,11 @@ export function DirectoryAdminPage() {
         }
         rowAction={(entry) =>
           entry.canManage || entry.canEditWorkingTime ? (
-            <Button variant="secondary" onClick={() => setManagedUserId(entry.id)}>
+            <Button
+              variant="secondary"
+              label={`${copy.directory.manage} ${entry.firstName} ${entry.lastName}`}
+              onClick={() => setManagedUserId(entry.id)}
+            >
               {copy.directory.manage}
             </Button>
           ) : null

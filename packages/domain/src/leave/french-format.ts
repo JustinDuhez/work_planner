@@ -12,7 +12,12 @@ export function formatDayMonth(date: string): string {
   return dayMonthFormat.format(new Date(`${date}T12:00:00Z`));
 }
 
+/** The number part of a day count with its French decimal: 29 half-days give "14,5". */
+export function formatDayNumber(halfDayCount: number): string {
+  return dayCountFormat.format(halfDayCount / HALF_DAYS_PER_DAY);
+}
+
 export function formatDayCount(halfDayCount: number): string {
   const days = halfDayCount / HALF_DAYS_PER_DAY;
-  return `${dayCountFormat.format(days)} ${days < PLURAL_FROM_DAYS ? 'jour' : 'jours'}`;
+  return `${formatDayNumber(halfDayCount)} ${days < PLURAL_FROM_DAYS ? 'jour' : 'jours'}`;
 }

@@ -12,7 +12,7 @@ export const DAY_TYPE_CHIP_CLASSES: Record<string, { approved: string; pending: 
   early_departure: { approved: 'bg-pink-600 text-white', pending: 'bg-pink-100 text-pink-900' },
 };
 export const FALLBACK_CHIP_CLASSES = {
-  approved: 'bg-zinc-600 text-white',
+  approved: 'bg-neutral-600 text-white',
   pending: 'bg-zinc-100 text-zinc-800',
 };
 

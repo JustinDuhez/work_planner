@@ -133,7 +133,7 @@ describe('session routes', () => {
     expect(response.statusCode).toBe(401);
     expect(response.json<unknown>()).toEqual({
       code: 'INVALID_CREDENTIALS',
-      message: 'Email ou mot de passe incorrect.',
+      message: 'E-mail ou mot de passe incorrect.',
     });
     expect(response.cookies).toEqual([]);
   });
@@ -152,7 +152,7 @@ describe('session routes', () => {
     expect(response.json<unknown>()).toEqual({
       code: 'VALIDATION_ERROR',
       message: 'Certains champs sont invalides.',
-      fieldErrors: { email: 'Adresse email invalide.', password: 'Mot de passe requis.' },
+      fieldErrors: { email: 'Adresse e-mail invalide.', password: 'Mot de passe requis.' },
     });
   });
 
@@ -163,7 +163,7 @@ describe('session routes', () => {
 
     expect(response.statusCode).toBe(400);
     expect(response.json<{ fieldErrors: unknown }>().fieldErrors).toEqual({
-      email: 'Adresse email invalide.',
+      email: 'Adresse e-mail invalide.',
     });
   });
 

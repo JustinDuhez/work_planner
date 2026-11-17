@@ -27,6 +27,14 @@ function postBody(fetchMock: jest.Mock): unknown {
 }
 
 describe('bulk counter reset', () => {
+  it('lives in the absent-today card as a secondary action', async () => {
+    renderAsManager();
+
+    const card = await screen.findByRole('region', { name: copy.planning.absentToday });
+
+    expect(within(card).getByRole('button', { name: copy.planning.resetButton })).toBeVisible();
+  });
+
   it('is hidden from someone who may reset nobody', async () => {
     mockFetchRoutes({
       ...signedInHomeRoutes(),
@@ -63,7 +71,9 @@ describe('bulk counter reset', () => {
     await waitFor(() =>
       expect(postBody(fetchMock)).toEqual({ userIds: [2, 7], resetDate: '2026-11-02' }),
     );
-    expect(await screen.findByText('2 compteurs remis à zéro.')).toHaveAttribute('role', 'status');
+    expect(
+      (await screen.findByText('2 compteurs remis à zéro.')).closest('[role="status"]'),
+    ).toBeInTheDocument();
     // Success refresh: the month is read a second time so the balances are current.
     await waitFor(() =>
       expect(
@@ -72,16 +82,35 @@ describe('bulk counter reset', () => {
     );
   });
 
+  it('groups each team as a named group and returns focus to the opener on cancel', async () => {
+    const { user } = renderAsManager();
+
+    const opener = await screen.findByRole('button', { name: copy.planning.resetButton });
+    await user.click(opener);
+    const dialog = screen.getByRole('dialog', { name: copy.planning.resetTitle });
+
+    expect(within(dialog).getByRole('group', { name: 'Tech › Front' })).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: copy.counters.cancel }));
+    expect(opener).toHaveFocus();
+  });
+
   it('says "1 compteur" for a single person, and clears the line on the next filter change', async () => {
     const { user } = renderAsManager({
       'POST /api/v1/counter-resets': { status: 201, body: { resets: [] } },
     });
 
-    await user.click(await screen.findByRole('button', { name: copy.planning.resetButton }));
+    const resetButton = await screen.findByRole('button', { name: copy.planning.resetButton });
+    // The live region is mounted before the outcome so that the outcome is announced.
+    expect(
+      within(resetButton.parentElement as HTMLElement).getByRole('status'),
+    ).toBeEmptyDOMElement();
+    await user.click(resetButton);
     const dialog = screen.getByRole('dialog', { name: copy.planning.resetTitle });
     await user.click(within(dialog).getByRole('checkbox', { name: 'Hugo Laurent' }));
     await user.click(within(dialog).getByRole('button', { name: 'Remettre 1 compteur à zéro' }));
-    expect(await screen.findByText('1 compteur remis à zéro.')).toHaveAttribute('role', 'status');
+    expect(
+      (await screen.findByText('1 compteur remis à zéro.')).closest('[role="status"]'),
+    ).toBeInTheDocument();
 
     await user.click(screen.getByRole('checkbox', { name: copy.planning.absentToday }));
     await waitFor(() =>

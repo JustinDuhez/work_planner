@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom';
+import { toHaveNoViolations } from 'jest-axe';
 import { TextEncoder } from 'node:util';
 
 // jsdom lacks TextEncoder, which react-router needs at import time.
@@ -13,3 +14,5 @@ Object.assign(HTMLDialogElement.prototype, {
     this.open = false;
   },
 });
+
+expect.extend(toHaveNoViolations);

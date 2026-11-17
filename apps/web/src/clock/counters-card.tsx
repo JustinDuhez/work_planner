@@ -1,11 +1,14 @@
 import { formatMinutes, formatSignedMinutes, type ClockWeek } from '@work-planner/domain';
-import type { ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { copy } from '../copy';
 import { formatLongDate } from './clock-time';
-import { liveGapMinutes } from './live-counters';
+import { liveGapMinutes, settledGapMinutes } from './live-counters';
 
 // Red is reserved for an open refusal: it overrides the gap tone until the day is fixed.
 const REFUSED_TONE = 'text-rose-700';
+// A soft primary tint fading out, padded so it reads as a highlight behind the value.
+const VALUE_FLASH = 'motion-safe:animate-[value-flash_600ms_ease-out]';
+const STAT_VALUE = 'text-3xl -mx-1 rounded-inner-sm px-1 tracking-tight';
 
 function gapToneClass(minutes: number): string {
   if (minutes > 0) return 'text-emerald-700';
@@ -28,6 +31,63 @@ export function Gap({
     >
       {formatSignedMinutes(minutes)}
     </span>
+  );
+}
+
+/** True from the first value that differs from the mounted one: nothing flashes on arrival. */
+function useHasChanged(value: number): boolean {
+  const [initialValue] = useState(value);
+  const [hasChanged, setHasChanged] = useState(false);
+  if (!hasChanged && value !== initialValue) setHasChanged(true);
+  return hasChanged || value !== initialValue;
+}
+
+/**
+ * Keyed on the settled value, not the live one: a real change (a stop, a reset, an edited period,
+ * an approved correction) replays the highlight; the minute-by-minute tick and poll of a running
+ * period do not.
+ */
+function FlashingGap({
+  settledMinutes,
+  liveMinutes,
+  isRefused = false,
+}: {
+  settledMinutes: number;
+  liveMinutes: number;
+  isRefused?: boolean;
+}) {
+  const hasChanged = useHasChanged(settledMinutes);
+  return (
+    <Gap
+      key={settledMinutes}
+      minutes={liveMinutes}
+      isRefused={isRefused}
+      className={`${STAT_VALUE} ${hasChanged ? VALUE_FLASH : ''}`}
+    />
+  );
+}
+
+function Stat({
+  title,
+  value,
+  children,
+}: {
+  title: string;
+  value: ReactNode;
+  children: ReactNode;
+}) {
+  const titleId = useId();
+  return (
+    <section
+      aria-labelledby={titleId}
+      className="rounded-card border border-line bg-surface p-4 shadow-card sm:p-5"
+    >
+      <h2 id={titleId} className="text-xs font-medium text-zinc-500">
+        {title}
+      </h2>
+      <p className="mt-1">{value}</p>
+      <div className="mt-2 space-y-1 text-xs text-zinc-500">{children}</div>
+    </section>
   );
 }
 
@@ -58,47 +118,53 @@ export function CountersCard({
 
   return (
     <div className="grid gap-3 sm:grid-cols-2">
-      <section className="rounded-card border border-zinc-200 bg-white p-4 shadow-card">
-        <h2 className="text-sm font-medium text-zinc-500">{copy.counters.weekTitle}</h2>
-        <p className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm text-zinc-600">
+      <Stat
+        title={copy.counters.weekTitle}
+        value={
+          <FlashingGap
+            settledMinutes={
+              isCurrentWeek
+                ? settledGapMinutes(counters.weekGapMinutes, timing)
+                : counters.weekGapMinutes
+            }
+            liveMinutes={weekGapMinutes}
+          />
+        }
+      >
+        <p className="flex flex-wrap gap-x-3 text-sm">
           <span>
             {copy.counters.worked}{' '}
-            <span className="font-semibold tabular-nums text-zinc-900">
+            <span className="font-medium tabular-nums text-zinc-900">
               {formatMinutes(workedMinutes)}
             </span>
           </span>
           <span>
             {copy.counters.target}{' '}
-            <span className="font-semibold tabular-nums text-zinc-900">
+            <span className="font-medium tabular-nums text-zinc-900">
               {formatMinutes(counters.weekTargetMinutes)}
             </span>
           </span>
         </p>
-        <p className="mt-2 flex items-baseline justify-between text-sm">
-          <span className="text-zinc-500">{copy.counters.weekGap}</span>
-          <Gap minutes={weekGapMinutes} className="text-lg" />
-        </p>
-      </section>
-      <section className="rounded-card border border-zinc-200 bg-white p-4 shadow-card">
-        <h2 className="text-sm font-medium text-zinc-500">{copy.counters.globalTitle}</h2>
-        <p className="mt-1">
-          <Gap
-            minutes={globalGapMinutes}
-            className="text-2xl"
+      </Stat>
+      <Stat
+        title={copy.counters.globalTitle}
+        value={
+          <FlashingGap
+            settledMinutes={settledGapMinutes(counters.globalGapMinutes, timing)}
+            liveMinutes={globalGapMinutes}
             isRefused={counters.hasOpenRefusal}
           />
-        </p>
-        {counters.hasOpenRefusal && refusalAction ? <p className="mt-1">{refusalAction}</p> : null}
-        <p className="mt-1 text-xs text-zinc-500">
-          {`${copy.counters.since} ${formatLongDate(counters.countingStartDate)}`}
-        </p>
+        }
+      >
+        {counters.hasOpenRefusal && refusalAction ? <p>{refusalAction}</p> : null}
+        <p>{`${copy.counters.since} ${formatLongDate(counters.countingStartDate)}`}</p>
         {counters.lastReset ? (
-          <p className="text-xs text-zinc-500">
+          <p>
             {`${copy.counters.lastResetPrefix} ${formatLongDate(counters.lastReset.resetDate)} ${copy.counters.lastResetBy} ${counters.lastReset.authorName}`}
           </p>
         ) : null}
-        {actions ? <div className="mt-3 flex flex-wrap gap-2">{actions}</div> : null}
-      </section>
+        {actions ? <div className="flex flex-wrap gap-2 pt-2">{actions}</div> : null}
+      </Stat>
     </div>
   );
 }

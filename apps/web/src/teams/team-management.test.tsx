@@ -187,7 +187,18 @@ describe('managing teams', () => {
     ]);
     const item = await screen.findByRole('listitem', { name: 'Commercial' });
 
-    await user.click(within(item).getByRole('button', { name: copy.teamDialog.delete }));
+    const opener = within(item).getByRole('button', { name: copy.teamDialog.delete });
+    await user.click(opener);
+    await user.click(
+      within(screen.getByRole('dialog', { name: copy.teamDialog.deleteTitle })).getByRole(
+        'button',
+        {
+          name: copy.teamDialog.cancel,
+        },
+      ),
+    );
+    expect(opener).toHaveFocus();
+    await user.click(opener);
     const dialog = screen.getByRole('dialog', { name: copy.teamDialog.deleteTitle });
     expect(
       within(dialog).getByText(

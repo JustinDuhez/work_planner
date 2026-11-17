@@ -1,9 +1,13 @@
 import { toLocalTime, type ClockPeriodView } from '@work-planner/domain';
-import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { ApiError } from '../api/api-client';
 import { bannerMessageFor } from '../api/form-errors';
 import { copy } from '../copy';
 import { Button } from '../ui/button';
+import { ErrorBanner } from '../ui/error-banner';
+import { Dialog } from '../ui/dialog';
+import { Field } from '../ui/field';
+import { useFocusFirstInvalid } from '../ui/field-error';
 import { APP_TIME_ZONE } from './clock-time';
 import { useDeleteClockPeriod, useStartClockPeriod, useUpdateClockPeriod } from './clock-queries';
 
@@ -24,14 +28,14 @@ export function PeriodDialog({
   isoWeek: string;
   onClose: () => void;
 }) {
-  const endHintId = useId();
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   const [startedAt, setStartedAt] = useState(localTimeOf(period?.startedAt));
   const [endedAt, setEndedAt] = useState(localTimeOf(period?.endedAt));
   const create = useStartClockPeriod(ownerId, isoWeek);
   const update = useUpdateClockPeriod(ownerId, isoWeek);
   const remove = useDeleteClockPeriod(ownerId, isoWeek);
   const [localErrors, setLocalErrors] = useState<Record<string, string>>({});
+  const [failedChecks, setFailedChecks] = useState(0);
   const error = create.error ?? update.error ?? remove.error;
   const fieldErrors = {
     ...(error instanceof ApiError ? error.fieldErrors : {}),
@@ -42,9 +46,14 @@ export function PeriodDialog({
   const hasEnd = Boolean(period?.endedAt);
   const title = period ? copy.clock.editPeriodTitle : copy.clock.addPeriodTitle;
 
-  useEffect(() => {
-    dialogRef.current?.showModal();
-  }, []);
+  useFocusFirstInvalid(formRef, error);
+  useFocusFirstInvalid(formRef, failedChecks);
+
+  function clearLocalError(field: string) {
+    setLocalErrors((current) =>
+      Object.fromEntries(Object.entries(current).filter(([name]) => name !== field)),
+    );
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -54,55 +63,53 @@ export function PeriodDialog({
       ...(hasEnd && endedAt === '' ? { endedAt: copy.clock.endRequired } : {}),
     };
     setLocalErrors(missing);
-    if (Object.keys(missing).length > 0) return;
+    if (Object.keys(missing).length > 0) {
+      setFailedChecks((count) => count + 1);
+      return;
+    }
     const times = { startedAt, ...(endedAt === '' ? {} : { endedAt }) };
     if (period) update.mutate({ periodId: period.id, ...times }, { onSuccess: onClose });
     else create.mutate(times, { onSuccess: onClose });
   }
 
   return (
-    <dialog
-      ref={dialogRef}
-      aria-label={title}
-      onClose={onClose}
-      className="m-auto w-[min(24rem,calc(100vw-2rem))] rounded-card border border-zinc-200 bg-white p-6 shadow-card backdrop:bg-zinc-900/30"
-    >
-      <form noValidate onSubmit={handleSubmit} className="space-y-4">
-        <h2 className="text-base font-semibold">{title}</h2>
-        <label className="block space-y-1 text-sm font-medium">
-          <span>{copy.clock.startTime}</span>
-          <input
-            type="time"
-            required
-            value={startedAt}
-            onChange={(event) => setStartedAt(event.target.value)}
-            aria-invalid={fieldErrors.startedAt !== undefined}
-            className="h-10 w-full rounded-lg border border-zinc-200 px-3"
-          />
-          {fieldErrors.startedAt ? (
-            <span className="text-xs text-rose-700">{fieldErrors.startedAt}</span>
-          ) : null}
-        </label>
-        <label className="block space-y-1 text-sm font-medium">
-          <span>{copy.clock.endTime}</span>
-          <input
-            type="time"
-            required={hasEnd}
-            value={endedAt}
-            onChange={(event) => setEndedAt(event.target.value)}
-            aria-invalid={fieldErrors.endedAt !== undefined}
-            aria-describedby={endHintId}
-            className="h-10 w-full rounded-lg border border-zinc-200 px-3"
-          />
-        </label>
-        <p id={endHintId} className="-mt-3 text-xs text-zinc-500">
-          {fieldErrors.endedAt ?? (hasEnd ? null : copy.clock.endTimeHint)}
-        </p>
-        {bannerMessage ? (
-          <p role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">
-            {bannerMessage}
-          </p>
-        ) : null}
+    <Dialog title={title} onClose={onClose}>
+      <form ref={formRef} noValidate onSubmit={handleSubmit} className="space-y-4">
+        <Field label={copy.clock.startTime} error={fieldErrors.startedAt}>
+          {(control) => (
+            <input
+              {...control}
+              type="time"
+              required
+              value={startedAt}
+              onChange={(event) => {
+                setStartedAt(event.target.value);
+                clearLocalError('startedAt');
+              }}
+              className="h-10 w-full rounded-control border border-line px-3"
+            />
+          )}
+        </Field>
+        <Field
+          label={copy.clock.endTime}
+          error={fieldErrors.endedAt}
+          hint={hasEnd ? undefined : copy.clock.endTimeHint}
+        >
+          {(control) => (
+            <input
+              {...control}
+              type="time"
+              required={hasEnd}
+              value={endedAt}
+              onChange={(event) => {
+                setEndedAt(event.target.value);
+                clearLocalError('endedAt');
+              }}
+              className="h-10 w-full rounded-control border border-line px-3"
+            />
+          )}
+        </Field>
+        <ErrorBanner message={bannerMessage} />
         <div className="flex flex-wrap justify-end gap-2">
           {period ? (
             <Button
@@ -121,6 +128,6 @@ export function PeriodDialog({
           </Button>
         </div>
       </form>
-    </dialog>
+    </Dialog>
   );
 }

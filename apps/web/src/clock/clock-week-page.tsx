@@ -1,4 +1,5 @@
 import { datesOfIsoWeek, toWorkDate, type ClockDayView } from '@work-planner/domain';
+import { CalendarPlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router';
 import { copy } from '../copy';
@@ -12,6 +13,8 @@ import { LeaveRequestDialog } from '../leave/leave-request-dialog';
 import { useDayTypes } from '../leave/leave-queries';
 import { useSession } from '../session/session-queries';
 import { Button } from '../ui/button';
+import { ErrorState } from '../ui/error-state';
+import { LoadingRegion } from '../ui/skeleton';
 import { APP_TIME_ZONE, currentIsoWeek } from './clock-time';
 import { useClockWeek } from './clock-queries';
 import { CountersCard } from './counters-card';
@@ -20,9 +23,10 @@ import { DayRow } from './day-row';
 import { CounterResetDialog } from './counter-reset-dialog';
 import { CounterResetHistoryDialog } from './counter-reset-history-dialog';
 import { PeriodDialog } from './period-dialog';
-import { TodayControls } from './today-controls';
+import { TodayHero } from './today-hero';
 import { useServerClock } from './use-server-clock';
 import { WeekHeader } from './week-header';
+import { WeekSkeleton } from './week-skeleton';
 
 export function ClockWeekPage() {
   const { userId } = useParams();
@@ -39,15 +43,20 @@ export function ClockWeekPage() {
   const requestedWeek = searchParams.get('semaine');
   const isoWeek =
     requestedWeek !== null && datesOfIsoWeek(requestedWeek) ? requestedWeek : followedWeek;
+  // The sticky bar stays outside the keyed view: rebuilt with each week, it would drop the focus
+  // a keyboard user left on ‹ or ›.
   return (
-    <ClockWeekView
-      key={`${pathUserId ?? 'me'}-${isoWeek}`}
-      ownerId={pathUserId ?? session.user.id}
-      pathUserId={pathUserId}
-      viewerId={session.user.id}
-      isoWeek={isoWeek}
-      onTodayWeekChange={setFollowedWeek}
-    />
+    <section className="space-y-4">
+      <h1 className="text-xl font-semibold tracking-tight text-balance">{copy.clock.title}</h1>
+      <WeekHeader isoWeek={isoWeek} pathUserId={pathUserId} viewerId={session.user.id} />
+      <ClockWeekView
+        key={`${pathUserId ?? 'me'}-${isoWeek}`}
+        ownerId={pathUserId ?? session.user.id}
+        viewerId={session.user.id}
+        isoWeek={isoWeek}
+        onTodayWeekChange={setFollowedWeek}
+      />
+    </section>
   );
 }
 
@@ -60,13 +69,11 @@ function canDeclareAbsence(day: ClockDayView): boolean {
 
 function ClockWeekView({
   ownerId,
-  pathUserId,
   viewerId,
   isoWeek,
   onTodayWeekChange,
 }: {
   ownerId: number;
-  pathUserId: number | undefined;
   viewerId: number;
   isoWeek: string;
   onTodayWeekChange: (isoWeek: string) => void;
@@ -113,89 +120,42 @@ function ClockWeekView({
     });
   }
   const dialogDay = week.data?.days.find((day) => day.date === dialog?.date);
+  // Only the owner can clock, and only today: any other week shows its counters and rows.
+  const heroDay = week.data?.days.find((day) => day.isToday && day.canEdit);
 
   return (
-    <section className="space-y-4">
-      <h1 className="text-xl font-semibold tracking-tight">{copy.clock.title}</h1>
-      <WeekHeader isoWeek={isoWeek} pathUserId={pathUserId} viewerId={viewerId} />
-      {week.isError ? (
-        <p role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">
-          {copy.clock.loadError}
-        </p>
+    <div className="space-y-4">
+      {/* A failed background refresh keeps the week on screen: the next poll or focus recovers. */}
+      {week.isError && !week.data ? (
+        <ErrorState
+          message={copy.clock.loadError}
+          onRetry={() => void week.refetch()}
+          isRetrying={week.isFetching}
+        />
       ) : null}
-      {week.isPending ? <p className="text-sm text-zinc-500">{copy.clock.loading}</p> : null}
+      {week.isPending ? (
+        <LoadingRegion label={copy.clock.loading}>
+          <WeekSkeleton hasHero={isOwnWeek && isoWeek === currentIsoWeek(new Date())} />
+        </LoadingRegion>
+      ) : null}
       {week.data ? (
-        <div className="animate-[week-in_200ms_ease-out] space-y-3">
+        <div className="space-y-4 motion-safe:animate-[week-in_200ms_ease-out]">
           {!isOwnWeek ? (
-            <p className="rounded-lg bg-zinc-100 px-3 py-2 text-sm text-zinc-700">
+            <p className="rounded-control bg-zinc-100 px-3 py-2 text-sm text-zinc-700">
               {copy.clock.readOnlyPrefix} {week.data.user.firstName} {week.data.user.lastName} —{' '}
               {copy.clock.readOnlySuffix}
             </p>
           ) : null}
-          {isOwnWeek ? (
-            <Button variant="secondary" onClick={() => setLeaveDialogDate(requestDate)}>
-              {copy.leave.requestButton}
-            </Button>
+          {heroDay ? (
+            <TodayHero
+              day={heroDay}
+              now={now}
+              ownerId={ownerId}
+              isoWeek={isoWeek}
+              onAddPeriod={() => setDialog({ kind: 'add', date: heroDay.date })}
+              onRequestAbsence={() => setLeaveDialogDate(requestDate)}
+            />
           ) : null}
-          <ol className="space-y-2">
-            {week.data.days.map((day, index) => (
-              <DayRow
-                key={day.date}
-                day={day}
-                index={index}
-                now={now}
-                onSelectPeriod={
-                  day.canEdit
-                    ? (periodId) => setDialog({ kind: 'edit', date: day.date, periodId })
-                    : undefined
-                }
-                actions={
-                  <>
-                    <HalfDayChips halfDays={day.halfDays} dayTypes={dayTypes.data ?? []} />
-                    {isOwnWeek && canDeclareAbsence(day) ? (
-                      <button
-                        type="button"
-                        onClick={() => setLeaveDialogDate(day.date)}
-                        className="text-sm font-medium text-primary-600 hover:text-primary-700"
-                      >
-                        {copy.leave.declareDay}
-                      </button>
-                    ) : null}
-                    {day.latestCorrection ? (
-                      <CorrectionStatusChip
-                        status={day.latestCorrection.status}
-                        onOpen={() => openCorrection(day.latestCorrection!.id)}
-                      />
-                    ) : null}
-                    {day.canEdit ? (
-                      <TodayControls
-                        day={day}
-                        ownerId={ownerId}
-                        isoWeek={isoWeek}
-                        onAddPeriod={() => setDialog({ kind: 'add', date: day.date })}
-                      />
-                    ) : day.canClose ? (
-                      <button
-                        type="button"
-                        onClick={() => setDialog({ kind: 'close', date: day.date })}
-                        className="text-sm font-medium text-primary-600 hover:text-primary-700"
-                      >
-                        {copy.clock.closeDay}
-                      </button>
-                    ) : day.canCorrect ? (
-                      <button
-                        type="button"
-                        onClick={() => setDialog({ kind: 'correct', date: day.date })}
-                        className="text-sm font-medium text-primary-600 hover:text-primary-700"
-                      >
-                        {copy.corrections.correctDay}
-                      </button>
-                    ) : null}
-                  </>
-                }
-              />
-            ))}
-          </ol>
           <CountersCard
             week={week.data}
             now={now}
@@ -223,6 +183,66 @@ function ClockWeekView({
               ) : undefined
             }
           />
+          {isOwnWeek && !heroDay ? (
+            <div className="flex justify-end">
+              <Button variant="secondary" onClick={() => setLeaveDialogDate(requestDate)}>
+                <CalendarPlus size={16} aria-hidden /> {copy.leave.requestButton}
+              </Button>
+            </div>
+          ) : null}
+          <ol className="divide-y divide-line overflow-hidden rounded-card border border-line bg-surface">
+            {week.data.days.map((day, index) => (
+              <DayRow
+                key={day.date}
+                day={day}
+                index={index}
+                now={now}
+                onSelectPeriod={
+                  day.canEdit
+                    ? (periodId) => setDialog({ kind: 'edit', date: day.date, periodId })
+                    : undefined
+                }
+                actions={
+                  <>
+                    <HalfDayChips halfDays={day.halfDays} dayTypes={dayTypes.data ?? []} />
+                    {/* The hero carries today's absence action: one action, one place. */}
+                    {isOwnWeek && day !== heroDay && canDeclareAbsence(day) ? (
+                      <button
+                        type="button"
+                        onClick={() => setLeaveDialogDate(day.date)}
+                        className="text-sm font-medium text-primary-600 hover:text-primary-700"
+                      >
+                        {copy.leave.declareDay}
+                      </button>
+                    ) : null}
+                    {day.latestCorrection ? (
+                      <CorrectionStatusChip
+                        status={day.latestCorrection.status}
+                        onOpen={() => openCorrection(day.latestCorrection!.id)}
+                      />
+                    ) : null}
+                    {day.canEdit ? null : day.canClose ? (
+                      <button
+                        type="button"
+                        onClick={() => setDialog({ kind: 'close', date: day.date })}
+                        className="text-sm font-medium text-primary-600 hover:text-primary-700"
+                      >
+                        {copy.clock.closeDay}
+                      </button>
+                    ) : day.canCorrect ? (
+                      <button
+                        type="button"
+                        onClick={() => setDialog({ kind: 'correct', date: day.date })}
+                        className="text-sm font-medium text-primary-600 hover:text-primary-700"
+                      >
+                        {copy.corrections.correctDay}
+                      </button>
+                    ) : null}
+                  </>
+                }
+              />
+            ))}
+          </ol>
         </div>
       ) : null}
       {dialog && dialogDay && (dialog.kind === 'add' || dialog.kind === 'edit') ? (
@@ -278,6 +298,6 @@ function ClockWeekView({
           onClose={closeCorrection}
         />
       ) : null}
-    </section>
+    </div>
   );
 }

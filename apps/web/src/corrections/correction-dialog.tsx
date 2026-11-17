@@ -8,12 +8,15 @@ import {
   type WorkMode,
 } from '@work-planner/domain';
 import { Building2, House, Plus, Trash2 } from 'lucide-react';
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useId, useRef, useState, type FormEvent } from 'react';
 import { ApiError } from '../api/api-client';
 import { bannerMessageFor } from '../api/form-errors';
 import { APP_TIME_ZONE, formatLongDate } from '../clock/clock-time';
 import { copy } from '../copy';
 import { Button } from '../ui/button';
+import { ErrorBanner } from '../ui/error-banner';
+import { Dialog } from '../ui/dialog';
+import { useFocusFirstInvalid } from '../ui/field-error';
 import { useCreateClockCorrection } from './correction-queries';
 
 interface PeriodRow {
@@ -54,7 +57,8 @@ export function CorrectionDialog({
   ownerId: number;
   onClose: () => void;
 }) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const messageIdPrefix = useId();
   const [workMode, setWorkMode] = useState<WorkMode>(day.workMode ?? 'on_site');
   const [rows, setRows] = useState<PeriodRow[]>(() => rowsOf(day));
   const [nextKey, setNextKey] = useState(day.periods.length);
@@ -69,9 +73,7 @@ export function CorrectionDialog({
   const bannerMessage = bannerMessageFor(createCorrection.error, fieldNames);
   const afterMinutes = previewMinutes(day.date, rows);
 
-  useEffect(() => {
-    dialogRef.current?.showModal();
-  }, []);
+  useFocusFirstInvalid(formRef, createCorrection.error);
 
   function updateRow(key: number, change: Partial<PeriodRow>) {
     setRows((current) => current.map((row) => (row.key === key ? { ...row, ...change } : row)));
@@ -97,20 +99,18 @@ export function CorrectionDialog({
   }
 
   return (
-    <dialog
-      ref={dialogRef}
-      aria-label={copy.corrections.dialogTitle}
+    <Dialog
+      title={`${copy.corrections.dialogTitle} — ${formatLongDate(day.date)}`}
       onClose={onClose}
-      className="m-auto w-[min(32rem,calc(100vw-2rem))] rounded-card border border-zinc-200 bg-white p-6 shadow-card backdrop:bg-zinc-900/30"
+      widthClass="w-[min(32rem,calc(100vw-2rem))]"
     >
-      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-        <h2 className="text-base font-semibold">{`${copy.corrections.dialogTitle} — ${formatLongDate(day.date)}`}</h2>
-        <fieldset className="inline-flex rounded-lg border border-zinc-200 bg-zinc-50 p-0.5">
+      <form ref={formRef} onSubmit={handleSubmit} className="space-y-4" noValidate>
+        <fieldset className="inline-flex rounded-card border border-line bg-zinc-50 p-1">
           <legend className="sr-only">{copy.corrections.workMode}</legend>
           {WORK_MODE_OPTIONS.map(({ value, label, Icon }) => (
             <label
               key={value}
-              className={`flex cursor-pointer items-center gap-1 rounded-md px-2.5 py-1 text-xs has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary-500 ${workMode === value ? 'bg-white font-medium text-zinc-900 shadow-card' : 'text-zinc-600'}`}
+              className={`flex cursor-pointer items-center gap-1 rounded-inner-sm px-2.5 py-1 text-xs has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary-500 ${workMode === value ? 'bg-surface font-medium text-zinc-900 shadow-card' : 'text-zinc-600'}`}
             >
               <input
                 type="radio"
@@ -129,6 +129,8 @@ export function CorrectionDialog({
           {rows.map((row, index) => {
             const startError = fieldErrors[`periods.${index}.startedAt`];
             const endError = fieldErrors[`periods.${index}.endedAt`];
+            const rowMessage = startError ?? endError;
+            const messageId = `${messageIdPrefix}-${row.key}`;
             return (
               <li key={row.key} className="space-y-1">
                 <div className="flex items-end gap-2">
@@ -139,7 +141,8 @@ export function CorrectionDialog({
                       value={row.startedAt}
                       onChange={(event) => updateRow(row.key, { startedAt: event.target.value })}
                       aria-invalid={startError !== undefined}
-                      className="h-10 w-full rounded-lg border border-zinc-200 px-3 text-sm"
+                      aria-describedby={rowMessage ? messageId : undefined}
+                      className="h-10 w-full rounded-control border border-line px-3 text-sm"
                     />
                   </label>
                   <label className="flex-1 space-y-1 text-xs font-medium">
@@ -149,7 +152,8 @@ export function CorrectionDialog({
                       value={row.endedAt}
                       onChange={(event) => updateRow(row.key, { endedAt: event.target.value })}
                       aria-invalid={endError !== undefined}
-                      className="h-10 w-full rounded-lg border border-zinc-200 px-3 text-sm"
+                      aria-describedby={rowMessage ? messageId : undefined}
+                      className="h-10 w-full rounded-control border border-line px-3 text-sm"
                     />
                   </label>
                   <button
@@ -158,13 +162,15 @@ export function CorrectionDialog({
                     onClick={() =>
                       setRows((current) => current.filter((other) => other.key !== row.key))
                     }
-                    className="h-10 rounded-lg px-2 text-zinc-500 hover:bg-zinc-100"
+                    className="h-10 rounded-control px-2 text-zinc-500 hover:bg-zinc-100"
                   >
                     <Trash2 size={16} aria-hidden />
                   </button>
                 </div>
-                {(startError ?? endError) ? (
-                  <p className="text-xs text-rose-700">{startError ?? endError}</p>
+                {rowMessage ? (
+                  <p id={messageId} className="text-xs text-rose-700">
+                    {rowMessage}
+                  </p>
                 ) : null}
               </li>
             );
@@ -183,14 +189,10 @@ export function CorrectionDialog({
             onChange={(event) => setComment(event.target.value)}
             maxLength={500}
             rows={2}
-            className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+            className="w-full rounded-control border border-line px-3 py-2 text-sm"
           />
         </label>
-        {bannerMessage ? (
-          <p role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">
-            {bannerMessage}
-          </p>
-        ) : null}
+        <ErrorBanner message={bannerMessage} />
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={onClose}>
             {copy.corrections.cancel}
@@ -200,6 +202,6 @@ export function CorrectionDialog({
           </Button>
         </div>
       </form>
-    </dialog>
+    </Dialog>
   );
 }

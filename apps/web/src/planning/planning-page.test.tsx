@@ -1,8 +1,9 @@
-import { screen, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { formatSignedMinutes } from '@work-planner/domain';
 import { copy } from '../copy';
 import { signedInHomeRoutes } from '../test/clock-fixtures';
+import { expectNoAxeViolations } from '../test/axe';
 import { mockFetchRoutes, type MockResponse } from '../test/mock-fetch';
 import { teamMonth } from '../test/planning-fixtures';
 import { renderApp } from '../test/render-app';
@@ -49,6 +50,14 @@ afterEach(() => {
   globalThis.fetch = realFetch;
 });
 
+// The team group headings are row headers too: only the person rows (scope="row") are names.
+function personNames(grid: HTMLElement) {
+  return within(grid)
+    .getAllByRole('rowheader')
+    .filter((cell) => cell.getAttribute('scope') === 'row')
+    .map((cell) => cell.textContent);
+}
+
 describe('PlanningPage', () => {
   it("starts on the viewer's team, manager first, with week headers and today", async () => {
     renderPlanning('/planning?mois=2026-11');
@@ -60,16 +69,14 @@ describe('PlanningPage', () => {
       within(grid).getByRole('rowheader', { name: /Sophie Dubois.*Responsable/ }),
     ).toBeInTheDocument();
     expect(within(grid).queryByText('Claire Martin')).not.toBeInTheDocument();
-    expect(
-      within(grid)
-        .getAllByRole('rowheader')
-        .map((cell) => cell.textContent),
-    ).toEqual([
+    expect(personNames(grid)).toEqual([
       expect.stringContaining('Sophie Dubois'),
       expect.stringContaining('Hugo Laurent'),
       expect.stringContaining('Léa Moreau'),
     ]);
-    expect(within(grid).getByRole('columnheader', { current: 'date' })).toHaveTextContent('13');
+    const todayHeader = within(grid).getByRole('columnheader', { current: 'date' });
+    expect(todayHeader).toHaveTextContent('13');
+    expect(todayHeader).toHaveTextContent(copy.calendar.today);
   });
 
   it('labels absences and holidays in text and shows balances', async () => {
@@ -106,11 +113,7 @@ describe('PlanningPage', () => {
     await user.click(await screen.findByRole('checkbox', { name: copy.planning.absentToday }));
 
     const grid = await table();
-    expect(
-      within(grid)
-        .getAllByRole('rowheader')
-        .map((cell) => cell.textContent),
-    ).toEqual([expect.stringContaining('Léa Moreau')]);
+    expect(personNames(grid)).toEqual([expect.stringContaining('Léa Moreau')]);
     expect(screen.getByText('1 personne')).toBeInTheDocument();
   });
 
@@ -139,11 +142,7 @@ describe('PlanningPage', () => {
     });
 
     const grid = await screen.findByRole('table', { name: /décembre 2026/ });
-    expect(
-      within(grid)
-        .getAllByRole('rowheader')
-        .map((cell) => cell.textContent),
-    ).toEqual([expect.stringContaining('Léa Moreau')]);
+    expect(personNames(grid)).toEqual([expect.stringContaining('Léa Moreau')]);
   });
 
   it('shows a parent team together with its sub-teams, counting each person once', async () => {
@@ -300,5 +299,153 @@ describe('PlanningPage', () => {
     expect(screen.queryByRole('table', { name: /novembre 2026/ })).not.toBeInTheDocument();
     release();
     expect(await screen.findByRole('table', { name: /décembre 2026/ })).toBeInTheDocument();
+  });
+
+  it('names each team group by its path', async () => {
+    renderPlanning('/planning?mois=2026-11&equipe=toutes');
+
+    await table();
+
+    expect(screen.getByRole('rowgroup', { name: 'Tech › Front' })).toBeInTheDocument();
+    expect(screen.getByRole('rowgroup', { name: 'Tech' })).toBeInTheDocument();
+  });
+
+  it('loads the month again on demand after a failure', async () => {
+    const url = '/api/v1/team-months/2026-11';
+    const { queryClient, container } = renderPlanning('/planning?mois=2026-11', {
+      [`GET ${url}`]: { status: 500, body: {} },
+    });
+    const fetchMock = globalThis.fetch as jest.Mock;
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(copy.planning.loadError);
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+    await expectNoAxeViolations(container);
+    await userEvent.setup().click(screen.getByRole('button', { name: copy.states.retry }));
+
+    await waitFor(() => expect(fetchMock.mock.calls.filter(([u]) => u === url)).toHaveLength(2));
+  });
+
+  it('announces the loading as one busy region', async () => {
+    renderPlanning('/planning?mois=2026-11');
+    const answer = globalThis.fetch;
+    globalThis.fetch = (input, init) =>
+      typeof input === 'string' && input.includes('/team-months/')
+        ? new Promise<Response>(() => undefined)
+        : answer(input, init);
+
+    renderApp('/planning?mois=2026-11');
+
+    const label = await screen.findByText(copy.planning.loading);
+    expect(label.closest('[aria-busy="true"]')).not.toBeNull();
+  });
+
+  it('shows an empty state when nobody is absent, and has no accessibility violation', async () => {
+    const { queryClient, container } = renderPlanning('/planning?mois=2026-11&absents=1', {
+      'GET /api/v1/team-months/2026-11': {
+        status: 200,
+        body: teamMonth({ absentTodayUserIds: [] }),
+      },
+    });
+
+    const message = await screen.findByText(copy.planning.nobodyAbsent);
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+
+    expect(message.closest('div')).toHaveClass('border-dashed');
+    await expectNoAxeViolations(container);
+  });
+
+  it('has no accessibility violation once loaded', async () => {
+    const { queryClient, container } = renderPlanning('/planning?mois=2026-11');
+
+    await table();
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+
+    await expectNoAxeViolations(container);
+  });
+
+  it('keeps the month on screen when a background refresh fails', async () => {
+    const { queryClient } = renderPlanning('/planning?mois=2026-11');
+    await table();
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+    mockFetchRoutes({
+      ...signedInHomeRoutes(),
+      'GET /api/v1/team-months/2026-11': { status: 500, body: {} },
+    });
+
+    await act(() => queryClient.refetchQueries({ queryKey: ['team-month'] }));
+    // TanStack Query tells its observers on the next macrotask: let the page render the failure.
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+
+    expect(queryClient.getQueryState(['team-month', '2026-11'])?.status).toBe('error');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByRole('table', { name: /novembre 2026/ })).toBeInTheDocument();
+  });
+
+  it('shows today’s absentees in a side card with their count and initials', async () => {
+    renderPlanning('/planning?mois=2026-11');
+
+    const card = await screen.findByRole('region', { name: copy.planning.absentToday });
+
+    expect(within(card).getByText('1')).toBeInTheDocument();
+    expect(within(card).getByText('Léa Moreau')).toBeInTheDocument();
+    expect(within(card).getByText('LM')).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('only counts absentees among the people shown', async () => {
+    renderPlanning('/planning?mois=2026-11', {
+      'GET /api/v1/team-months/2026-11': {
+        status: 200,
+        body: teamMonth({ absentTodayUserIds: [7, 12] }),
+      },
+    });
+
+    const card = await screen.findByRole('region', { name: copy.planning.absentToday });
+
+    expect(within(card).getByText('1')).toBeInTheDocument();
+    expect(within(card).queryByText('Inès Bernard')).not.toBeInTheDocument();
+  });
+
+  it('shows 0 and no sentence in the card when nobody is absent', async () => {
+    renderPlanning('/planning?mois=2026-11', {
+      'GET /api/v1/team-months/2026-11': {
+        status: 200,
+        body: teamMonth({ absentTodayUserIds: [] }),
+      },
+    });
+
+    const card = await screen.findByRole('region', { name: copy.planning.absentToday });
+
+    expect(within(card).getByText('0')).toBeInTheDocument();
+    expect(within(card).queryByText(copy.planning.nobodyAbsent)).not.toBeInTheDocument();
+  });
+
+  it('puts an initials avatar next to each name without changing the name', async () => {
+    renderPlanning('/planning?mois=2026-11');
+
+    const grid = await table();
+
+    const header = within(grid).getByRole('rowheader', { name: /Sophie Dubois.*Responsable/ });
+    expect(within(header).getByText('SD')).toHaveAttribute('aria-hidden', 'true');
+    const cards = screen.getByRole('list', { name: copy.planning.cardsLabel });
+    const card = within(cards).getByRole('listitem', { name: 'Sophie Dubois' });
+    expect(within(card).getByText('SD')).toHaveAttribute('aria-hidden', 'true');
+    expect(within(card).getByRole('link', { name: 'Sophie Dubois' })).toBeInTheDocument();
+  });
+
+  it('keeps the card slot in the layout while loading', async () => {
+    mockFetchRoutes({ ...signedInHomeRoutes() });
+    const initialFetch = globalThis.fetch;
+    globalThis.fetch = jest.fn((input: RequestInfo | URL, init?: RequestInit) =>
+      typeof input === 'string' && input.includes('/team-months/')
+        ? new Promise<Response>(() => undefined)
+        : initialFetch(input, init),
+    ) as typeof fetch;
+    const { container } = renderApp('/planning?mois=2026-11');
+
+    await screen.findByText(copy.planning.loading);
+    expect(container.querySelectorAll('[data-slot="aside"] [aria-hidden]').length).toBeGreaterThan(
+      0,
+    );
+    expect(container.querySelector('[data-slot="aside"] section')).toBeNull();
   });
 });

@@ -56,7 +56,7 @@ function renderHugoWeek(extra: Record<string, MockResponse> = {}) {
 async function openDialog(user: ReturnType<typeof userEvent.setup>) {
   const tuesday = await screen.findByRole('listitem', { name: /^MAR 3/ });
   await user.click(within(tuesday).getByRole('button', { name: copy.corrections.correctDay }));
-  return screen.getByRole('dialog', { name: copy.corrections.dialogTitle });
+  return screen.getByRole('dialog', { name: new RegExp(`^${copy.corrections.dialogTitle}`) });
 }
 
 function sentBody(fetchMock: jest.Mock): unknown {
@@ -168,12 +168,15 @@ describe('CorrectionDialog', () => {
 
   it('closes the dialog without sending anything on cancel', async () => {
     const { user, fetchMock } = renderHugoWeek();
+    const tuesday = await screen.findByRole('listitem', { name: /^MAR 3/ });
+    const opener = within(tuesday).getByRole('button', { name: copy.corrections.correctDay });
     const dialog = await openDialog(user);
 
     await user.click(within(dialog).getByRole('button', { name: copy.corrections.cancel }));
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(sentBody(fetchMock)).toBeUndefined();
+    expect(opener).toHaveFocus();
   });
 
   it('removes a period', async () => {

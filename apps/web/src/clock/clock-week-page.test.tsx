@@ -1,10 +1,13 @@
-import { act, screen, within } from '@testing-library/react';
+import { formatMinutes, toLocalTime, toWorkDate } from '@work-planner/domain';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { copy } from '../copy';
+import { expectNoAxeViolations } from '../test/axe';
 import { HUGO, LEA, signedInHomeRoutes, weekFixture } from '../test/clock-fixtures';
 import { mockFetchRoutes } from '../test/mock-fetch';
 import { renderApp } from '../test/render-app';
-import { shiftIsoWeek } from './clock-time';
+import { CLOCK_WEEK_QUERY_PREFIX, clockWeekQueryKey } from './clock-queries';
+import { APP_TIME_ZONE, currentIsoWeek, shiftIsoWeek } from './clock-time';
 
 const WEEK = '2026-W45';
 // Tuesday of week 45: leave tests must not depend on the real date.
@@ -44,6 +47,16 @@ describe('ClockWeekPage', () => {
     expect(screen.getByText(copy.counters.worked).parentElement).toHaveTextContent('13:30');
   });
 
+  it('has no accessibility violations on a loaded week', async () => {
+    mockFetchRoutes(signedInHomeRoutes());
+    const { queryClient, container } = renderApp('/');
+
+    await screen.findByRole('region', { name: copy.clock.todayTitle });
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+
+    await expectNoAxeViolations(container);
+  });
+
   it('warns about a day left unclosed', async () => {
     const week = weekFixture({ isoWeek: WEEK, days: { '2026-11-05': { isUnclosed: true } } });
     mockFetchRoutes(signedInHomeRoutes(week));
@@ -64,11 +77,14 @@ describe('ClockWeekPage', () => {
       },
     });
     const { router } = renderApp(`/?semaine=${WEEK}`);
+    const nextWeekButton = await screen.findByRole('button', { name: copy.clock.nextWeek });
 
-    await userEvent.setup().click(await screen.findByRole('button', { name: copy.clock.nextWeek }));
+    await userEvent.setup().click(nextWeekButton);
 
     expect(await screen.findByText('S46')).toBeInTheDocument();
     expect(router.state.location.search).toBe(`?semaine=${next}`);
+    // The sticky bar is not rebuilt with the week: keyboard users keep their place on it.
+    expect(nextWeekButton).toHaveFocus();
   });
 
   it("opens a colleague's week from the person picker, read-only", async () => {
@@ -107,18 +123,183 @@ describe('ClockWeekPage', () => {
     expect(await screen.findByText(copy.notFound.title)).toBeInTheDocument();
   });
 
-  it('says so when the week cannot be loaded', async () => {
-    mockFetchRoutes({
+  it('says so when the week cannot be loaded and loads it again on demand', async () => {
+    const weekUrl = `/api/v1/users/${LEA.id}/clock-weeks/${WEEK}`;
+    const fetchMock = mockFetchRoutes({
       ...signedInHomeRoutes(weekFixture({ isoWeek: WEEK })),
+      [`GET ${weekUrl}`]: { status: 500, body: { code: 'INTERNAL_ERROR', message: 'Oups' } },
+    });
+    const { queryClient, container } = renderApp(`/?semaine=${WEEK}`);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(copy.clock.loadError);
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+    await expectNoAxeViolations(container);
+    await userEvent.setup().click(screen.getByRole('button', { name: copy.states.retry }));
+
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.filter(([url]) => url === weekUrl)).toHaveLength(2),
+    );
+  });
+
+  it('shows the shape of the week while it loads', async () => {
+    mockFetchRoutes(signedInHomeRoutes());
+    const answer = globalThis.fetch;
+    // The week never answers: the page stays on its placeholder.
+    globalThis.fetch = (input, init) =>
+      typeof input === 'string' && input.includes('/clock-weeks/')
+        ? new Promise<Response>(() => undefined)
+        : answer(input, init);
+
+    renderApp('/');
+
+    const label = await screen.findByText(copy.clock.loading);
+    expect(label).toHaveClass('sr-only');
+    expect(label.closest('[aria-busy="true"]')).not.toBeNull();
+    expect(screen.queryAllByRole('listitem', { name: /^(LUN|MAR|MER|JEU|VEN|SAM|DIM)/ })).toEqual(
+      [],
+    );
+  });
+
+  describe('today card', () => {
+    const TODAY = toWorkDate(new Date(), APP_TIME_ZONE);
+    const ONE_HOUR_IN_MILLISECONDS = 3_600_000;
+
+    it('comes first with the time worked today and one primary Start button', async () => {
+      const done = {
+        id: 1,
+        startedAt: new Date(Date.now() - 2 * ONE_HOUR_IN_MILLISECONDS).toISOString(),
+        endedAt: new Date(Date.now() - ONE_HOUR_IN_MILLISECONDS).toISOString(),
+      };
+      const week = weekFixture({ days: { [TODAY]: { periods: [done], workMode: 'on_site' } } });
+      mockFetchRoutes(signedInHomeRoutes(week));
+
+      renderApp('/');
+
+      const hero = await screen.findByRole('region', { name: copy.clock.todayTitle });
+      expect(screen.getAllByRole('region')[0]).toBe(hero);
+      expect(within(hero).getByText(formatMinutes(60))).toBeInTheDocument();
+      const start = within(hero).getByRole('button', { name: copy.clock.start });
+      expect(start).toHaveClass('bg-primary-600');
+      expect(
+        within(hero)
+          .getAllByRole('button')
+          .filter((button) => button.classList.contains('bg-primary-600')),
+      ).toEqual([start]);
+      expect(start.closest('.fixed')).toBeNull();
+      expect(within(hero).queryByText(new RegExp(`^${copy.clock.since} `))).toBeNull();
+      const todayRow = screen.getByRole('listitem', { current: 'date' });
+      expect(within(todayRow).queryByRole('button', { name: copy.clock.start })).toBeNull();
+    });
+
+    it('offers Stop in the same spot while a period runs, with its start and mode', async () => {
+      const startedAt = new Date(Date.now() - ONE_HOUR_IN_MILLISECONDS);
+      const running = { id: 2, startedAt: startedAt.toISOString(), endedAt: null };
+      const week = weekFixture({ days: { [TODAY]: { periods: [running], workMode: 'telework' } } });
+      mockFetchRoutes(signedInHomeRoutes(week));
+
+      renderApp('/');
+
+      const hero = await screen.findByRole('region', { name: copy.clock.todayTitle });
+      expect(within(hero).getByRole('button', { name: copy.clock.stop })).toHaveClass(
+        'bg-primary-600',
+      );
+      expect(
+        within(hero).getByText(
+          `${copy.clock.since} ${toLocalTime(startedAt, APP_TIME_ZONE)} · ${copy.clock.telework}`,
+        ),
+      ).toBeInTheDocument();
+    });
+
+    it('tells in its status line that a Stop in the same minute cancelled the period', async () => {
+      const running = { id: 3, startedAt: new Date().toISOString(), endedAt: null };
+      const week = weekFixture({ days: { [TODAY]: { periods: [running], workMode: 'on_site' } } });
+      mockFetchRoutes({
+        ...signedInHomeRoutes(week),
+        'PATCH /api/v1/clock-periods/3': { status: 204 },
+      });
+      renderApp('/');
+
+      const hero = await screen.findByRole('region', { name: copy.clock.todayTitle });
+      const status = within(hero).getByRole('status');
+      expect(status).toBeEmptyDOMElement();
+      await userEvent.setup().click(within(hero).getByRole('button', { name: copy.clock.stop }));
+
+      await waitFor(() => expect(status).toHaveTextContent(copy.clock.periodCancelled));
+    });
+
+    it('is not shown on a past week', async () => {
+      const lastWeek = shiftIsoWeek(currentIsoWeek(new Date()), -1);
+      mockFetchRoutes(signedInHomeRoutes(weekFixture({ isoWeek: lastWeek })));
+
+      renderApp(`/?semaine=${lastWeek}`);
+
+      expect(await screen.findAllByRole('listitem', { name: /^LUN/ })).toHaveLength(1);
+      expect(screen.queryByRole('region', { name: copy.clock.todayTitle })).toBeNull();
+      // Without a hero, the absence request stays on its own above the rows.
+      expect(screen.getByRole('button', { name: copy.leave.requestButton })).toBeInTheDocument();
+    });
+
+    it("is not shown on a colleague's current week", async () => {
+      const other = weekFixture({ user: HUGO, isOwnWeek: false });
+      mockFetchRoutes({
+        ...signedInHomeRoutes(),
+        [`GET /api/v1/users/${HUGO.id}/clock-weeks/${other.isoWeek}`]: { status: 200, body: other },
+      });
+
+      renderApp(`/pointage/${HUGO.id}`);
+
+      expect(await screen.findByText(/Semaine de Hugo Laurent/)).toBeInTheDocument();
+      expect(screen.queryByRole('region', { name: copy.clock.todayTitle })).toBeNull();
+    });
+
+    it("groups the absence request with the hero's secondary actions", async () => {
+      mockFetchRoutes(signedInHomeRoutes());
+
+      renderApp('/');
+
+      const hero = await screen.findByRole('region', { name: copy.clock.todayTitle });
+      const request = within(hero).getByRole('button', { name: copy.leave.requestButton });
+      expect(request).not.toHaveClass('bg-primary-600');
+      expect(request.parentElement).toBe(
+        within(hero).getByRole('button', { name: copy.clock.addPeriod }).parentElement,
+      );
+      expect(screen.getAllByRole('button', { name: copy.leave.requestButton })).toEqual([request]);
+    });
+  });
+
+  it("leaves today's row without its own absence link while the hero offers one", async () => {
+    mockFetchRoutes(signedInHomeRoutes());
+
+    renderApp('/');
+
+    await screen.findByRole('region', { name: copy.clock.todayTitle });
+    const todayRow = screen.getByRole('listitem', { current: 'date' });
+    expect(
+      within(todayRow).queryByRole('button', { name: copy.leave.declareDay }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('keeps the week on screen when a background refresh fails', async () => {
+    const week = weekFixture({ isoWeek: WEEK });
+    mockFetchRoutes(signedInHomeRoutes(week));
+    const { queryClient } = renderApp(`/?semaine=${WEEK}`);
+    await screen.findAllByRole('listitem', { name: /^LUN/ });
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+    mockFetchRoutes({
+      ...signedInHomeRoutes(week),
       [`GET /api/v1/users/${LEA.id}/clock-weeks/${WEEK}`]: {
         status: 500,
         body: { code: 'INTERNAL_ERROR', message: 'Oups' },
       },
     });
 
-    renderApp(`/?semaine=${WEEK}`);
+    await act(() => queryClient.refetchQueries({ queryKey: CLOCK_WEEK_QUERY_PREFIX }));
+    // TanStack Query tells its observers on the next macrotask: let the page render the failure.
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(copy.clock.loadError);
+    expect(queryClient.getQueryState(clockWeekQueryKey(LEA.id, WEEK))?.status).toBe('error');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('listitem', { name: /^LUN/ })).toHaveLength(1);
   });
 
   it('offers the owner to declare an absence on a future weekday and opens the dialog', async () => {
@@ -167,11 +348,14 @@ describe('ClockWeekPage', () => {
     mockFetchRoutes(signedInHomeRoutes(weekFixture({ isoWeek: WEEK, serverNow: SERVER_NOW })));
     renderApp(`/?semaine=${WEEK}`);
 
-    await userEvent
-      .setup()
-      .click(await screen.findByRole('button', { name: copy.leave.requestButton }));
+    const user = userEvent.setup();
+    const opener = await screen.findByRole('button', { name: copy.leave.requestButton });
+    await user.click(opener);
 
-    expect(await screen.findByRole('dialog', { name: copy.leave.dialogTitle })).toBeInTheDocument();
+    const dialog = await screen.findByRole('dialog', { name: copy.leave.dialogTitle });
+    expect(dialog).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: copy.leave.cancel }));
+    expect(opener).toHaveFocus();
   });
 
   it("shows a colleague's planned half-days but no request buttons", async () => {

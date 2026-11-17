@@ -10,6 +10,7 @@ import { ApiError, apiSendNoContent } from '../api/api-client';
 import { bannerMessageFor } from '../api/form-errors';
 import { copy } from '../copy';
 import { Button } from '../ui/button';
+import { StatusMessage } from '../ui/status-message';
 import { TextField } from '../ui/text-field';
 
 const STRENGTH_SEGMENT_COUNT_BY_LEVEL: Record<PasswordStrength, number> = {
@@ -64,9 +65,9 @@ export function PasswordForm({ onSuccess }: { onSuccess?: () => void } = {}) {
   return (
     <section
       aria-labelledby="password-title"
-      className="rounded-card border border-zinc-200 bg-white p-6 shadow-card"
+      className="rounded-card border border-line bg-surface p-6 shadow-card"
     >
-      <h2 id="password-title" className="text-base font-semibold tracking-tight">
+      <h2 id="password-title" className="text-sm font-semibold text-zinc-900">
         {copy.password.title}
       </h2>
       <form className="mt-4 space-y-4" onSubmit={handleSubmit} noValidate>
@@ -121,11 +122,7 @@ export function PasswordForm({ onSuccess }: { onSuccess?: () => void } = {}) {
           <Button type="submit" isPending={change.isPending}>
             {copy.password.submit}
           </Button>
-          {change.isSuccess ? (
-            <p role="status" className="text-sm text-emerald-700">
-              {copy.password.changed}
-            </p>
-          ) : null}
+          <StatusMessage message={change.isSuccess ? copy.password.changed : null} tone="success" />
           {bannerMessage !== undefined ? (
             <p role="alert" className="text-sm text-rose-700">
               {bannerMessage}

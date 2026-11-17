@@ -9,6 +9,7 @@ import {
 import { Link } from 'react-router';
 import { Gap } from '../clock/counters-card';
 import { copy } from '../copy';
+import { Avatar } from '../ui/avatar';
 
 function runText(run: AbsenceRun, dayTypes: readonly DayTypeView[]): string {
   const label = dayTypes.find((type) => type.code === run.dayTypeCode)?.label ?? run.dayTypeCode;
@@ -47,15 +48,15 @@ export function PersonCards({
           <li
             key={id}
             aria-label={name}
-            className="rounded-card border border-zinc-200 bg-white p-3 text-sm"
+            className="rounded-card border border-line bg-surface p-3 text-sm"
           >
-            <div className="flex items-baseline justify-between gap-2">
-              <Link
-                to={`/calendrier/${id}`}
-                className="font-medium hover:underline focus-visible:outline-2 focus-visible:outline-primary-600"
-              >
-                {name}
-              </Link>
+            <div className="flex items-center justify-between gap-2">
+              <span className="flex items-center gap-2">
+                <Avatar firstName={person.firstName} lastName={person.lastName} />
+                <Link to={`/calendrier/${id}`} className="font-medium hover:underline">
+                  {name}
+                </Link>
+              </span>
               <Gap
                 minutes={person.balance.globalGapMinutes}
                 isRefused={person.balance.hasOpenRefusal}

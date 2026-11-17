@@ -2,7 +2,7 @@ import { formatDayCount, type DayTypeView, type LeaveRequestView } from '@work-p
 import type { ReactNode } from 'react';
 import { formatLongDate } from '../clock/clock-time';
 import { copy } from '../copy';
-import { DAY_TYPE_CHIP_CLASSES, FALLBACK_CHIP_CLASSES } from './half-day-chips';
+import { Avatar } from '../ui/avatar';
 
 const STATUS_CLASS: Record<LeaveRequestView['status'], string> = {
   pending: 'bg-amber-50 text-amber-800',
@@ -20,12 +20,6 @@ function statusLabel(request: LeaveRequestView): string {
 
 function typeLabel(request: LeaveRequestView, dayTypes: readonly DayTypeView[]): string {
   return dayTypes.find((type) => type.code === request.dayTypeCode)?.label ?? request.dayTypeCode;
-}
-
-function typeChipClass(request: LeaveRequestView): string {
-  const classes = DAY_TYPE_CHIP_CLASSES[request.dayTypeCode] ?? FALLBACK_CHIP_CLASSES;
-  if (request.status === 'approved') return classes.approved;
-  return request.status === 'pending' ? classes.pending : 'bg-zinc-100 text-zinc-600';
 }
 
 function periodText(request: LeaveRequestView): string {
@@ -48,20 +42,28 @@ export function LeaveRequestCard({
   children?: ReactNode;
 }) {
   return (
-    <li className="space-y-2 rounded-card border border-zinc-200 bg-white p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <li className="space-y-2 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
+          {/* A review card is about the person; "Mes demandes" cards are about the absence. */}
           {showPerson ? (
-            <p className="font-medium text-zinc-900">{`${request.user.firstName} ${request.user.lastName}`}</p>
-          ) : null}
-          <p className="flex flex-wrap items-center gap-2 text-sm text-zinc-700">
-            <span
-              className={`rounded-full px-2 py-0.5 text-xs font-medium ${typeChipClass(request)}`}
-            >
-              {typeLabel(request, dayTypes)}
-            </span>
-            <span>{periodText(request)}</span>
-          </p>
+            <div className="flex items-start gap-3">
+              <Avatar
+                firstName={request.user.firstName}
+                lastName={request.user.lastName}
+                size="md"
+              />
+              <div>
+                <p className="font-medium text-zinc-900">{`${request.user.firstName} ${request.user.lastName}`}</p>
+                <p className="text-sm text-zinc-600">{`${typeLabel(request, dayTypes)} · ${periodText(request)}`}</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <p className="font-medium text-zinc-900">{typeLabel(request, dayTypes)}</p>
+              <p className="text-sm text-zinc-600">{periodText(request)}</p>
+            </>
+          )}
         </div>
         <span
           className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_CLASS[request.status]}`}
@@ -71,7 +73,7 @@ export function LeaveRequestCard({
       </div>
       {request.reason ? <p className="text-sm text-zinc-600">{request.reason}</p> : null}
       {request.ruleNote ? (
-        <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+        <p className="rounded-control bg-amber-50 px-3 py-2 text-sm text-amber-900">
           {request.ruleNote}
         </p>
       ) : null}

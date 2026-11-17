@@ -8,6 +8,7 @@ import { Link } from 'react-router';
 import { HalfCell } from '../calendar/month-card';
 import { Gap } from '../clock/counters-card';
 import { copy } from '../copy';
+import { Avatar } from '../ui/avatar';
 
 const monthTitle = new Intl.DateTimeFormat('fr-FR', {
   month: 'long',
@@ -41,18 +42,16 @@ function PersonRow({
     <tr>
       <th
         scope="row"
-        className="sticky left-0 z-10 bg-white px-3 py-1 text-left font-normal whitespace-nowrap"
+        className="sticky left-0 z-10 bg-surface px-3 py-1 text-left font-normal whitespace-nowrap"
       >
-        <Link
-          to={`/calendrier/${person.id}`}
-          className="font-medium hover:underline focus-visible:outline-2 focus-visible:outline-primary-600"
-        >
+        <span className="mr-2 inline-block align-middle">
+          <Avatar firstName={person.firstName} lastName={person.lastName} />
+        </span>
+        <Link to={`/calendrier/${person.id}`} className="font-medium hover:underline">
           {`${person.firstName} ${person.lastName}`}
         </Link>
         {isManager ? (
-          <span className="ml-2 rounded bg-zinc-100 px-1 text-xs text-zinc-600">
-            {copy.planning.manager}
-          </span>
+          <span className="ml-2 text-xs font-medium text-zinc-500">{copy.planning.manager}</span>
         ) : null}
         <span className="ml-2 text-xs">
           <span className="sr-only">{copy.planning.balance} </span>
@@ -68,7 +67,7 @@ function PersonRow({
       </th>
       {dates.map((date) => (
         <td key={date} className={`p-0.5 ${date === today ? 'bg-primary-50' : ''}`}>
-          <div className="w-5 overflow-hidden rounded border border-zinc-200">
+          <div className="w-5 overflow-hidden rounded-inner-md border border-line">
             {(['am', 'pm'] as const).map((half) => (
               <HalfCell
                 key={half}
@@ -102,11 +101,11 @@ export function TeamMonthTable({
   const holidayByDate = new Map(teamMonth.holidays.map((holiday) => [holiday.date, holiday.label]));
   const title = `${copy.planning.tableLabelPrefix} ${monthTitle.format(atNoon(teamMonth.month.startDate))}`;
   return (
-    <div className="overflow-x-auto rounded-card border border-zinc-200 bg-white">
+    <div className="overflow-x-auto rounded-card border border-line bg-surface">
       <table aria-label={title} className="border-separate border-spacing-0 text-sm">
         <thead>
           <tr>
-            <th rowSpan={2} scope="col" className="sticky left-0 z-10 bg-white px-3 text-left">
+            <th rowSpan={2} scope="col" className="sticky left-0 z-10 bg-surface px-3 text-left">
               {copy.planning.person}
             </th>
             {weeks.map((week) => (
@@ -114,7 +113,7 @@ export function TeamMonthTable({
                 key={week.isoWeek}
                 colSpan={week.dates.length}
                 scope="colgroup"
-                className="border-l border-zinc-200 px-1 text-xs text-zinc-600"
+                className="border-l border-line px-1 text-xs text-zinc-600"
               >
                 {`${copy.planning.weekPrefix}${week.weekNumber}`}
               </th>
@@ -128,6 +127,9 @@ export function TeamMonthTable({
                 aria-current={date === teamMonth.today ? 'date' : undefined}
                 className={`w-6 px-0.5 text-[10px] font-normal text-zinc-600 ${date === teamMonth.today ? 'bg-primary-50 font-semibold text-primary-700' : ''}`}
               >
+                {date === teamMonth.today ? (
+                  <span className="sr-only">{copy.calendar.today}</span>
+                ) : null}
                 <span aria-hidden>{weekdayInitial.format(atNoon(date))}</span>
                 <span className="block">{Number(date.slice(8))}</span>
               </th>
@@ -135,15 +137,20 @@ export function TeamMonthTable({
           </tr>
         </thead>
         {sections.map((section) => (
-          <tbody key={section.teamId ?? 'none'}>
+          <tbody
+            key={section.teamId ?? 'none'}
+            aria-labelledby={`team-group-${section.teamId ?? 'none'}`}
+          >
             <tr>
-              <td
+              <th
+                id={`team-group-${section.teamId ?? 'none'}`}
+                scope="rowgroup"
                 colSpan={dates.length + 1}
                 className="bg-zinc-50 px-3 py-1 text-left text-xs font-semibold text-zinc-700"
               >
                 {/* Sticky on the text, not the full-width cell: the title stays in view on scroll. */}
                 <span className="sticky left-3">{section.title}</span>
-              </td>
+              </th>
             </tr>
             {section.rows.flatMap((row) => {
               const person = personById.get(row.personId);

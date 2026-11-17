@@ -32,13 +32,13 @@ export function NotificationBell() {
         type="button"
         popoverTarget={PANEL_ID}
         aria-label={label}
-        className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg text-zinc-600 hover:bg-zinc-100"
+        className="relative inline-flex h-9 w-9 items-center justify-center rounded-control text-zinc-600 hover:bg-zinc-100"
       >
         <Bell size={18} aria-hidden />
         {unreadCount > 0 ? (
           <span
             aria-hidden
-            className="absolute -right-0.5 -top-0.5 min-w-4 rounded-full bg-primary-600 px-1 text-[10px] font-semibold leading-4 text-white"
+            className="absolute -right-0.5 -top-0.5 min-w-4 rounded-full bg-primary-600 px-1 text-[10px] font-semibold leading-4 text-on-primary"
           >
             {unreadCount > MAX_BADGE_COUNT ? `${MAX_BADGE_COUNT}+` : unreadCount}
           </span>
@@ -47,7 +47,7 @@ export function NotificationBell() {
       <div
         id={PANEL_ID}
         popover="auto"
-        className="m-0 mt-2 w-80 rounded-card border border-zinc-200 bg-white p-2 shadow-card [inset:unset] [position-area:bottom_span-left]"
+        className="m-0 mt-2 w-80 rounded-card border border-line bg-surface p-2 shadow-popover [inset:unset] [position-area:bottom_span-left]"
       >
         {notifications.data?.notifications.length === 0 ? (
           <p className="px-3 py-2 text-sm text-zinc-500">{copy.notifications.empty}</p>
@@ -60,7 +60,7 @@ export function NotificationBell() {
                   closePanel();
                   if (notification.readAt === null) markRead.mutate(notification.id);
                 },
-                className: `block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-zinc-100 ${notification.readAt === null ? 'font-medium text-zinc-900' : 'text-zinc-500'}`,
+                className: `block w-full rounded-inner-md px-3 py-2 text-left text-sm hover:bg-zinc-100 ${notification.readAt === null ? 'font-medium text-zinc-900' : 'text-zinc-500'}`,
               };
               return (
                 <li key={notification.id}>
@@ -82,7 +82,7 @@ export function NotificationBell() {
           <button
             type="button"
             onClick={() => markAllRead.mutate()}
-            className="mt-1 w-full rounded-lg px-3 py-1.5 text-left text-xs font-medium text-primary-600 hover:bg-zinc-100"
+            className="mt-1 w-full rounded-inner-md px-3 py-1.5 text-left text-xs font-medium text-primary-600 hover:bg-zinc-100"
           >
             {copy.notifications.markAllRead}
           </button>
