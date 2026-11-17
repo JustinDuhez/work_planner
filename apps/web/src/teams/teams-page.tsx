@@ -38,7 +38,7 @@ function TeamItem({
     <li aria-labelledby={nameId} className="space-y-2">
       <div
         data-selected={team.id === selectedId}
-        className="rounded-card border border-line bg-white p-3 data-[selected=true]:border-primary-500 data-[selected=true]:ring-1 data-[selected=true]:ring-primary-500"
+        className="relative rounded-card border border-line bg-white p-3 hover:border-line-strong data-[selected=true]:border-primary-500 data-[selected=true]:ring-1 data-[selected=true]:ring-primary-500"
       >
         <div className="space-y-3">
           <div className="flex flex-wrap items-baseline gap-x-2">
@@ -47,7 +47,7 @@ function TeamItem({
               type="button"
               aria-pressed={team.id === selectedId}
               onClick={() => onSelect(team.id)}
-              className="font-medium text-zinc-900 hover:text-primary-600 hover:underline aria-pressed:font-semibold aria-pressed:text-primary-700"
+              className="font-medium text-zinc-900 after:absolute after:inset-0 after:rounded-card hover:text-primary-600 hover:underline aria-pressed:font-semibold aria-pressed:text-primary-700"
             >
               {team.name}
             </button>
@@ -62,7 +62,9 @@ function TeamItem({
               {memberCountLabel(team.members.length)}
             </span>
           </div>
-          {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
+          {actions ? (
+            <div className="relative z-10 flex flex-wrap items-center gap-2">{actions}</div>
+          ) : null}
         </div>
       </div>
       {children.length > 0 ? (
