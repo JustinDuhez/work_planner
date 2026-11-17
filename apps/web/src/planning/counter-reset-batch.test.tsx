@@ -27,6 +27,14 @@ function postBody(fetchMock: jest.Mock): unknown {
 }
 
 describe('bulk counter reset', () => {
+  it('lives in the absent-today card as a secondary action', async () => {
+    renderAsManager();
+
+    const card = await screen.findByRole('region', { name: copy.planning.absentToday });
+
+    expect(within(card).getByRole('button', { name: copy.planning.resetButton })).toBeVisible();
+  });
+
   it('is hidden from someone who may reset nobody', async () => {
     mockFetchRoutes({
       ...signedInHomeRoutes(),

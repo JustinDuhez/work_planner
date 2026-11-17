@@ -1,15 +1,6 @@
-import {
-  HOLIDAY_YEAR_MAX,
-  HOLIDAY_YEAR_MIN,
-  type PlanningSection,
-  type TeamMonth,
-} from '@work-planner/domain';
-import { ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
-import { useState } from 'react';
+import { HOLIDAY_YEAR_MAX, HOLIDAY_YEAR_MIN, type TeamMonth } from '@work-planner/domain';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { copy } from '../copy';
-import { Button } from '../ui/button';
-import { StatusMessage } from '../ui/status-message';
-import { CounterResetBatchDialog } from './counter-reset-batch-dialog';
 
 const monthTitle = new Intl.DateTimeFormat('fr-FR', {
   month: 'long',
@@ -29,27 +20,20 @@ export interface PlanningFilters {
 export function PlanningFilterBar({
   filters,
   teamMonth,
-  sections,
   peopleCount,
   onChange,
   onShiftMonth,
 }: {
   filters: PlanningFilters;
   teamMonth: TeamMonth | undefined;
-  sections: PlanningSection[];
   peopleCount: number;
   onChange: (filters: PlanningFilters) => void;
   onShiftMonth: (delta: number) => void;
 }) {
   const { yearMonth, team, isAbsentOnly } = filters;
-  const [isResetOpen, setIsResetOpen] = useState(false);
-  // The success line belongs to the filters it was produced under: another choice hides it.
-  const [resetDone, setResetDone] = useState<{ count: number; filterKey: string } | null>(null);
-  const filterKey = `${yearMonth}|${team}|${isAbsentOnly}`;
-  const doneCount = resetDone?.filterKey === filterKey ? resetDone.count : null;
 
   return (
-    <div className="sticky top-14 z-20 -mx-4 flex flex-wrap items-center justify-between gap-3 border-b border-line bg-zinc-50/90 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-card sm:border">
+    <>
       <div className="flex items-center gap-2">
         <button
           type="button"
@@ -106,28 +90,6 @@ export function PlanningFilterBar({
       <p className="text-sm text-zinc-600">
         {`${peopleCount} ${peopleCount === 1 ? copy.planning.personSingular : copy.planning.personPlural}`}
       </p>
-      {teamMonth && teamMonth.canResetUserIds.length > 0 ? (
-        <Button variant="secondary" onClick={() => setIsResetOpen(true)}>
-          <RotateCcw size={16} aria-hidden />
-          {copy.planning.resetButton}
-        </Button>
-      ) : null}
-      <StatusMessage
-        message={
-          doneCount === null
-            ? null
-            : `${doneCount} ${doneCount === 1 ? copy.planning.counterSingular : copy.planning.counterPlural} ${copy.planning.resetDone}`
-        }
-        tone="success"
-      />
-      {isResetOpen && teamMonth ? (
-        <CounterResetBatchDialog
-          teamMonth={teamMonth}
-          sections={sections}
-          onClose={() => setIsResetOpen(false)}
-          onDone={(count) => setResetDone({ count, filterKey })}
-        />
-      ) : null}
-    </div>
+    </>
   );
 }

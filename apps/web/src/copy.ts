@@ -181,6 +181,7 @@ export const copy = {
     teamFilter: 'Équipe',
     allTeams: 'Toutes les équipes',
     absentToday: 'Absents aujourd’hui',
+    absentCount: 'Personnes absentes',
     person: 'Personne',
     personSingular: 'personne',
     personPlural: 'personnes',

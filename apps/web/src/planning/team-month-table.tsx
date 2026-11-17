@@ -8,6 +8,7 @@ import { Link } from 'react-router';
 import { HalfCell } from '../calendar/month-card';
 import { Gap } from '../clock/counters-card';
 import { copy } from '../copy';
+import { Avatar } from '../ui/avatar';
 
 const monthTitle = new Intl.DateTimeFormat('fr-FR', {
   month: 'long',
@@ -43,6 +44,9 @@ function PersonRow({
         scope="row"
         className="sticky left-0 z-10 bg-white px-3 py-1 text-left font-normal whitespace-nowrap"
       >
+        <span className="mr-2 inline-block align-middle">
+          <Avatar firstName={person.firstName} lastName={person.lastName} />
+        </span>
         <Link to={`/calendrier/${person.id}`} className="font-medium hover:underline">
           {`${person.firstName} ${person.lastName}`}
         </Link>

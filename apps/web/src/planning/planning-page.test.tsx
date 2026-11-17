@@ -125,7 +125,7 @@ describe('PlanningPage', () => {
       },
     });
 
-    expect(await screen.findByText(copy.planning.nobodyAbsent)).toBeInTheDocument();
+    expect(await screen.findAllByText(copy.planning.nobodyAbsent)).toHaveLength(2);
   });
 
   it("keeps today's absentees whatever month is shown", async () => {
@@ -347,10 +347,12 @@ describe('PlanningPage', () => {
       },
     });
 
-    const message = await screen.findByText(copy.planning.nobodyAbsent);
+    const messages = await screen.findAllByText(copy.planning.nobodyAbsent);
     await waitFor(() => expect(queryClient.isFetching()).toBe(0));
 
-    expect(message.closest('div')).toHaveClass('border-dashed');
+    expect(messages.some((message) => message.closest('div')?.matches('.border-dashed'))).toBe(
+      true,
+    );
     await expectNoAxeViolations(container);
   });
 
@@ -379,5 +381,68 @@ describe('PlanningPage', () => {
     expect(queryClient.getQueryState(['team-month', '2026-11'])?.status).toBe('error');
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.getByRole('table', { name: /novembre 2026/ })).toBeInTheDocument();
+  });
+
+  it('shows today’s absentees in a side card with their count and initials', async () => {
+    renderPlanning('/planning?mois=2026-11');
+
+    const card = await screen.findByRole('region', { name: copy.planning.absentToday });
+
+    expect(within(card).getByText('1')).toBeInTheDocument();
+    expect(within(card).getByText('Léa Moreau')).toBeInTheDocument();
+    expect(within(card).getByText('LM')).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('only counts absentees among the people shown', async () => {
+    renderPlanning('/planning?mois=2026-11', {
+      'GET /api/v1/team-months/2026-11': {
+        status: 200,
+        body: teamMonth({ absentTodayUserIds: [7, 12] }),
+      },
+    });
+
+    const card = await screen.findByRole('region', { name: copy.planning.absentToday });
+
+    expect(within(card).getByText('1')).toBeInTheDocument();
+    expect(within(card).queryByText('Inès Bernard')).not.toBeInTheDocument();
+  });
+
+  it('says in the card when nobody is absent', async () => {
+    renderPlanning('/planning?mois=2026-11', {
+      'GET /api/v1/team-months/2026-11': {
+        status: 200,
+        body: teamMonth({ absentTodayUserIds: [] }),
+      },
+    });
+
+    const card = await screen.findByRole('region', { name: copy.planning.absentToday });
+
+    expect(within(card).getByText('0')).toBeInTheDocument();
+    expect(within(card).getByText(copy.planning.nobodyAbsent)).toBeInTheDocument();
+  });
+
+  it('puts an initials avatar next to each name without changing the name', async () => {
+    renderPlanning('/planning?mois=2026-11');
+
+    const grid = await table();
+
+    const header = within(grid).getByRole('rowheader', { name: /Sophie Dubois.*Responsable/ });
+    expect(within(header).getByText('SD')).toHaveAttribute('aria-hidden', 'true');
+    const cards = screen.getByRole('list', { name: copy.planning.cardsLabel });
+    const card = within(cards).getByRole('listitem', { name: 'Sophie Dubois' });
+    expect(within(card).getByText('SD')).toHaveAttribute('aria-hidden', 'true');
+    expect(within(card).getByRole('link', { name: 'Sophie Dubois' })).toBeInTheDocument();
+  });
+
+  it('keeps the card slot in the layout while loading', async () => {
+    const { container } = renderPlanning('/planning?mois=2026-11');
+    const answer = globalThis.fetch;
+    globalThis.fetch = (input, init) =>
+      typeof input === 'string' && input.includes('/team-months/')
+        ? new Promise<Response>(() => undefined)
+        : answer(input, init);
+
+    await screen.findByText(copy.planning.loading);
+    expect(container.querySelector('[data-slot="aside"]')).not.toBeNull();
   });
 });
