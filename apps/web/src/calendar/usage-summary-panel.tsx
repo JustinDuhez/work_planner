@@ -1,11 +1,8 @@
-import { formatDayCount, type DayTypeView, type YearCalendar } from '@work-planner/domain';
+import { formatDayNumber, type DayTypeView, type YearCalendar } from '@work-planner/domain';
 import { copy } from '../copy';
 import { DAY_TYPE_CHIP_CLASSES, FALLBACK_CHIP_CLASSES } from '../leave/half-day-chips';
 import { Stat } from '../ui/stat';
 import { SummaryCard } from '../ui/summary-card';
-
-// The domain formatter owns the French number ("14,5"); the unit is shown separately.
-const dayNumber = (halfDays: number) => formatDayCount(halfDays).split(' ')[0] ?? '';
 
 function typeInfo(dayTypes: readonly DayTypeView[], code: string) {
   return {
@@ -55,7 +52,7 @@ export function UsageSummaryPanel({
     <SummaryCard title={title}>
       <Stat
         label={copy.calendar.approvedTotal}
-        value={dayNumber(approvedTotal)}
+        value={formatDayNumber(approvedTotal)}
         unit={copy.calendar.dayUnit}
       />
       {calendar.summary.length === 0 ? (
@@ -71,12 +68,12 @@ export function UsageSummaryPanel({
                 {label}
                 {usage.pendingHalfDays > 0 ? (
                   <span className="block text-xs text-zinc-500">
-                    {`+${dayNumber(usage.pendingHalfDays)} ${copy.calendar.dayUnit} ${copy.calendar.pendingSuffix}`}
+                    {`+${formatDayNumber(usage.pendingHalfDays)} ${copy.calendar.dayUnit} ${copy.calendar.pendingSuffix}`}
                   </span>
                 ) : null}
               </span>
               <span className="font-semibold tabular-nums">
-                {`${dayNumber(usage.approvedHalfDays)} ${copy.calendar.dayUnit}`}
+                {`${formatDayNumber(usage.approvedHalfDays)} ${copy.calendar.dayUnit}`}
               </span>
             </li>
           );

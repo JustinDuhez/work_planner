@@ -26,7 +26,7 @@ import { Dialog } from '../ui/dialog';
 import { ErrorState } from '../ui/error-state';
 import { LoadingRegion } from '../ui/skeleton';
 import { useSettings } from '../settings/settings-queries';
-import { CalendarSkeleton } from './calendar-skeleton';
+import { CalendarSkeleton, SummarySkeleton } from './calendar-skeleton';
 import { calendarPath, useYearCalendar } from './calendar-queries';
 import { halfKey, MonthCard, type HalfAction } from './month-card';
 import { PageLayout } from '../ui/page-layout';
@@ -277,6 +277,8 @@ function YearCalendarView({
                 isOwn ? copy.calendar.yearTitle : `${copy.calendar.yearOf} ${data.user.firstName}`
               }
             />
+          ) : calendar.isPending ? (
+            <SummarySkeleton />
           ) : undefined
         }
       />

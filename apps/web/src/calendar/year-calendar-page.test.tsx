@@ -143,13 +143,15 @@ describe('YearCalendarPage', () => {
   });
 
   it('says when nothing is declared', async () => {
-    renderCalendar('/calendrier?periode=2026', {
+    const { queryClient, container } = renderCalendar('/calendrier?periode=2026', {
       'GET /api/v1/users/7/year-calendars/2026': { status: 200, body: yearCalendar() },
     });
 
     const card = await screen.findByRole('region', { name: copy.calendar.yearTitle });
 
     expect(within(card).getByText(copy.calendar.noAbsence)).toBeInTheDocument();
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+    await expectNoAxeViolations(container);
   });
 
   it('moves to the next period in the URL', async () => {
@@ -324,6 +326,10 @@ describe('YearCalendarPage', () => {
     const label = await screen.findByText(copy.calendar.loading);
     expect(label).toHaveClass('sr-only');
     expect(label.closest('[aria-busy="true"]')).not.toBeNull();
+    expect(document.querySelectorAll('[data-slot="aside"] [aria-hidden]').length).toBeGreaterThan(
+      0,
+    );
+    expect(screen.queryByRole('region', { name: copy.calendar.yearTitle })).not.toBeInTheDocument();
   });
 
   it('says so when the calendar cannot be loaded and loads it again on demand', async () => {

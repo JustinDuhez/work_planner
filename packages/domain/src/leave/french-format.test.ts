@@ -1,4 +1,4 @@
-import { formatDayCount, formatDayMonth } from './french-format';
+import { formatDayCount, formatDayMonth, formatDayNumber } from './french-format';
 
 describe('French leave formats', () => {
   it('writes a day and short month', () => {
@@ -13,5 +13,13 @@ describe('French leave formats', () => {
     [7, '3,5 jours'],
   ])('writes %i half-days as %s', (halfDayCount, text) => {
     expect(formatDayCount(halfDayCount)).toBe(text);
+  });
+
+  it.each([
+    [1, '0,5'],
+    [2, '1'],
+    [29, '14,5'],
+  ])('writes the number of %i half-days as %s', (halfDayCount, text) => {
+    expect(formatDayNumber(halfDayCount)).toBe(text);
   });
 });
