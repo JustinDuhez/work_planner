@@ -38,7 +38,7 @@ function TeamItem({
     <li aria-labelledby={nameId} className="space-y-2">
       <div
         data-selected={team.id === selectedId}
-        className="relative rounded-card border border-line bg-white p-3 hover:border-line-strong data-[selected=true]:border-primary-500 data-[selected=true]:ring-1 data-[selected=true]:ring-primary-500"
+        className="relative rounded-card border border-line bg-surface p-3 hover:border-line-strong data-[selected=true]:border-primary-500 data-[selected=true]:ring-1 data-[selected=true]:ring-primary-500"
       >
         <div className="space-y-3">
           <div className="flex flex-wrap items-baseline gap-x-2">

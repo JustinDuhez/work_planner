@@ -190,7 +190,7 @@ function ClockWeekView({
               </Button>
             </div>
           ) : null}
-          <ol className="divide-y divide-line overflow-hidden rounded-card border border-line bg-white">
+          <ol className="divide-y divide-line overflow-hidden rounded-card border border-line bg-surface">
             {week.data.days.map((day, index) => (
               <DayRow
                 key={day.date}

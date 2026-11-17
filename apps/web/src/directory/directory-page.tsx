@@ -71,13 +71,13 @@ export function DirectoryPage({
         placeholder={copy.directory.search}
         value={search}
         onChange={(event) => setSearch(event.target.value)}
-        className="h-9 min-w-48 flex-1 rounded-control border border-line bg-white px-3 text-sm"
+        className="h-9 min-w-48 flex-1 rounded-control border border-line bg-surface px-3 text-sm"
       />
       <select
         aria-label={copy.directory.teamFilter}
         value={teamName}
         onChange={(event) => setTeamName(event.target.value)}
-        className="h-9 rounded-control border border-line bg-white px-2 text-sm"
+        className="h-9 rounded-control border border-line bg-surface px-2 text-sm"
       >
         <option value="">{copy.directory.allTeams}</option>
         {teamNames.map((name) => (
@@ -133,7 +133,7 @@ export function DirectoryPage({
                 <tr
                   key={entry.id}
                   aria-label={name}
-                  className="block rounded-card border border-line bg-white p-4 sm:table-row sm:rounded-none sm:border-0 sm:border-b sm:p-0"
+                  className="block rounded-card border border-line bg-surface p-4 sm:table-row sm:rounded-none sm:border-0 sm:border-b sm:p-0"
                 >
                   <td className="block py-1 sm:table-cell sm:px-3 sm:py-2">
                     <span className="inline-flex items-center gap-2">

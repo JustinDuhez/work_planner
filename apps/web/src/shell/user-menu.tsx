@@ -1,8 +1,10 @@
-import { LogOut, Settings, UserRound } from 'lucide-react';
+import { LogOut, Moon, Settings, UserRound } from 'lucide-react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { copy } from '../copy';
 import { initialsOf } from '../session/role-label';
 import { useLogout, useSession } from '../session/session-queries';
+import { currentTheme, setTheme } from '../ui/theme';
 
 const MENU_ID = 'user-menu';
 
@@ -15,6 +17,7 @@ export function UserMenu() {
   const { data: session } = useSession();
   const logout = useLogout();
   const navigate = useNavigate();
+  const [isDark, setIsDark] = useState(() => currentTheme() === 'dark');
   if (!session) return null;
   const { firstName, lastName, email } = session.user;
 
@@ -36,7 +39,7 @@ export function UserMenu() {
       <div
         id={MENU_ID}
         popover="auto"
-        className="m-0 mt-2 w-60 rounded-card border border-line bg-white p-1 shadow-popover [inset:unset] [position-area:bottom_span-left]"
+        className="m-0 mt-2 w-60 rounded-card border border-line bg-surface p-1 shadow-popover [inset:unset] [position-area:bottom_span-left]"
       >
         <div className="px-3 py-2">
           <p className="text-sm font-medium text-zinc-900">
@@ -60,6 +63,24 @@ export function UserMenu() {
             <Settings size={16} aria-hidden /> {copy.userMenu.settings}
           </Link>
         ) : null}
+        <button
+          type="button"
+          role="switch"
+          aria-checked={isDark}
+          onClick={() => {
+            setTheme(isDark ? 'light' : 'dark');
+            setIsDark(!isDark);
+          }}
+          className="group flex w-full items-center gap-2 rounded-inner-sm px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100"
+        >
+          <Moon size={16} aria-hidden /> {copy.userMenu.darkMode}
+          <span
+            aria-hidden
+            className="ml-auto flex h-5 w-8 items-center rounded-full bg-zinc-300 p-0.5 transition-colors group-aria-checked:bg-primary-600"
+          >
+            <span className="size-4 rounded-full bg-white shadow-card transition-transform group-aria-checked:translate-x-3" />
+          </span>
+        </button>
         <button
           type="button"
           onClick={handleLogout}

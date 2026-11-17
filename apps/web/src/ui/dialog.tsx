@@ -34,7 +34,7 @@ export function Dialog({
       ref={dialogRef}
       aria-labelledby={titleId}
       onClose={onClose}
-      className={`m-auto max-h-[calc(100dvh-2rem)] ${widthClass} overflow-y-auto rounded-card border border-line bg-white p-6 shadow-popover backdrop:bg-zinc-900/30 motion-safe:animate-[dialog-in_150ms_ease-out]`}
+      className={`m-auto max-h-[calc(100dvh-2rem)] ${widthClass} overflow-y-auto rounded-card border border-line bg-surface p-6 shadow-popover backdrop:bg-black/40 motion-safe:animate-[dialog-in_150ms_ease-out]`}
     >
       <h2 id={titleId} className="mb-4 text-base font-semibold text-balance">
         {title}

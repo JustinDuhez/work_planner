@@ -42,7 +42,7 @@ function PersonRow({
     <tr>
       <th
         scope="row"
-        className="sticky left-0 z-10 bg-white px-3 py-1 text-left font-normal whitespace-nowrap"
+        className="sticky left-0 z-10 bg-surface px-3 py-1 text-left font-normal whitespace-nowrap"
       >
         <span className="mr-2 inline-block align-middle">
           <Avatar firstName={person.firstName} lastName={person.lastName} />
@@ -101,11 +101,11 @@ export function TeamMonthTable({
   const holidayByDate = new Map(teamMonth.holidays.map((holiday) => [holiday.date, holiday.label]));
   const title = `${copy.planning.tableLabelPrefix} ${monthTitle.format(atNoon(teamMonth.month.startDate))}`;
   return (
-    <div className="overflow-x-auto rounded-card border border-line bg-white">
+    <div className="overflow-x-auto rounded-card border border-line bg-surface">
       <table aria-label={title} className="border-separate border-spacing-0 text-sm">
         <thead>
           <tr>
-            <th rowSpan={2} scope="col" className="sticky left-0 z-10 bg-white px-3 text-left">
+            <th rowSpan={2} scope="col" className="sticky left-0 z-10 bg-surface px-3 text-left">
               {copy.planning.person}
             </th>
             {weeks.map((week) => (

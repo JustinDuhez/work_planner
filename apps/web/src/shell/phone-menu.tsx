@@ -49,7 +49,7 @@ export function PhoneMenu() {
         <nav
           id={panelId}
           aria-label={copy.shell.menu}
-          className="absolute right-0 top-full mt-2 flex w-56 flex-col rounded-card border border-line bg-white p-1 shadow-popover"
+          className="absolute right-0 top-full mt-2 flex w-56 flex-col rounded-card border border-line bg-surface p-1 shadow-popover"
         >
           {NAV_ITEMS.map((item) => (
             <NavLink

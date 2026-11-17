@@ -56,7 +56,7 @@ describe('HalfDayChips', () => {
       />,
     );
 
-    expect(screen.getByText('mystery · matin')).toHaveClass('bg-zinc-600');
+    expect(screen.getByText('mystery · matin')).toHaveClass('bg-neutral-600');
   });
 
   it('shows nothing for an ordinary day', () => {

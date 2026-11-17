@@ -138,7 +138,7 @@ function HolidaysSection({ year }: { year: number }) {
   return (
     <section
       aria-labelledby={titleId}
-      className="space-y-3 rounded-card border border-line bg-white p-6 shadow-card"
+      className="space-y-3 rounded-card border border-line bg-surface p-6 shadow-card"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 id={titleId} className="text-sm font-semibold text-zinc-900">

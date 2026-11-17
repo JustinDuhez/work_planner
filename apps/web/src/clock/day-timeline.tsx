@@ -54,7 +54,7 @@ export function DayTimeline({
           const className = `absolute inset-y-1 rounded-inner-md text-[10px] font-medium transition-colors ${
             isOpen && !day.isToday
               ? 'border border-dashed border-amber-400 bg-amber-50 text-amber-800'
-              : 'bg-primary-500/80 text-white hover:bg-primary-600'
+              : 'bg-primary-500/80 text-on-primary hover:bg-primary-600'
           } ${isOpen && day.isToday ? 'motion-safe:animate-pulse' : ''}`;
           const style = {
             left: `${percentOf(segment.startedAt)}%`,

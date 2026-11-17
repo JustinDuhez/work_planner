@@ -5,7 +5,7 @@ export function SummaryCard({ title, children }: { title: string; children: Reac
   return (
     <section
       aria-labelledby={titleId}
-      className="space-y-4 rounded-card border border-line bg-white p-4 shadow-card"
+      className="space-y-4 rounded-card border border-line bg-surface p-4 shadow-card"
     >
       <h2 id={titleId} className="text-sm font-semibold text-zinc-900">
         {title}

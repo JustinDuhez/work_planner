@@ -48,7 +48,7 @@ export function PersonCards({
           <li
             key={id}
             aria-label={name}
-            className="rounded-card border border-line bg-white p-3 text-sm"
+            className="rounded-card border border-line bg-surface p-3 text-sm"
           >
             <div className="flex items-center justify-between gap-2">
               <span className="flex items-center gap-2">

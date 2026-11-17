@@ -1,7 +1,7 @@
 import { Skeleton } from '../ui/skeleton';
 
 const DAYS_IN_WEEK = 7;
-const CARD = 'rounded-card border border-line bg-white';
+const CARD = 'rounded-card border border-line bg-surface';
 
 /** Shaped like the loaded page so nothing jumps when the week arrives. */
 export function WeekSkeleton({ hasHero }: { hasHero: boolean }) {

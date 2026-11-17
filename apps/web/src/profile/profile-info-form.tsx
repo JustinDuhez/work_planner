@@ -33,7 +33,7 @@ export function ProfileInfoForm({ user }: { user: CurrentUser }) {
   return (
     <section
       aria-labelledby="profile-info-title"
-      className="rounded-card border border-line bg-white p-6 shadow-card"
+      className="rounded-card border border-line bg-surface p-6 shadow-card"
     >
       <h2 id="profile-info-title" className="text-sm font-semibold text-zinc-900">
         {copy.profile.infoTitle}

@@ -44,7 +44,7 @@ export function LoginPage() {
 
   return (
     <main className="flex min-h-dvh items-center justify-center bg-zinc-50 px-4 py-8 font-sans">
-      <section className="w-full max-w-sm rounded-card border border-line bg-white p-6 shadow-card sm:p-8">
+      <section className="w-full max-w-sm rounded-card border border-line bg-surface p-6 shadow-card sm:p-8">
         <p className="text-sm font-semibold tracking-tight text-primary-600">{copy.appName}</p>
         <h1 className="mt-3 text-xl font-semibold tracking-tight text-balance text-zinc-900">
           {copy.login.title}

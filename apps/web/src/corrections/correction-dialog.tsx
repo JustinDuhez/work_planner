@@ -110,7 +110,7 @@ export function CorrectionDialog({
           {WORK_MODE_OPTIONS.map(({ value, label, Icon }) => (
             <label
               key={value}
-              className={`flex cursor-pointer items-center gap-1 rounded-inner-sm px-2.5 py-1 text-xs has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary-500 ${workMode === value ? 'bg-white font-medium text-zinc-900 shadow-card' : 'text-zinc-600'}`}
+              className={`flex cursor-pointer items-center gap-1 rounded-inner-sm px-2.5 py-1 text-xs has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary-500 ${workMode === value ? 'bg-surface font-medium text-zinc-900 shadow-card' : 'text-zinc-600'}`}
             >
               <input
                 type="radio"

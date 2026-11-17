@@ -39,7 +39,7 @@ export function TodayHero({
   return (
     <section
       aria-labelledby={titleId}
-      className="rounded-card border border-line bg-white p-5 shadow-card sm:p-6"
+      className="rounded-card border border-line bg-surface p-5 shadow-card sm:p-6"
     >
       <TodayControls
         day={day}

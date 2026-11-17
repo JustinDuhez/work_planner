@@ -68,7 +68,7 @@ export function PlanningFilterBar({
               isAbsentOnly,
             })
           }
-          className="rounded-control border border-line-strong bg-white px-2 py-1"
+          className="rounded-control border border-line-strong bg-surface px-2 py-1"
         >
           <option value="all">{copy.planning.allTeams}</option>
           {teamMonth?.teams.map((option) => (

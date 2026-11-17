@@ -14,7 +14,7 @@ export function ErrorState({
   return (
     <div
       role="alert"
-      className="flex flex-col items-center gap-3 rounded-card border border-line bg-white px-4 py-8 text-center"
+      className="flex flex-col items-center gap-3 rounded-card border border-line bg-surface px-4 py-8 text-center"
     >
       <CircleAlert size={20} aria-hidden className="text-rose-600" />
       <p className="text-sm text-zinc-700">{message}</p>

@@ -1,8 +1,8 @@
 import type { ReactNode, Ref } from 'react';
 
 const VARIANT_CLASS = {
-  primary: 'bg-primary-600 text-white hover:bg-primary-700',
-  secondary: 'border border-line bg-white text-zinc-800 hover:bg-zinc-50',
+  primary: 'bg-primary-600 text-on-primary hover:bg-primary-700',
+  secondary: 'border border-line bg-surface text-zinc-800 hover:bg-zinc-50',
   ghost: 'text-zinc-700 hover:bg-zinc-100',
 } as const;
 

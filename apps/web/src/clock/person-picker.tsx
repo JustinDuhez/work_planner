@@ -33,14 +33,14 @@ export function PersonPicker({
       <button
         type="button"
         popoverTarget={PICKER_ID}
-        className="inline-flex h-9 items-center gap-2 rounded-control border border-line bg-white px-3 text-sm text-zinc-700 hover:bg-zinc-50"
+        className="inline-flex h-9 items-center gap-2 rounded-control border border-line bg-surface px-3 text-sm text-zinc-700 hover:bg-zinc-50"
       >
         <Users size={16} aria-hidden /> {label}
       </button>
       <div
         id={PICKER_ID}
         popover="auto"
-        className="m-0 mt-2 w-72 rounded-card border border-line bg-white p-2 shadow-popover [inset:unset] [position-area:bottom_span-left]"
+        className="m-0 mt-2 w-72 rounded-card border border-line bg-surface p-2 shadow-popover [inset:unset] [position-area:bottom_span-left]"
       >
         <input
           type="search"

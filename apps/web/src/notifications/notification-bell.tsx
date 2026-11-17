@@ -38,7 +38,7 @@ export function NotificationBell() {
         {unreadCount > 0 ? (
           <span
             aria-hidden
-            className="absolute -right-0.5 -top-0.5 min-w-4 rounded-full bg-primary-600 px-1 text-[10px] font-semibold leading-4 text-white"
+            className="absolute -right-0.5 -top-0.5 min-w-4 rounded-full bg-primary-600 px-1 text-[10px] font-semibold leading-4 text-on-primary"
           >
             {unreadCount > MAX_BADGE_COUNT ? `${MAX_BADGE_COUNT}+` : unreadCount}
           </span>
@@ -47,7 +47,7 @@ export function NotificationBell() {
       <div
         id={PANEL_ID}
         popover="auto"
-        className="m-0 mt-2 w-80 rounded-card border border-line bg-white p-2 shadow-popover [inset:unset] [position-area:bottom_span-left]"
+        className="m-0 mt-2 w-80 rounded-card border border-line bg-surface p-2 shadow-popover [inset:unset] [position-area:bottom_span-left]"
       >
         {notifications.data?.notifications.length === 0 ? (
           <p className="px-3 py-2 text-sm text-zinc-500">{copy.notifications.empty}</p>

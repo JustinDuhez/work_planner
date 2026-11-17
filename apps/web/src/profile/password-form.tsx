@@ -65,7 +65,7 @@ export function PasswordForm({ onSuccess }: { onSuccess?: () => void } = {}) {
   return (
     <section
       aria-labelledby="password-title"
-      className="rounded-card border border-line bg-white p-6 shadow-card"
+      className="rounded-card border border-line bg-surface p-6 shadow-card"
     >
       <h2 id="password-title" className="text-sm font-semibold text-zinc-900">
         {copy.password.title}

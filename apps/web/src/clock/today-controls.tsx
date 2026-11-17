@@ -93,7 +93,7 @@ export function TodayControls({
           {WORK_MODE_OPTIONS.map(({ value, label, Icon }) => (
             <label
               key={value}
-              className={`flex cursor-pointer items-center gap-1.5 rounded-inner-sm px-3 text-sm has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary-500 ${workMode === value ? 'bg-white font-medium text-zinc-900 shadow-card' : 'text-zinc-600 hover:text-zinc-900'}`}
+              className={`flex cursor-pointer items-center gap-1.5 rounded-inner-sm px-3 text-sm has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary-500 ${workMode === value ? 'bg-surface font-medium text-zinc-900 shadow-card' : 'text-zinc-600 hover:text-zinc-900'}`}
             >
               <input
                 type="radio"

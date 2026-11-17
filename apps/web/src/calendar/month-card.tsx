@@ -179,7 +179,7 @@ export function MonthCard({
     slots.slice(week * DAYS_PER_WEEK, (week + 1) * DAYS_PER_WEEK),
   );
   return (
-    <table className="w-full table-fixed rounded-card border border-line bg-white">
+    <table className="w-full table-fixed rounded-card border border-line bg-surface">
       <caption className="px-2 pt-2 text-left text-sm font-semibold first-letter:uppercase">
         {monthTitle.format(new Date(Date.UTC(year, month - 1, 1, 12)))}
       </caption>

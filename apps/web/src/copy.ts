@@ -338,6 +338,7 @@ export const copy = {
     profile: 'Mon profil',
     logout: 'Se déconnecter',
     settings: 'Paramètres',
+    darkMode: 'Mode sombre',
   },
   roles: {
     collaborator: 'Collaborateur',

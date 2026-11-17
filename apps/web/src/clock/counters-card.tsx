@@ -80,7 +80,7 @@ function Stat({
   return (
     <section
       aria-labelledby={titleId}
-      className="rounded-card border border-line bg-white p-4 shadow-card sm:p-5"
+      className="rounded-card border border-line bg-surface p-4 shadow-card sm:p-5"
     >
       <h2 id={titleId} className="text-xs font-medium text-zinc-500">
         {title}

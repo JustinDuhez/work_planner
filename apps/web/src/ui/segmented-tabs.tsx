@@ -59,7 +59,7 @@ export function SegmentedTabs({
             tabIndex={isSelected ? 0 : -1}
             onClick={() => onSelect(tab.id)}
             onKeyDown={(event) => onKeyDown(event, index)}
-            className={`rounded-inner-md px-3 py-1.5 text-sm ${isSelected ? 'bg-white font-semibold text-zinc-900 shadow-card' : 'text-zinc-600 hover:text-zinc-900'}`}
+            className={`rounded-inner-md px-3 py-1.5 text-sm ${isSelected ? 'bg-surface font-semibold text-zinc-900 shadow-card' : 'text-zinc-600 hover:text-zinc-900'}`}
           >
             {tab.label}
           </button>
