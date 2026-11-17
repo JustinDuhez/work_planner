@@ -6,6 +6,7 @@ import { signedInHomeRoutes } from '../test/clock-fixtures';
 import { directoryEntry } from '../test/directory-fixtures';
 import { mockFetchRoutes } from '../test/mock-fetch';
 import { renderApp } from '../test/render-app';
+import { SIGNED_IN_SESSION } from '../test/sessions';
 
 const LEA = directoryEntry();
 const HUGO = directoryEntry({
@@ -160,5 +161,91 @@ describe('DirectoryPage', () => {
     const row = await screen.findByRole('row', { name: /Hugo Laurent/ });
     expect(within(row).getByText('Hugo Laurent')).toBeInTheDocument();
     expect(within(row).queryByRole('link', { name: 'Hugo Laurent' })).not.toBeInTheDocument();
+  });
+});
+
+const ADMIN_SESSION = {
+  ...SIGNED_IN_SESSION,
+  user: { ...SIGNED_IN_SESSION.user, roles: { isAdmin: true, isManager: false } },
+};
+
+function statValue(label: string): string | null | undefined {
+  const aside = document.querySelector<HTMLElement>('[data-slot="aside"]');
+  return aside ? within(aside).queryByText(label)?.nextElementSibling?.textContent : undefined;
+}
+
+describe('DirectoryPage summary and layout', () => {
+  it('shows an avatar with the initials on every person', async () => {
+    renderDirectory();
+
+    const row = await screen.findByRole('row', { name: /Hugo Laurent/ });
+
+    expect(within(row).getByText('HL')).toBeInTheDocument();
+  });
+
+  it('counts the people and the teams in the side card, without an archived count', async () => {
+    renderDirectory();
+
+    await screen.findByRole('row', { name: /Hugo Laurent/ });
+
+    expect(statValue(copy.directory.peopleCount)).toBe('4');
+    expect(statValue(copy.directory.teamCount)).toBe('3');
+    expect(statValue(copy.directory.archivedCount)).toBeUndefined();
+  });
+
+  it('keeps the counts when a search narrows the list', async () => {
+    const { user } = renderDirectory();
+
+    await user.type(await screen.findByLabelText(copy.directory.search), 'fournier');
+
+    expect(statValue(copy.directory.peopleCount)).toBe('4');
+  });
+
+  it('hides the new person button from people who are not admins', async () => {
+    renderDirectory();
+    await screen.findByRole('row', { name: /Hugo Laurent/ });
+
+    expect(screen.queryByRole('button', { name: copy.directory.newUser })).not.toBeInTheDocument();
+  });
+
+  it('counts archived people for an admin who shows them', async () => {
+    mockFetchRoutes({
+      ...signedInHomeRoutes(),
+      'GET /api/v1/me': { status: 200, body: ADMIN_SESSION },
+      'GET /api/v1/users': { status: 200, body: [LEA, HUGO] },
+      'GET /api/v1/users?archived=true': {
+        status: 200,
+        body: [LEA, { ...HUGO, isArchived: true }],
+      },
+    });
+    renderApp('/annuaire');
+    const user = userEvent.setup();
+    expect(await screen.findByRole('button', { name: copy.directory.newUser })).toBeInTheDocument();
+
+    await user.click(screen.getByLabelText(copy.directory.archived));
+
+    await waitFor(() => expect(statValue(copy.directory.archivedCount)).toBe('1'));
+    expect(statValue(copy.directory.peopleCount)).toBe('1');
+  });
+
+  it('keeps the side card placeholder while the directory loads', async () => {
+    mockFetchRoutes({ ...signedInHomeRoutes() });
+    const initialFetch = globalThis.fetch;
+    globalThis.fetch = jest.fn((input: RequestInfo | URL, init?: RequestInit) =>
+      input === '/api/v1/users'
+        ? new Promise<Response>(() => undefined)
+        : initialFetch(input, init),
+    ) as typeof fetch;
+    const { container } = renderApp('/annuaire');
+
+    await waitFor(() => expect(container.querySelector('[data-slot="aside"]')).toBeInTheDocument());
+  });
+
+  it('has no accessibility problems when empty or failing', async () => {
+    const { container, queryClient } = renderDirectory([]);
+    await screen.findByText(copy.directory.empty);
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+
+    await expectNoAxeViolations(container);
   });
 });

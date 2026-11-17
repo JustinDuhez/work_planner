@@ -5,6 +5,10 @@ import { Link } from 'react-router';
 import { clockWeekPath, currentIsoWeek, formatLongDate } from '../clock/clock-time';
 import { copy } from '../copy';
 import { roleLabel } from '../session/role-label';
+import { PageLayout } from '../ui/page-layout';
+import { SummarySkeleton } from '../ui/summary-skeleton';
+import { Avatar } from '../ui/avatar';
+import { DirectorySummaryCard } from './directory-summary-card';
 import { ErrorState } from '../ui/error-state';
 import { EmptyState } from '../ui/empty-state';
 import { LoadingRegion, Skeleton } from '../ui/skeleton';
@@ -59,33 +63,34 @@ export function DirectoryPage({
       (teamName === '' || entry.teams.some((team) => team.name === teamName)),
   );
 
-  return (
-    <section className="space-y-6">
-      <h1 className="text-xl font-semibold tracking-tight text-balance">{copy.directory.title}</h1>
-      <div className="sticky top-14 z-10 -mx-4 flex flex-wrap items-center gap-3 border-b border-line bg-zinc-50/90 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-card sm:border">
-        <input
-          type="search"
-          aria-label={copy.directory.search}
-          placeholder={copy.directory.search}
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          className="h-9 min-w-48 flex-1 rounded-control border border-line bg-white px-3 text-sm"
-        />
-        <select
-          aria-label={copy.directory.teamFilter}
-          value={teamName}
-          onChange={(event) => setTeamName(event.target.value)}
-          className="h-9 rounded-control border border-line bg-white px-2 text-sm"
-        >
-          <option value="">{copy.directory.allTeams}</option>
-          {teamNames.map((name) => (
-            <option key={name} value={name}>
-              {name}
-            </option>
-          ))}
-        </select>
-        {toolbar}
-      </div>
+  const bar = (
+    <>
+      <input
+        type="search"
+        aria-label={copy.directory.search}
+        placeholder={copy.directory.search}
+        value={search}
+        onChange={(event) => setSearch(event.target.value)}
+        className="h-9 min-w-48 flex-1 rounded-control border border-line bg-white px-3 text-sm"
+      />
+      <select
+        aria-label={copy.directory.teamFilter}
+        value={teamName}
+        onChange={(event) => setTeamName(event.target.value)}
+        className="h-9 rounded-control border border-line bg-white px-2 text-sm"
+      >
+        <option value="">{copy.directory.allTeams}</option>
+        {teamNames.map((name) => (
+          <option key={name} value={name}>
+            {name}
+          </option>
+        ))}
+      </select>
+      {toolbar}
+    </>
+  );
+  const main = (
+    <>
       {directory.isError && !directory.data ? (
         <ErrorState
           message={copy.directory.loadError}
@@ -131,19 +136,22 @@ export function DirectoryPage({
                   className="block rounded-card border border-line bg-white p-4 sm:table-row sm:rounded-none sm:border-0 sm:border-b sm:p-0"
                 >
                   <td className="block py-1 sm:table-cell sm:px-3 sm:py-2">
-                    {entry.isArchived ? (
-                      <span className="font-medium text-zinc-900">{name}</span>
-                    ) : (
-                      <Link
-                        to={clockWeekPath(
-                          entry.id === session?.user.id ? undefined : entry.id,
-                          isoWeek,
-                        )}
-                        className="font-medium text-zinc-900 hover:text-primary-600"
-                      >
-                        {name}
-                      </Link>
-                    )}
+                    <span className="inline-flex items-center gap-2">
+                      <Avatar firstName={entry.firstName} lastName={entry.lastName} />
+                      {entry.isArchived ? (
+                        <span className="font-medium text-zinc-900">{name}</span>
+                      ) : (
+                        <Link
+                          to={clockWeekPath(
+                            entry.id === session?.user.id ? undefined : entry.id,
+                            isoWeek,
+                          )}
+                          className="font-medium text-zinc-900 hover:text-primary-600"
+                        >
+                          {name}
+                        </Link>
+                      )}
+                    </span>
                     {entry.isBlocked ? (
                       <span className="ml-2 rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600">
                         {copy.directory.blocked}
@@ -189,6 +197,18 @@ export function DirectoryPage({
           </tbody>
         </table>
       ) : null}
+    </>
+  );
+  const aside = directory.data ? (
+    <DirectorySummaryCard entries={directory.data} showArchived={includeArchived} />
+  ) : directory.isPending && !directory.isError ? (
+    <SummarySkeleton />
+  ) : null;
+
+  return (
+    <section className="space-y-6">
+      <h1 className="text-xl font-semibold tracking-tight text-balance">{copy.directory.title}</h1>
+      <PageLayout bar={bar} main={main} aside={aside} />
     </section>
   );
 }

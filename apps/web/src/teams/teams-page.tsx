@@ -1,65 +1,59 @@
-import { useId, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { Users } from 'lucide-react';
-import { Link } from 'react-router';
-import { clockWeekPath, currentIsoWeek } from '../clock/clock-time';
+import { currentIsoWeek } from '../clock/clock-time';
 import { copy } from '../copy';
 import { useSession } from '../session/session-queries';
 import { EmptyState } from '../ui/empty-state';
 import { ErrorState } from '../ui/error-state';
+import { PageLayout } from '../ui/page-layout';
 import { LoadingRegion, Skeleton } from '../ui/skeleton';
+import { SummarySkeleton } from '../ui/summary-skeleton';
+import { TeamMembersCard } from './team-members-card';
 import { useTeams } from './team-queries';
 import { buildTeamTree, type TeamNode } from './team-tree';
 
 function memberCountLabel(count: number): string {
-  if (count === 0) return copy.teams.noMembers;
-  return `${count} ${count === 1 ? copy.teams.memberCountOne : copy.teams.memberCountMany}`;
+  return `${count} ${count > 1 ? copy.teams.memberCountMany : copy.teams.memberCountOne}`;
+}
+
+function flatten(nodes: readonly TeamNode[]): TeamNode['team'][] {
+  return nodes.flatMap((node) => [node.team, ...flatten(node.children)]);
 }
 
 function TeamItem({
   node,
   teamActions,
-  ownUserId,
-  isoWeek,
+  selectedId,
+  onSelect,
 }: {
   node: TeamNode;
   teamActions?: (node: TeamNode) => ReactNode;
-  ownUserId: number | undefined;
-  isoWeek: string;
+  selectedId: number | undefined;
+  onSelect: (id: number) => void;
 }) {
   const nameId = useId();
   const { team, children } = node;
-  const managerLabel = team.manager
-    ? `${copy.teams.manager} ${team.manager.firstName} ${team.manager.lastName}`
-    : copy.teams.noManager;
   return (
     <li aria-labelledby={nameId} className="space-y-2">
       <div className="rounded-card border border-line bg-white p-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <p id={nameId} className="font-medium text-zinc-900">
+          <div className="flex flex-wrap items-baseline gap-x-2">
+            <button
+              id={nameId}
+              type="button"
+              aria-pressed={team.id === selectedId}
+              onClick={() => onSelect(team.id)}
+              className="font-medium text-zinc-900 hover:text-primary-600 aria-pressed:text-primary-700"
+            >
               {team.name}
-            </p>
-            <p className="text-sm text-zinc-600">{managerLabel}</p>
+            </button>
+            <span className="text-sm text-zinc-600">
+              {`· ${team.manager ? `${team.manager.firstName} ${team.manager.lastName}` : copy.teams.noManager}`}
+            </span>
+            <span className="text-sm text-zinc-600">{`· ${memberCountLabel(team.members.length)}`}</span>
           </div>
           <div className="flex gap-2">{teamActions?.(node)}</div>
         </div>
-        <details open className="mt-2 text-sm">
-          <summary className="cursor-pointer text-zinc-600">
-            {memberCountLabel(team.members.length)}
-          </summary>
-          <ul className="mt-1 space-y-0.5">
-            {team.members.map((member) => (
-              <li key={member.id}>
-                <Link
-                  to={clockWeekPath(member.id === ownUserId ? undefined : member.id, isoWeek)}
-                  className="text-zinc-800 hover:text-primary-600"
-                >
-                  {`${member.firstName} ${member.lastName}`}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </details>
       </div>
       {children.length > 0 ? (
         <ul className="space-y-2 border-l border-line pl-4">
@@ -68,8 +62,8 @@ function TeamItem({
               key={child.team.id}
               node={child}
               teamActions={teamActions}
-              ownUserId={ownUserId}
-              isoWeek={isoWeek}
+              selectedId={selectedId}
+              onSelect={onSelect}
             />
           ))}
         </ul>
@@ -87,15 +81,25 @@ export function TeamsPage({
 }) {
   const { data: session } = useSession();
   const teams = useTeams();
+  const [pickedId, setPickedId] = useState<number>();
   const tree = buildTeamTree(teams.data ?? []);
   const isoWeek = currentIsoWeek(new Date());
+  const ownUserId = session?.user.id;
+  const ordered = flatten(tree);
+  const selected =
+    ordered.find((team) => team.id === pickedId) ??
+    ordered.find((team) => team.manager?.id === ownUserId) ??
+    ordered.find((team) => team.members.some((member) => member.id === ownUserId)) ??
+    ordered[0];
 
-  return (
-    <section className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold tracking-tight text-balance">{copy.teams.title}</h1>
-        {toolbar}
-      </div>
+  const bar = (
+    <>
+      <h1 className="text-xl font-semibold tracking-tight text-balance">{copy.teams.title}</h1>
+      {toolbar}
+    </>
+  );
+  const main = (
+    <>
       {teams.isError && !teams.data ? (
         <ErrorState
           message={copy.teams.loadError}
@@ -121,12 +125,23 @@ export function TeamsPage({
               key={node.team.id}
               node={node}
               teamActions={teamActions}
-              ownUserId={session?.user.id}
-              isoWeek={isoWeek}
+              selectedId={selected?.id}
+              onSelect={setPickedId}
             />
           ))}
         </ul>
       ) : null}
+    </>
+  );
+  const aside = selected ? (
+    <TeamMembersCard team={selected} ownUserId={ownUserId} isoWeek={isoWeek} />
+  ) : teams.isPending && !teams.isError ? (
+    <SummarySkeleton />
+  ) : null;
+
+  return (
+    <section>
+      <PageLayout bar={bar} main={main} aside={aside} />
     </section>
   );
 }

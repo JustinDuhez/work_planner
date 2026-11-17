@@ -38,15 +38,15 @@ describe('TeamsPage', () => {
     const direction = await screen.findByRole('listitem', { name: 'Direction' });
     const front = within(direction).getByRole('listitem', { name: 'Front' });
 
-    expect(within(direction).getByText('Responsable : Claire Martin')).toBeInTheDocument();
-    expect(within(front).getByText('Responsable : Sophie Dubois')).toBeInTheDocument();
-    expect(within(front).getByText('2 membres')).toBeInTheDocument();
+    expect(within(direction).getByText('· Claire Martin')).toBeInTheDocument();
+    expect(within(front).getByText('· Sophie Dubois')).toBeInTheDocument();
+    expect(within(front).getByText('· 2 membres')).toBeInTheDocument();
   });
 
   it('says when a team has no manager', async () => {
     renderTeams([teamView({ name: 'Commercial' })]);
 
-    expect(await screen.findByText(copy.teams.noManager)).toBeInTheDocument();
+    expect(await screen.findByText(`· ${copy.teams.noManager}`)).toBeInTheDocument();
   });
 
   it("opens a member's week from their name", async () => {
@@ -67,8 +67,8 @@ describe('TeamsPage', () => {
       teamView({ id: 2, name: 'Vide' }),
     ]);
 
-    expect(await screen.findByText('1 membre')).toBeInTheDocument();
-    expect(screen.getByText(copy.teams.noMembers)).toBeInTheDocument();
+    expect(await screen.findByText('· 1 membre')).toBeInTheDocument();
+    expect(screen.getByText('· 0 membre')).toBeInTheDocument();
   });
 
   it('opens your own week from your own name', async () => {
@@ -111,5 +111,88 @@ describe('TeamsPage', () => {
       'href',
       '/equipes',
     );
+  });
+});
+
+describe('TeamsPage selection and side card', () => {
+  it('shows each team with its manager and member count on one line', async () => {
+    renderTeams();
+
+    const front = await screen.findByRole('listitem', { name: 'Front' });
+
+    expect(within(front).getByText('· Sophie Dubois')).toBeInTheDocument();
+    expect(within(front).getByText('· 2 membres')).toBeInTheDocument();
+  });
+
+  it('selects the team you belong to first and lists its manager and members', async () => {
+    renderTeams();
+
+    const front = await screen.findByRole('button', { name: 'Front' });
+
+    expect(front).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Direction' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+    const card = screen.getByRole('region', { name: 'Front' });
+    expect(within(card).getByText('Sophie Dubois')).toBeInTheDocument();
+    expect(within(card).getByText(copy.teams.managerTag)).toBeInTheDocument();
+    expect(within(card).getByText('HL')).toBeInTheDocument();
+  });
+
+  it('selects the team you manage before the ones you belong to', async () => {
+    renderTeams([
+      teamView({
+        id: 1,
+        name: 'Alpha',
+        members: [{ id: 7, firstName: 'Léa', lastName: 'Moreau' }],
+      }),
+      teamView({ id: 2, name: 'Beta', manager: { id: 7, firstName: 'Léa', lastName: 'Moreau' } }),
+    ]);
+
+    expect(await screen.findByRole('button', { name: 'Beta' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+  });
+
+  it('falls back to the first team of the tree', async () => {
+    renderTeams([teamView({ id: 1, name: 'Alpha' }), teamView({ id: 2, name: 'Beta' })]);
+
+    expect(await screen.findByRole('button', { name: 'Alpha' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+  });
+
+  it('selects another team when its name is clicked', async () => {
+    const { user } = renderTeams();
+
+    await user.click(await screen.findByRole('button', { name: 'Direction' }));
+
+    expect(screen.getByRole('button', { name: 'Direction' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByRole('region', { name: 'Direction' })).toBeInTheDocument();
+  });
+
+  it('says when the selected team has no member', async () => {
+    renderTeams([teamView({ id: 2, name: 'Vide' })]);
+
+    expect(await screen.findByText(copy.teams.noMembers)).toBeInTheDocument();
+  });
+
+  it('keeps the side card placeholder while the teams load', async () => {
+    mockFetchRoutes({ ...signedInHomeRoutes() });
+    const initialFetch = globalThis.fetch;
+    globalThis.fetch = jest.fn((input: RequestInfo | URL, init?: RequestInit) =>
+      input === '/api/v1/teams'
+        ? new Promise<Response>(() => undefined)
+        : initialFetch(input, init),
+    ) as typeof fetch;
+    const { container } = renderApp('/equipes');
+
+    await waitFor(() => expect(container.querySelector('[data-slot="aside"]')).toBeInTheDocument());
   });
 });
