@@ -2,6 +2,7 @@ import { formatDayCount, type DayTypeView, type LeaveRequestView } from '@work-p
 import type { ReactNode } from 'react';
 import { formatLongDate } from '../clock/clock-time';
 import { copy } from '../copy';
+import { Avatar } from '../ui/avatar';
 
 const STATUS_CLASS: Record<LeaveRequestView['status'], string> = {
   pending: 'bg-amber-50 text-amber-800',
@@ -41,15 +42,22 @@ export function LeaveRequestCard({
   children?: ReactNode;
 }) {
   return (
-    <li className="space-y-2 rounded-card border border-line bg-white p-4">
+    <li className="space-y-2 p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           {/* A review card is about the person; "Mes demandes" cards are about the absence. */}
           {showPerson ? (
-            <>
-              <p className="font-medium text-zinc-900">{`${request.user.firstName} ${request.user.lastName}`}</p>
-              <p className="text-sm text-zinc-600">{`${typeLabel(request, dayTypes)} · ${periodText(request)}`}</p>
-            </>
+            <div className="flex items-start gap-3">
+              <Avatar
+                firstName={request.user.firstName}
+                lastName={request.user.lastName}
+                size="md"
+              />
+              <div>
+                <p className="font-medium text-zinc-900">{`${request.user.firstName} ${request.user.lastName}`}</p>
+                <p className="text-sm text-zinc-600">{`${typeLabel(request, dayTypes)} · ${periodText(request)}`}</p>
+              </div>
+            </div>
           ) : (
             <>
               <p className="font-medium text-zinc-900">{typeLabel(request, dayTypes)}</p>

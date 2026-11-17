@@ -233,6 +233,13 @@ export const copy = {
     title: 'Demandes',
     mineTab: 'Mes demandes',
     toReviewTab: 'À valider',
+    tabsLabel: 'Liste des demandes',
+    summary: {
+      title: 'Aperçu',
+      toReview: 'À valider',
+      pending: 'En attente',
+      approved: 'Validées · 30 j',
+    },
     loading: 'Chargement des demandes…',
     noRequests: "Vous n'avez fait aucune demande.",
     noPending: 'Aucune demande en attente.',

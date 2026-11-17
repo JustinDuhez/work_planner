@@ -462,3 +462,99 @@ describe('LeaveRequestsPage', () => {
     await expectNoAxeViolations(container);
   });
 });
+
+describe('LeaveRequestsPage layout', () => {
+  const toReview = (pending: ReturnType<typeof leaveRequestView>[]) => ({
+    'GET /api/v1/me': { status: 200, body: MANAGER_SESSION },
+    'GET /api/v1/leave-requests?view=to-review': { status: 200, body: { pending, recent: [] } },
+  });
+
+  it('moves between the tabs with the arrow keys and keeps the pending count in the label', async () => {
+    const { user, router } = renderPage(
+      '/demandes',
+      toReview([
+        leaveRequestView({ id: 21, canReview: true }),
+        leaveRequestView({ id: 22, canReview: true }),
+      ]),
+    );
+
+    const mine = await screen.findByRole('tab', { name: copy.leaveRequests.mineTab });
+    const review = await screen.findByRole('tab', { name: 'À valider · 2' });
+    mine.focus();
+    await user.keyboard('{ArrowRight}');
+
+    expect(review).toHaveFocus();
+    expect(review).toHaveAttribute('aria-selected', 'true');
+    expect(router.state.location.search).toBe('?onglet=a-valider');
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', 'tab-a-valider');
+  });
+
+  it('shows the requester with an avatar on the review tab', async () => {
+    renderPage('/demandes?onglet=a-valider', toReview([leaveRequestView({ id: 23 })]));
+
+    const card = (await within(await screen.findByRole('tabpanel')).findAllByRole('listitem'))[0]!;
+
+    expect(within(card).getByText('LM')).toBeInTheDocument();
+    expect(within(card).getByText('Léa Moreau')).toBeInTheDocument();
+  });
+
+  it('counts what to review, what is pending and what was approved within 30 days', async () => {
+    renderPage('/demandes', {
+      ...toReview([leaveRequestView({ id: 24, canReview: true })]),
+      'GET /api/v1/leave-requests?view=mine': {
+        status: 200,
+        body: [
+          leaveRequestView({ id: 1 }),
+          leaveRequestView({ id: 2 }),
+          leaveRequestView({
+            id: 3,
+            status: 'approved',
+            reviewedAt: '2026-11-10T09:00:00.000Z',
+            canCancel: false,
+          }),
+          leaveRequestView({
+            id: 4,
+            status: 'approved',
+            reviewedAt: '2026-09-01T09:00:00.000Z',
+            canCancel: false,
+          }),
+        ],
+      },
+    });
+
+    const card = await screen.findByRole('region', { name: copy.leaveRequests.summary.title });
+    await waitFor(() =>
+      expect(
+        within(card).getByText(copy.leaveRequests.summary.toReview).nextSibling,
+      ).toHaveTextContent('1'),
+    );
+    expect(
+      within(card).getByText(copy.leaveRequests.summary.pending).nextSibling,
+    ).toHaveTextContent('2');
+    expect(
+      within(card).getByText(copy.leaveRequests.summary.approved).nextSibling,
+    ).toHaveTextContent('1');
+  });
+
+  it('shows a collaborator no stat to review, and omits the 30 days stat without any date', async () => {
+    renderPage('/demandes');
+
+    const card = await screen.findByRole('region', { name: copy.leaveRequests.summary.title });
+
+    expect(within(card).queryByText(copy.leaveRequests.summary.toReview)).not.toBeInTheDocument();
+    expect(within(card).queryByText(copy.leaveRequests.summary.approved)).not.toBeInTheDocument();
+    expect(within(card).getByText(copy.leaveRequests.summary.pending)).toBeInTheDocument();
+  });
+
+  it('has no accessibility violation on the review tab', async () => {
+    const { queryClient, container } = renderPage(
+      '/demandes?onglet=a-valider',
+      toReview([leaveRequestView({ id: 25, canReview: true })]),
+    );
+
+    await screen.findByText('Léa Moreau');
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+
+    await expectNoAxeViolations(container);
+  });
+});

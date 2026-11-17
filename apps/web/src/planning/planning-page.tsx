@@ -16,7 +16,7 @@ import { EmptyState } from '../ui/empty-state';
 import { ErrorState } from '../ui/error-state';
 import { PageLayout } from '../ui/page-layout';
 import { LoadingRegion } from '../ui/skeleton';
-import { SummarySkeleton } from '../calendar/calendar-skeleton';
+import { SummarySkeleton } from '../ui/summary-skeleton';
 import { AbsentTodayCard } from './absent-today-card';
 import { PersonCards } from './person-cards';
 import { PlanningFilterBar, type PlanningFilters } from './planning-filter-bar';
