@@ -73,16 +73,73 @@ describe('YearCalendarPage', () => {
     expect(saturday?.children[2]).toHaveClass('bg-zinc-100');
   });
 
-  it('summarizes the usage of the period', async () => {
+  it('summarizes the approved days of the period in a side card', async () => {
     renderCalendar('/calendrier?periode=2026');
 
-    const summary = await screen.findByRole('region', { name: copy.calendar.summaryTitle });
+    const card = await screen.findByRole('region', { name: copy.calendar.yearTitle });
 
+    expect(within(card).getByText('1', { selector: 'p span' })).toBeInTheDocument();
     expect(
-      within(summary).getByText('Télétravail · 0 jour (+0,5 jour en attente)'),
+      within(card).getByText(copy.calendar.dayUnit, { selector: 'p span' }),
     ).toBeInTheDocument();
-    expect(within(summary).getByText('Congé · 1 jour')).toBeInTheDocument();
-    expect(within(summary).getByText('Jours fériés · 1')).toBeInTheDocument();
+    const leave = within(card).getByText('Congé').closest('li') as HTMLElement;
+    expect(leave).toHaveTextContent('1 j');
+    const telework = within(card).getByText('Télétravail').closest('li') as HTMLElement;
+    expect(telework).toHaveTextContent('0 j');
+    expect(telework).toHaveTextContent('+0,5 j en attente');
+    const holidays = within(card).getByText(copy.calendar.holidays).closest('li') as HTMLElement;
+    expect(holidays).toHaveTextContent('1');
+  });
+
+  it('writes the total with a French decimal', async () => {
+    renderCalendar('/calendrier?periode=2026', {
+      'GET /api/v1/users/7/year-calendars/2026': {
+        status: 200,
+        body: yearCalendar({
+          summary: [{ dayTypeCode: 'leave', approvedHalfDays: 29, pendingHalfDays: 0 }],
+        }),
+      },
+    });
+
+    const card = await screen.findByRole('region', { name: copy.calendar.yearTitle });
+
+    expect(within(card).getByText('14,5', { selector: 'p span' })).toBeInTheDocument();
+  });
+
+  it("names the card after the person on someone else's calendar", async () => {
+    renderCalendar('/calendrier/9?periode=2026', {
+      'GET /api/v1/users/9/year-calendars/2026': {
+        status: 200,
+        body: yearCalendar({ user: { id: 9, firstName: 'Hugo', lastName: 'Laurent' } }),
+      },
+    });
+
+    expect(await screen.findByRole('region', { name: 'Année de Hugo' })).toBeInTheDocument();
+  });
+
+  it('lists the used types and the pending shade above the months', async () => {
+    renderCalendar('/calendrier?periode=2026');
+
+    const pastel = await screen.findByText(copy.calendar.legendPending);
+    const legend = pastel.closest('ul') as HTMLElement;
+
+    expect(within(legend).getByText('Congé')).toBeInTheDocument();
+    expect(within(legend).getByText('Télétravail')).toBeInTheDocument();
+    expect(
+      legend.compareDocumentPosition(screen.getByRole('table', { name: 'juillet 2026' })) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('shows the months in two columns', async () => {
+    renderCalendar('/calendrier?periode=2026');
+
+    const grid = (await screen.findByRole('table', { name: 'juillet 2026' })).closest(
+      '.grid',
+    ) as HTMLElement;
+
+    expect(grid).toHaveClass('sm:grid-cols-2');
+    expect(grid).not.toHaveClass('lg:grid-cols-3');
   });
 
   it('says when nothing is declared', async () => {
@@ -90,7 +147,9 @@ describe('YearCalendarPage', () => {
       'GET /api/v1/users/7/year-calendars/2026': { status: 200, body: yearCalendar() },
     });
 
-    expect(await screen.findByText(copy.calendar.noAbsence)).toBeInTheDocument();
+    const card = await screen.findByRole('region', { name: copy.calendar.yearTitle });
+
+    expect(within(card).getByText(copy.calendar.noAbsence)).toBeInTheDocument();
   });
 
   it('moves to the next period in the URL', async () => {

@@ -29,7 +29,8 @@ import { useSettings } from '../settings/settings-queries';
 import { CalendarSkeleton } from './calendar-skeleton';
 import { calendarPath, useYearCalendar } from './calendar-queries';
 import { halfKey, MonthCard, type HalfAction } from './month-card';
-import { UsageSummaryPanel } from './usage-summary-panel';
+import { PageLayout } from '../ui/page-layout';
+import { CalendarLegend, UsageSummaryPanel } from './usage-summary-panel';
 
 const periodMonthFormat = new Intl.DateTimeFormat('fr-FR', {
   month: 'short',
@@ -186,80 +187,99 @@ function YearCalendarView({
           ? `${copy.calendar.titleOf} ${data.user.firstName} ${data.user.lastName}`
           : copy.calendar.title}
       </h1>
-      <div className="sticky top-14 z-10 -mx-4 flex flex-wrap items-center justify-between gap-3 border-b border-line bg-zinc-50/90 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-card sm:border">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            aria-label={copy.calendar.previousPeriod}
-            disabled={startYear <= HOLIDAY_YEAR_MIN}
-            onClick={() => goTo(startYear - 1)}
-            className="rounded-control p-2 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <ChevronLeft size={18} aria-hidden />
-          </button>
-          <p className="min-w-40 text-center text-base font-semibold">
-            {data ? periodLabel(data.period.startDate, data.period.endDate) : startYear}
-          </p>
-          <button
-            type="button"
-            aria-label={copy.calendar.nextPeriod}
-            disabled={startYear >= HOLIDAY_YEAR_MAX}
-            onClick={() => goTo(startYear + 1)}
-            className="rounded-control p-2 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <ChevronRight size={18} aria-hidden />
-          </button>
-        </div>
-        <PersonPicker
-          viewerId={viewerId}
-          pathFor={(userId) => calendarPath(userId, startYear)}
-          label={copy.calendar.viewCalendarOf}
-        />
-        {data && isOwn ? (
-          <Button onClick={() => setDialog({ kind: 'request', date: data.today })}>
-            <CalendarPlus size={16} aria-hidden /> {copy.leave.requestButton}
-          </Button>
-        ) : null}
-        {data && canDeclare ? (
-          <Button onClick={() => setDialog({ kind: 'declare', date: data.today })}>
-            <CalendarPlus size={16} aria-hidden />{' '}
-            {`${copy.calendar.declareFor} ${data.user.firstName}`}
-          </Button>
-        ) : null}
-      </div>
-      {/* A failed background refresh keeps the calendar on screen. */}
-      {calendar.isError && !data ? (
-        <ErrorState
-          message={copy.calendar.loadError}
-          onRetry={() => void calendar.refetch()}
-          isRetrying={calendar.isFetching}
-        />
-      ) : null}
-      {calendar.isPending ? (
-        <LoadingRegion label={copy.calendar.loading}>
-          <CalendarSkeleton />
-        </LoadingRegion>
-      ) : null}
-      {data ? (
-        <div className="grid gap-4 motion-safe:animate-[week-in_200ms_ease-out] lg:grid-cols-[1fr_16rem]">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {monthsOfPeriod(data.period).map(({ year, month }) => (
-              <MonthCard
-                key={`${year}-${month}`}
-                year={year}
-                month={month}
-                period={data.period}
-                halfDaysByKey={halfDaysByKey}
-                holidaysByDate={holidaysByDate}
-                dayTypes={dayTypes.data ?? []}
-                today={data.today}
-                halfAction={halfAction}
+      <PageLayout
+        bar={
+          <>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                aria-label={copy.calendar.previousPeriod}
+                disabled={startYear <= HOLIDAY_YEAR_MIN}
+                onClick={() => goTo(startYear - 1)}
+                className="rounded-control p-2 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <ChevronLeft size={18} aria-hidden />
+              </button>
+              <p className="min-w-40 text-center text-base font-semibold">
+                {data ? periodLabel(data.period.startDate, data.period.endDate) : startYear}
+              </p>
+              <button
+                type="button"
+                aria-label={copy.calendar.nextPeriod}
+                disabled={startYear >= HOLIDAY_YEAR_MAX}
+                onClick={() => goTo(startYear + 1)}
+                className="rounded-control p-2 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <ChevronRight size={18} aria-hidden />
+              </button>
+            </div>
+            <PersonPicker
+              viewerId={viewerId}
+              pathFor={(userId) => calendarPath(userId, startYear)}
+              label={copy.calendar.viewCalendarOf}
+            />
+            {data && isOwn ? (
+              <Button onClick={() => setDialog({ kind: 'request', date: data.today })}>
+                <CalendarPlus size={16} aria-hidden /> {copy.leave.requestButton}
+              </Button>
+            ) : null}
+            {data && canDeclare ? (
+              <Button onClick={() => setDialog({ kind: 'declare', date: data.today })}>
+                <CalendarPlus size={16} aria-hidden />{' '}
+                {`${copy.calendar.declareFor} ${data.user.firstName}`}
+              </Button>
+            ) : null}
+          </>
+        }
+        main={
+          <>
+            {/* A failed background refresh keeps the calendar on screen. */}
+            {calendar.isError && !data ? (
+              <ErrorState
+                message={copy.calendar.loadError}
+                onRetry={() => void calendar.refetch()}
+                isRetrying={calendar.isFetching}
               />
-            ))}
-          </div>
-          <UsageSummaryPanel calendar={data} dayTypes={dayTypes.data ?? []} />
-        </div>
-      ) : null}
+            ) : null}
+            {calendar.isPending ? (
+              <LoadingRegion label={copy.calendar.loading}>
+                <CalendarSkeleton />
+              </LoadingRegion>
+            ) : null}
+            {data ? (
+              <div className="space-y-3 motion-safe:animate-[week-in_200ms_ease-out]">
+                <CalendarLegend calendar={data} dayTypes={dayTypes.data ?? []} />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {monthsOfPeriod(data.period).map(({ year, month }) => (
+                    <MonthCard
+                      key={`${year}-${month}`}
+                      year={year}
+                      month={month}
+                      period={data.period}
+                      halfDaysByKey={halfDaysByKey}
+                      holidaysByDate={holidaysByDate}
+                      dayTypes={dayTypes.data ?? []}
+                      today={data.today}
+                      halfAction={halfAction}
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </>
+        }
+        aside={
+          data ? (
+            <UsageSummaryPanel
+              calendar={data}
+              dayTypes={dayTypes.data ?? []}
+              title={
+                isOwn ? copy.calendar.yearTitle : `${copy.calendar.yearOf} ${data.user.firstName}`
+              }
+            />
+          ) : undefined
+        }
+      />
       {data && dialog?.kind === 'cancel' ? (
         <CancelDeclaredDialog
           declared={dialog.declared}
