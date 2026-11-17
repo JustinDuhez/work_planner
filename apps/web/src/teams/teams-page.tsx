@@ -33,13 +33,14 @@ function TeamItem({
 }) {
   const nameId = useId();
   const { team, children } = node;
+  const actions = teamActions?.(node);
   return (
     <li aria-labelledby={nameId} className="space-y-2">
       <div
         data-selected={team.id === selectedId}
         className="rounded-card border border-line bg-white p-3 data-[selected=true]:border-primary-500 data-[selected=true]:ring-1 data-[selected=true]:ring-primary-500"
       >
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="space-y-3">
           <div className="flex flex-wrap items-baseline gap-x-2">
             <button
               id={nameId}
@@ -61,7 +62,7 @@ function TeamItem({
               {memberCountLabel(team.members.length)}
             </span>
           </div>
-          <div className="flex gap-2">{teamActions?.(node)}</div>
+          {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
         </div>
       </div>
       {children.length > 0 ? (
