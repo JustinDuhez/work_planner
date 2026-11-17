@@ -193,7 +193,12 @@ describe('TeamsPage selection and side card', () => {
     ) as typeof fetch;
     const { container } = renderApp('/equipes');
 
-    await waitFor(() => expect(container.querySelector('[data-slot="aside"]')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(
+        container.querySelectorAll('[data-slot="aside"] [aria-hidden]').length,
+      ).toBeGreaterThan(0),
+    );
+    expect(container.querySelector('[data-slot="aside"] section')).toBeNull();
   });
 });
 
