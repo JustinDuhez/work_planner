@@ -16,11 +16,11 @@ export function AppShell() {
           event.preventDefault();
           document.getElementById(MAIN_ID)?.focus();
         }}
-        className="sr-only rounded-control bg-white px-3 py-2 text-sm font-medium text-primary-700 shadow-popover focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-20"
+        className="sr-only rounded-control bg-white px-3 py-2 text-sm font-medium text-primary-700 shadow-popover focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-30"
       >
         {copy.shell.skipToContent}
       </a>
-      <header className="sticky top-0 z-10 border-b border-line bg-white/80 backdrop-blur">
+      <header className="sticky top-0 z-20 border-b border-line bg-white/80 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
           <Link to="/" className="text-sm font-semibold tracking-tight">
             {copy.appName}
