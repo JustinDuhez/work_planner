@@ -91,8 +91,15 @@ describe('creating leave requests', () => {
     expect(notified.map((row) => row.userId).sort()).toEqual([managerId, adminId].sort());
   });
 
-  it('approves telework at once while 3 days stay on site', async () => {
+  it('approves telework at once while 3 days stay on site, without asking the approvers', async () => {
     const member = await newMember();
+    const received = () =>
+      db
+        .selectFrom('notification')
+        .select('id')
+        .where('type', '=', 'leave_request_received')
+        .execute();
+    const before = await received();
 
     const response = await post(
       member.email,
@@ -104,6 +111,7 @@ describe('creating leave requests', () => {
       isAutoApproved: true,
       ruleNote: null,
     });
+    expect(await received()).toEqual(before);
   });
 
   it('holds telework that would leave fewer than 3 days on site, with the reason', async () => {
@@ -153,6 +161,17 @@ describe('creating leave requests', () => {
     );
 
     expect(response.json<RequestBody>().halfDayCount).toBe(6);
+  });
+
+  it('accepts a request starting today', async () => {
+    const member = await newMember();
+
+    const response = await post(
+      member.email,
+      leave({ dayTypeCode: 'sick', startDate: '2026-11-12', endDate: '2026-11-12' }),
+    );
+
+    expect(response.statusCode).toBe(201);
   });
 
   it.each([
@@ -246,19 +265,29 @@ describe('creating leave requests', () => {
     });
   });
 
-  it('frees half-days of a refused or cancelled request', async () => {
+  it('lets the same days be requested again after a refusal and after a cancellation', async () => {
     const member = await newMember();
-    await insertLeaveRequest(db, {
-      userId: member.id,
-      dayTypeCode: 'leave',
-      startDate: '2026-12-02',
-      status: 'refused',
-    });
-
+    const refusedDay = leave({ startDate: '2026-12-02', endDate: '2026-12-02' });
+    const cancelledDay = leave({ startDate: '2026-12-04', endDate: '2026-12-04' });
+    const refused = (await post(member.email, refusedDay)).json<RequestBody>();
+    const cancelled = (await post(member.email, cancelledDay)).json<RequestBody>();
+    const admin = await logIn(app, 'ines.leave@example.com');
+    const owner = sessions.get(member.email)!;
+    const put = (session: typeof owner, path: string, payload: object) =>
+      app.inject({
+        method: 'PUT',
+        url: `/api/v1/leave-requests/${path}`,
+        headers: { cookie: session.cookie, origin: TEST_ORIGIN, 'x-csrf-token': session.csrfToken },
+        payload,
+      });
     expect(
-      (await post(member.email, leave({ startDate: '2026-12-02', endDate: '2026-12-02' })))
+      (await put(admin, `${refused.id}/review`, { decision: 'refused', comment: 'Non' }))
         .statusCode,
-    ).toBe(201);
+    ).toBe(200);
+    expect((await put(owner, `${cancelled.id}/cancellation`, {})).statusCode).toBe(200);
+
+    expect((await post(member.email, refusedDay)).statusCode).toBe(201);
+    expect((await post(member.email, cancelledDay)).statusCode).toBe(201);
   });
 
   it('lets only one of two simultaneous requests take the same half-day', async () => {

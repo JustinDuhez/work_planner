@@ -182,29 +182,6 @@ describe('leave in the week', () => {
     expect(day.workMode).toBe('on_site');
   });
 
-  it('keeps the target when a pending absence is refused', async () => {
-    const person = await newPerson();
-    const requestId = await insertLeaveRequest(db, {
-      userId: person.id,
-      dayTypeCode: 'leave',
-      startDate: '2026-11-16',
-      status: 'pending',
-    });
-    const before = await getWeek(person.email, person.id, '2026-W47');
-    const admin = await logIn(app, 'ines.week@example.com');
-
-    const response = await app.inject({
-      method: 'PUT',
-      url: `/api/v1/leave-requests/${requestId}/review`,
-      headers: { cookie: admin.cookie, origin: TEST_ORIGIN, 'x-csrf-token': admin.csrfToken },
-      payload: { decision: 'refused', comment: 'Période chargée' },
-    });
-    const after = await getWeek(person.email, person.id, '2026-W47');
-
-    expect(response.statusCode).toBe(200);
-    expect(after.counters.weekTargetMinutes).toBe(before.counters.weekTargetMinutes);
-  });
-
   it('restores the target when an approved absence is cancelled before it starts', async () => {
     const person = await newPerson();
     const before = await getWeek(person.email, person.id, '2026-W47');

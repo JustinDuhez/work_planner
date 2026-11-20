@@ -29,7 +29,7 @@ describe('declaring an absence for someone', () => {
     });
   }
 
-  function sick(overrides: object = {}) {
+  function absence(overrides: object = {}) {
     return {
       dayTypeCode: 'sick',
       startDate: '2026-11-03',
@@ -60,7 +60,7 @@ describe('declaring an absence for someone', () => {
   });
 
   it('records a past sick day approved at once, with the manager as author and decider', async () => {
-    const response = await declare('sophie.dec@example.com', leaId, sick());
+    const response = await declare('sophie.dec@example.com', leaId, absence());
 
     expect(response.statusCode).toBe(201);
     expect(response.json<unknown>()).toMatchObject({
@@ -77,11 +77,11 @@ describe('declaring an absence for someone', () => {
     expect(told).toEqual([{ userId: leaId, type: 'leave_request_declared' }]);
   });
 
-  it('does not hold telework by the 3-day rule', async () => {
+  it('approves a declared telework at once, whatever the 3-day rule would say', async () => {
     const response = await declare(
       'sophie.dec@example.com',
       leaId,
-      sick({ dayTypeCode: 'telework', startDate: '2026-11-16', endDate: '2026-11-19' }),
+      absence({ dayTypeCode: 'telework', startDate: '2026-11-16', endDate: '2026-11-19' }),
     );
 
     expect(response.json<unknown>()).toMatchObject({ status: 'approved', ruleNote: null });
@@ -91,7 +91,7 @@ describe('declaring an absence for someone', () => {
     const response = await declare(
       'ines.dec@example.com',
       leaId,
-      sick({ startDate: '2026-11-05', endDate: '2026-11-05' }),
+      absence({ startDate: '2026-11-05', endDate: '2026-11-05' }),
     );
 
     expect(response.statusCode).toBe(201);
@@ -108,7 +108,7 @@ describe('declaring an absence for someone', () => {
     const response = await declare(
       'sophie.dec@example.com',
       leaId,
-      sick({ startDate: '2026-11-09', endDate: '2026-11-09' }),
+      absence({ startDate: '2026-11-09', endDate: '2026-11-09' }),
     );
 
     expect(response.statusCode).toBe(409);
@@ -116,7 +116,7 @@ describe('declaring an absence for someone', () => {
   });
 
   it('refuses to declare for yourself', async () => {
-    const response = await declare('sophie.dec@example.com', sophieId, sick());
+    const response = await declare('sophie.dec@example.com', sophieId, absence());
 
     expect(response.statusCode).toBe(400);
     expect(response.json<{ code: string }>().code).toBe('LEAVE_DECLARE_SELF');
@@ -126,7 +126,7 @@ describe('declaring an absence for someone', () => {
     const response = await declare(
       'hugo.dec@example.com',
       leaId,
-      sick({ startDate: '2026-11-06', endDate: '2026-11-06' }),
+      absence({ startDate: '2026-11-06', endDate: '2026-11-06' }),
     );
 
     expect(response.statusCode).toBe(403);
@@ -134,7 +134,7 @@ describe('declaring an absence for someone', () => {
   });
 
   it('answers 404 for an unknown person', async () => {
-    const response = await declare('ines.dec@example.com', 999999, sick());
+    const response = await declare('ines.dec@example.com', 999999, absence());
 
     expect(response.statusCode).toBe(404);
     expect(response.json<{ code: string }>().code).toBe('USER_NOT_FOUND');

@@ -27,6 +27,19 @@ describe('notifications', () => {
     return { correctionId, ownerId: leaId, workDate, actorName: 'Sophie Dubois' };
   }
 
+  async function userWithNotifications(name: string, count: number): Promise<string> {
+    const email = `${name}.notifications@example.com`;
+    const userId = await insertUser(db, { email });
+    for (let day = 1; day <= count; day += 1) {
+      await insertNotification(db, {
+        userId,
+        type: 'clock_correction_received',
+        payload: payload(`2026-10-0${day}`),
+      });
+    }
+    return email;
+  }
+
   async function sessionOf(email: string) {
     return logIn(app, email);
   }
@@ -133,18 +146,14 @@ describe('notifications', () => {
   });
 
   it('marks one of my notifications as read', async () => {
-    const [first] = (await list('lea.notifications@example.com')).notifications;
+    const email = await userWithNotifications('read-one', 3);
+    const [first] = (await list(email)).notifications;
 
-    const response = await patch(
-      'lea.notifications@example.com',
-      `/api/v1/notifications/${first?.id}`,
-    );
+    const response = await patch(email, `/api/v1/notifications/${first?.id}`);
 
     expect(response.statusCode).toBe(200);
     expect(response.json<{ readAt: string }>().readAt).toBe(NOW.toISOString());
-    expect((await list('lea.notifications@example.com')).unreadCount).toBe(
-      NOTIFICATION_LIST_LIMIT + 1,
-    );
+    expect((await list(email)).unreadCount).toBe(2);
   });
 
   it("answers 404 for someone else's notification", async () => {
@@ -160,11 +169,14 @@ describe('notifications', () => {
   });
 
   it('marks all my notifications as read without touching anyone else', async () => {
-    const response = await patch('lea.notifications@example.com', '/api/v1/notifications');
+    const email = await userWithNotifications('read-all', 3);
+    const bystander = await userWithNotifications('bystander', 2);
+
+    const response = await patch(email, '/api/v1/notifications');
 
     expect(response.statusCode).toBe(204);
-    expect((await list('lea.notifications@example.com')).unreadCount).toBe(0);
-    expect((await list('hugo.notifications@example.com')).unreadCount).toBe(1);
+    expect((await list(email)).unreadCount).toBe(0);
+    expect((await list(bystander)).unreadCount).toBe(2);
   });
 
   it('refuses to mark a notification as unread', async () => {

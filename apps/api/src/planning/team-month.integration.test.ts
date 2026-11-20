@@ -89,6 +89,13 @@ describe('the team month', () => {
       startDate: '2026-11-13',
       status: 'pending',
     });
+    await insertLeaveRequest(db, {
+      userId: claireId,
+      dayTypeCode: 'leave',
+      startDate: '2026-11-30',
+      endDate: '2026-12-01',
+      status: 'approved',
+    });
     await insertPublicHoliday(db, { date: '2026-11-11', label: 'Armistice' });
     app = await buildApp({ config: createTestConfig(), db, now: createTestClock(NOW).now });
   });
@@ -125,6 +132,18 @@ describe('the team month', () => {
       status: 'approved',
     });
     expect(response.body).not.toMatch(/Mariage|Bon séjour|reason|ruleNote|reviewComment/);
+  });
+
+  it('shows an absence spanning the month end in each month with only its own half-days', async () => {
+    const dates = async (month: string) =>
+      (await get('hugo.tm@example.com', `/api/v1/team-months/${month}`))
+        .json<TeamMonthBody>()
+        .people.find((person) => person.id === claireId)
+        ?.halfDays.filter((halfDay) => halfDay.dayTypeCode === 'leave')
+        .map((halfDay) => halfDay.date);
+
+    expect(await dates('2026-11')).toEqual(['2026-11-30', '2026-11-30']);
+    expect(await dates('2026-12')).toEqual(['2026-12-01', '2026-12-01']);
   });
 
   it("gives the same balance as the person's current week", async () => {

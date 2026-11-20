@@ -79,12 +79,22 @@ describe('public holidays', () => {
   });
 
   it('imports the French holidays once, then adds nothing', async () => {
+    // An admin-edited holiday keeps its label; the other 10 are added.
+    await insertPublicHoliday(db, { date: '2026-12-25', label: 'Noël (pont)' });
     const first = await request(ADMIN, 'POST', '/api/v1/public-holiday-imports', { year: 2026 });
     const second = await request(ADMIN, 'POST', '/api/v1/public-holiday-imports', { year: 2026 });
 
     expect(first.statusCode).toBe(201);
-    expect(first.json<unknown>()).toEqual({ addedCount: 11 });
+    expect(first.json<unknown>()).toEqual({ addedCount: 10 });
     expect(second.json<unknown>()).toEqual({ addedCount: 0 });
+    const year = (await request(COLLEAGUE, 'GET', '/api/v1/public-holidays?year=2026')).json<
+      { date: string; label: string }[]
+    >();
+    const byDate = new Map(year.map((holiday) => [holiday.date, holiday.label]));
+    expect(byDate.get('2026-12-25')).toBe('Noël (pont)');
+    // Easter Monday, Ascension Thursday and Bastille Day.
+    expect(['2026-04-06', '2026-05-14', '2026-07-14'].filter((d) => !byDate.has(d))).toEqual([]);
+    expect(year).toHaveLength(11);
   });
 
   it('adds and deletes a holiday', async () => {

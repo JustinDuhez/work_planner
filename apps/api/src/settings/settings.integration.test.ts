@@ -50,8 +50,15 @@ describe('settings', () => {
 
   it('lets an admin move the year start', async () => {
     const response = await patch('ines.set@example.com', { yearStart: '09-01' });
+    const { cookie } = await logIn(app, 'lea.set@example.com');
+    const reread = await app.inject({
+      method: 'GET',
+      url: '/api/v1/settings',
+      headers: { cookie },
+    });
 
     expect(response.json<unknown>()).toEqual({ yearStart: '09-01' });
+    expect(reread.json<unknown>()).toEqual({ yearStart: '09-01' });
   });
 
   it('refuses a day that does not exist every year', async () => {
