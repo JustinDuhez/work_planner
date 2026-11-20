@@ -1,3 +1,4 @@
+import argon2 from 'argon2';
 import { burnPasswordVerification, hashPassword, verifyPassword } from './password-hasher';
 
 describe('password hasher', () => {
@@ -29,7 +30,12 @@ describe('password hasher', () => {
     );
   });
 
-  it('spends a verification without failing, to answer unknown emails in the same time', async () => {
+  it('spends a full verification for unknown emails, so they answer as slowly as wrong passwords', async () => {
+    const verify = jest.spyOn(argon2, 'verify');
+
     await expect(burnPasswordVerification('whatever was typed')).resolves.toBeUndefined();
+
+    expect(verify).toHaveBeenCalledTimes(1);
+    verify.mockRestore();
   });
 });

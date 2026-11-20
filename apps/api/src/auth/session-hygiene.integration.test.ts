@@ -7,6 +7,7 @@ import { logIn, TEST_ORIGIN } from '../test/auth-helpers';
 import { createTestClock } from '../test/test-clock';
 import { createTestConfig } from '../test/test-config';
 import { createMigratedTestDb } from '../test/test-database';
+import { PUBLIC_API_ROUTES } from '../http/protected-routes';
 import { createSession, deleteAllSessions, purgeExpiredSessions } from './session-service';
 
 const NOW = new Date('2026-11-10T12:00:00Z');
@@ -77,12 +78,24 @@ describe('forced password change', () => {
   });
 
   it('refuses every other protected route until the password is changed', async () => {
-    const { cookie } = await logIn(app, 'new.hire@example.com');
+    const { cookie, csrfToken } = await logIn(app, 'new.hire@example.com');
+    const openRoutes = new Set(['GET /api/v1/me', 'PUT /api/v1/me/password']);
+    const notRefused: string[] = [];
 
-    const response = await app.inject({ method: 'GET', url: '/api/v1/users', headers: { cookie } });
+    for (const { method, url } of app.registeredApiRoutes) {
+      const route = `${method} ${url}`;
+      if (PUBLIC_API_ROUTES.has(route) || openRoutes.has(route) || method === 'HEAD') continue;
+      const response = await app.inject({
+        method: method as 'GET',
+        url: url.replace(/:w+/g, '1'),
+        headers: { cookie, origin: TEST_ORIGIN, 'x-csrf-token': csrfToken },
+      });
+      const code = response.statusCode === 403 && response.json<{ code: string }>().code;
+      if (code !== 'PASSWORD_CHANGE_REQUIRED') notRefused.push(`${route} → ${response.statusCode}`);
+    }
 
-    expect(response.statusCode).toBe(403);
-    expect(response.json<{ code: string }>().code).toBe('PASSWORD_CHANGE_REQUIRED');
+    expect(notRefused).toEqual([]);
+    expect(app.registeredApiRoutes.length).toBeGreaterThan(openRoutes.size);
   });
 
   it('clears the requirement once the person chooses a password', async () => {

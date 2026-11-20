@@ -34,7 +34,11 @@ describe('route protection', () => {
   });
 
   it('knows the API routes it registered', () => {
-    expect(app.registeredApiRoutes.length).toBeGreaterThan(PUBLIC_API_ROUTES.size);
+    const routes = app.registeredApiRoutes.map(({ method, url }) => `${method} ${url}`);
+
+    expect(routes).toEqual(
+      expect.arrayContaining(['GET /api/v1/users', 'GET /api/v1/me', ...PUBLIC_API_ROUTES]),
+    );
   });
 
   it('answers 401 without a session on every API route except the public ones', async () => {
