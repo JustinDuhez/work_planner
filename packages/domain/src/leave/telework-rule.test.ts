@@ -41,6 +41,30 @@ describe('findTeleworkShortfalls', () => {
     ).toEqual([{ weekMonday: '2026-11-16', remainingOnSiteHalfDays: 4 }]);
   });
 
+  it('counts a slot once when it is both requested and already declared', () => {
+    // 4 distinct half-days taken (16 am/pm, 17 am/pm): 6 left. Counted twice it would be 4.
+    const declared = [...slots('2026-11-16'), ...slots('2026-11-17')];
+
+    expect(
+      findTeleworkShortfalls({
+        requested: slots('2026-11-16'),
+        declared,
+        holidayDates: NO_HOLIDAYS,
+      }),
+    ).toEqual([]);
+  });
+
+  it('ignores requested and declared half-days that fall on a public holiday or a weekend', () => {
+    // Week of 9 November, 11 November off: 8 workable half-days, 2 taken on workable days.
+    const result = findTeleworkShortfalls({
+      requested: [...slots('2026-11-09'), ...slots('2026-11-11')],
+      declared: slots('2026-11-14'),
+      holidayDates: new Set(['2026-11-11']),
+    });
+
+    expect(result).toEqual([]);
+  });
+
   it('leaves less room in a week with a public holiday', () => {
     // Week of Monday 9 November 2026 with 11 November off: 8 workable half-days.
     expect(

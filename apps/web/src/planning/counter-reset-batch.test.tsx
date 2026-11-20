@@ -118,7 +118,7 @@ describe('bulk counter reset', () => {
     );
   });
 
-  it('shows the server refusal naming the person, and resets nothing', async () => {
+  it('shows the server refusal naming the person', async () => {
     const { user } = renderAsManager({
       'POST /api/v1/counter-resets': {
         status: 403,

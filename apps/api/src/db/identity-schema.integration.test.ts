@@ -81,28 +81,15 @@ describe('identity schema', () => {
     );
   });
 
-  it('keeps updated_at current on every identity table', async () => {
+  it('keeps updated_at current on every table that has the column', async () => {
     const { rows } = await sql<{ tableName: string }>`
-      SELECT event_object_table AS table_name FROM information_schema.triggers
-      WHERE trigger_name LIKE '%set_updated_at' ORDER BY event_object_table
+      SELECT c.table_name FROM information_schema.columns c
+      WHERE c.table_schema = 'public' AND c.column_name = 'updated_at'
+        AND NOT EXISTS (
+          SELECT 1 FROM information_schema.triggers t
+          WHERE t.event_object_table = c.table_name AND t.trigger_name LIKE '%set_updated_at')
     `.execute(db);
 
-    expect(rows.map((row) => row.tableName)).toEqual([
-      'app_user',
-      'clock_correction',
-      'clock_day',
-      'clock_period',
-      'counter_reset',
-      'daily_minutes_change',
-      'day_type',
-      'half_day',
-      'leave_request',
-      'notification',
-      'public_holiday',
-      'session',
-      'setting',
-      'team',
-      'team_member',
-    ]);
+    expect(rows).toEqual([]);
   });
 });

@@ -6,6 +6,7 @@ import { logIn, TEST_ORIGIN } from '../test/auth-helpers';
 import { insertTeam, insertUser } from '../test/fixtures';
 import { createTestClock } from '../test/test-clock';
 import { createTestConfig } from '../test/test-config';
+import { holdRowLock } from '../test/hold-row-lock';
 import { createMigratedTestDb } from '../test/test-database';
 
 // Tuesday 10 November 2026.
@@ -121,10 +122,10 @@ describe('working time', () => {
     expect(response.json<{ code: string }>().code).toBe('WORKING_TIME_DATE_IN_PAST');
   });
 
-  it('serializes two edits for the same date: both succeed and the history keeps one row', async () => {
+  it('makes two edits of one person wait for each other, then keeps one history row', async () => {
     const memberId = await newMember();
 
-    const responses = await Promise.all([
+    const responses = await holdRowLock(db, memberId, () => [
       patch(MANAGER, memberId, { dailyMinutes: 360, effectiveDate: '2026-11-16' }),
       patch(ADMIN, memberId, { dailyMinutes: 300, effectiveDate: '2026-11-16' }),
     ]);
@@ -133,6 +134,18 @@ describe('working time', () => {
     expect(await changesOf(memberId)).toEqual([
       { effectiveDate: '2026-11-16', previousDailyMinutes: 420 },
     ]);
+  });
+
+  it.each([0, 1441, 7.5])('refuses a daily time of %s minutes', async (dailyMinutes) => {
+    const memberId = await newMember();
+
+    const response = await patch(ADMIN, memberId, { dailyMinutes });
+
+    expect(response.statusCode).toBe(400);
+    expect(
+      response.json<{ fieldErrors: Record<string, string> }>().fieldErrors.dailyMinutes,
+    ).toBeDefined();
+    expect(await changesOf(memberId)).toEqual([]);
   });
 
   it('answers 404 for an archived person', async () => {

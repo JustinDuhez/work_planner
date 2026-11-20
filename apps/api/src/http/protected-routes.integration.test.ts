@@ -3,20 +3,10 @@ import type { Kysely } from 'kysely';
 import { buildApp } from '../app';
 import type { Database } from '../db/database';
 import { TEST_ORIGIN } from '../test/auth-helpers';
+import { withSampleParams } from '../test/sample-params';
 import { createTestConfig } from '../test/test-config';
 import { createMigratedTestDb } from '../test/test-database';
 import { PUBLIC_API_ROUTES } from './protected-routes';
-
-const SAMPLE_PARAMS: Record<string, string> = {
-  id: '1',
-  userId: '1',
-  isoWeek: '2026-W45',
-  date: '2026-11-06',
-};
-
-function withSampleParams(url: string): string {
-  return url.replace(/:(\w+)/g, (_match, name: string) => SAMPLE_PARAMS[name] ?? '1');
-}
 
 describe('route protection', () => {
   let db: Kysely<Database>;
@@ -34,7 +24,11 @@ describe('route protection', () => {
   });
 
   it('knows the API routes it registered', () => {
-    expect(app.registeredApiRoutes.length).toBeGreaterThan(PUBLIC_API_ROUTES.size);
+    const routes = app.registeredApiRoutes.map(({ method, url }) => `${method} ${url}`);
+
+    expect(routes).toEqual(
+      expect.arrayContaining(['GET /api/v1/users', 'GET /api/v1/me', ...PUBLIC_API_ROUTES]),
+    );
   });
 
   it('answers 401 without a session on every API route except the public ones', async () => {

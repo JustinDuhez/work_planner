@@ -46,7 +46,15 @@ const admin: Actor = {
   managedUserIds: new Set(),
   directReportIds: new Set(),
 };
-const managerAndAdmin: Actor = { ...manager, id: 5, isAdmin: true };
+// No scope of their own: only the admin right can explain what they may do. (Archived or blocked
+// actors are refused by the API before the policy is asked.)
+const managerAndAdmin: Actor = {
+  ...manager,
+  id: 5,
+  isAdmin: true,
+  managedUserIds: new Set(),
+  directReportIds: new Set(),
+};
 
 type Relation = 'self' | 'direct report' | 'sub-team member' | 'outsider';
 
@@ -125,8 +133,12 @@ describe('canEditProfile', () => {
     expect(canEditProfile(collaborator, collaborator.id)).toBe(true);
   });
 
-  it("does not let even an admin edit someone else's profile here", () => {
-    expect(canEditProfile(admin, OUTSIDER_ID)).toBe(false);
+  it.each([
+    ['collaborator', collaborator],
+    ['manager', manager],
+    ['admin', admin],
+  ])("does not let a %s edit someone else's profile here", (_name, actor) => {
+    expect(canEditProfile(actor, DIRECT_REPORT_ID)).toBe(false);
   });
 });
 

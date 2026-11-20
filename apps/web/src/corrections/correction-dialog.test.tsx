@@ -246,6 +246,26 @@ describe('CorrectionDialog', () => {
     );
   });
 
+  it('offers no correction on a day the viewer cannot correct', async () => {
+    const week = weekFixture({
+      isoWeek: ISO_WEEK,
+      user: HUGO,
+      isOwnWeek: false,
+      days: { [TUESDAY]: { canCorrect: false } },
+    });
+    mockFetchRoutes({
+      ...signedInHomeRoutes(),
+      [`GET ${WEEK_URL}`]: { status: 200, body: week },
+    });
+    renderApp(`/pointage/${HUGO.id}?semaine=${ISO_WEEK}`);
+
+    const tuesday = await screen.findByRole('listitem', { name: /^MAR 3/ });
+
+    expect(
+      within(tuesday).queryByRole('button', { name: copy.corrections.correctDay }),
+    ).not.toBeInTheDocument();
+  });
+
   it("does not offer the manager the old quick close of someone else's day", async () => {
     renderHugoWeek();
 

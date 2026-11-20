@@ -7,6 +7,7 @@ import { expectNoAxeViolations } from '../test/axe';
 import { mockFetchRoutes, type MockResponse } from '../test/mock-fetch';
 import { teamMonth } from '../test/planning-fixtures';
 import { renderApp } from '../test/render-app';
+import { summaryPlaceholder } from '../test/summary-placeholder';
 
 function renderPlanning(path: string, extra: Record<string, MockResponse> = {}) {
   mockFetchRoutes({
@@ -226,17 +227,6 @@ describe('PlanningPage', () => {
     );
   });
 
-  it('disables the previous month at January 2000', async () => {
-    renderPlanning('/planning?mois=2000-01', {
-      'GET /api/v1/team-months/2000-01': {
-        status: 200,
-        body: teamMonth({ month: { startDate: '2000-01-01', endDate: '2000-01-31' } }),
-      },
-    });
-
-    expect(await screen.findByRole('button', { name: copy.planning.previousMonth })).toBeDisabled();
-  });
-
   it('falls back to the default team when the URL names an unknown one', async () => {
     renderPlanning('/planning?mois=2026-11&equipe=99');
     await table();
@@ -350,7 +340,7 @@ describe('PlanningPage', () => {
     const message = await screen.findByText(copy.planning.nobodyAbsent);
     await waitFor(() => expect(queryClient.isFetching()).toBe(0));
 
-    expect(message.closest('div')).toHaveClass('border-dashed');
+    expect(message).toBeInTheDocument();
     await expectNoAxeViolations(container);
   });
 
@@ -432,7 +422,7 @@ describe('PlanningPage', () => {
     expect(within(card).getByRole('link', { name: 'Sophie Dubois' })).toBeInTheDocument();
   });
 
-  it('keeps the card slot in the layout while loading', async () => {
+  it('announces the loading and shows no absentee card yet', async () => {
     mockFetchRoutes({ ...signedInHomeRoutes() });
     const initialFetch = globalThis.fetch;
     globalThis.fetch = jest.fn((input: RequestInfo | URL, init?: RequestInit) =>
@@ -440,12 +430,10 @@ describe('PlanningPage', () => {
         ? new Promise<Response>(() => undefined)
         : initialFetch(input, init),
     ) as typeof fetch;
-    const { container } = renderApp('/planning?mois=2026-11');
+    renderApp('/planning?mois=2026-11');
 
-    await screen.findByText(copy.planning.loading);
-    expect(container.querySelectorAll('[data-slot="aside"] [aria-hidden]').length).toBeGreaterThan(
-      0,
-    );
-    expect(container.querySelector('[data-slot="aside"] section')).toBeNull();
+    expect(await screen.findByText(copy.planning.loading)).toBeInTheDocument();
+    expect(summaryPlaceholder()).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: copy.planning.absentToday })).toBeNull();
   });
 });

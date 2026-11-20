@@ -143,10 +143,8 @@ describe('correction detail', () => {
 
     await user.click(within(dialog).getByRole('button', { name: copy.corrections.accept }));
 
-    // The dialog closes only after four invalidations and refetches, which can outlast the 1 s default under load.
-    await waitFor(() => expect(router.state.location.search).toBe(`?semaine=${ISO_WEEK}`), {
-      timeout: 3000,
-    });
+    // The dialog closes only after four invalidations and refetches, which can outlast the 1 s
+    // default under load: one longer wait on the visible outcome, then the URL follows at once.
     await waitFor(
       () =>
         expect(
@@ -154,6 +152,7 @@ describe('correction detail', () => {
         ).not.toBeInTheDocument(),
       { timeout: 3000 },
     );
+    expect(router.state.location.search).toBe(`?semaine=${ISO_WEEK}`);
   });
 
   it('shows the error and stays open when the answer fails', async () => {

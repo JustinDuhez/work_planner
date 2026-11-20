@@ -331,5 +331,20 @@ describe('user administration', () => {
         .executeTakeFirstOrThrow();
       expect(row.mustChangePassword).toBe(true);
     });
+
+    it('refuses a weak new password and keeps the person logged in', async () => {
+      const person = await newPerson();
+      await logIn(app, person.email);
+
+      const response = await send(ADMIN, 'PUT', `/api/v1/users/${person.id}/password`, {
+        newPassword: 'short',
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(
+        response.json<{ fieldErrors: Record<string, string> }>().fieldErrors.newPassword,
+      ).toBeDefined();
+      expect(await sessionCount(person.id)).toBe(1);
+    });
   });
 });

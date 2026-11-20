@@ -199,6 +199,61 @@ describe('clocking commands', () => {
       expect(response.json<{ code: string }>().code).toBe(code);
     });
 
+    it('accepts a period that starts exactly when another one ends', async () => {
+      const { session } = await newPerson();
+      await send(session, 'POST', '/api/v1/clock-periods', {
+        startedAt: '09:00',
+        endedAt: '12:00',
+      });
+
+      const response = await send(session, 'POST', '/api/v1/clock-periods', {
+        startedAt: '12:00',
+        endedAt: '13:00',
+      });
+
+      expect(response.statusCode).toBe(201);
+    });
+
+    it('refuses a running period started in the past inside another period', async () => {
+      const { session } = await newPerson();
+      await send(session, 'POST', '/api/v1/clock-periods', {
+        startedAt: '13:00',
+        endedAt: '14:00',
+      });
+
+      const response = await send(session, 'POST', '/api/v1/clock-periods', { startedAt: '13:30' });
+
+      expect(response.statusCode).toBe(409);
+      expect(response.json<{ code: string }>().code).toBe('CLOCK_PERIOD_OVERLAP');
+    });
+
+    it('refuses to move a period onto another one and leaves it unchanged', async () => {
+      const { session } = await newPerson();
+      await send(session, 'POST', '/api/v1/clock-periods', {
+        startedAt: '09:00',
+        endedAt: '12:00',
+      });
+      const second = (
+        await send(session, 'POST', '/api/v1/clock-periods', {
+          startedAt: '13:00',
+          endedAt: '14:00',
+        })
+      ).json<{ id: number }>();
+
+      const response = await send(session, 'PATCH', `/api/v1/clock-periods/${second.id}`, {
+        startedAt: '11:00',
+      });
+
+      expect(response.statusCode).toBe(409);
+      expect(response.json<{ code: string }>().code).toBe('CLOCK_PERIOD_OVERLAP');
+      const stored = await db
+        .selectFrom('clockPeriod')
+        .select('startedAt')
+        .where('id', '=', second.id)
+        .executeTakeFirstOrThrow();
+      expect(stored.startedAt.toISOString()).toBe('2026-11-06T12:00:00.000Z');
+    });
+
     it('refuses an end time without a start time, with a field message', async () => {
       const { session } = await newPerson();
 
@@ -295,6 +350,7 @@ describe('clocking commands', () => {
       });
 
       expect(response.statusCode).toBe(403);
+      expect(response.json<{ code: string }>().code).toBe('CLOCK_DAY_NOT_EDITABLE');
     });
 
     it("refuses to touch someone else's period of today", async () => {
@@ -304,16 +360,15 @@ describe('clocking commands', () => {
       }>();
       const other = await newPerson();
 
-      expect(
-        (await send(other.session, 'DELETE', `/api/v1/clock-periods/${period.id}`)).statusCode,
-      ).toBe(403);
-      expect(
-        (
-          await send(other.session, 'PATCH', `/api/v1/clock-periods/${period.id}`, {
-            endedAt: 'now',
-          })
-        ).statusCode,
-      ).toBe(403);
+      const deleted = await send(other.session, 'DELETE', `/api/v1/clock-periods/${period.id}`);
+      const patched = await send(other.session, 'PATCH', `/api/v1/clock-periods/${period.id}`, {
+        endedAt: 'now',
+      });
+
+      for (const response of [deleted, patched]) {
+        expect(response.statusCode).toBe(403);
+        expect(response.json<{ code: string }>().code).toBe('CLOCK_DAY_NOT_EDITABLE');
+      }
     });
 
     it('refuses a period id beyond the database integer range', async () => {
@@ -340,6 +395,7 @@ describe('clocking commands', () => {
       });
 
       expect(response.statusCode).toBe(403);
+      expect(response.json<{ code: string }>().code).toBe('CLOCK_DAY_NOT_EDITABLE');
     });
 
     it("refuses a manager editing their managed person's period of today", async () => {
@@ -355,6 +411,7 @@ describe('clocking commands', () => {
       });
 
       expect(response.statusCode).toBe(403);
+      expect(response.json<{ code: string }>().code).toBe('CLOCK_DAY_NOT_EDITABLE');
     });
 
     it('refuses to delete a period of a past day', async () => {
@@ -364,6 +421,7 @@ describe('clocking commands', () => {
       const response = await send(session, 'DELETE', `/api/v1/clock-periods/${periodId}`);
 
       expect(response.statusCode).toBe(403);
+      expect(response.json<{ code: string }>().code).toBe('CLOCK_DAY_NOT_EDITABLE');
     });
 
     it('answers 404 when deleting an unknown period', async () => {
@@ -486,6 +544,7 @@ describe('clocking commands', () => {
       });
 
       expect(response.statusCode).toBe(403);
+      expect(response.json<{ code: string }>().code).toBe('CLOCK_DAY_NOT_EDITABLE');
     });
   });
 });

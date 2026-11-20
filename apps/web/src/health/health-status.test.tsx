@@ -36,6 +36,14 @@ describe('HealthStatus', () => {
     expect(await screen.findByText(copy.health.unavailable)).toBeInTheDocument();
   });
 
+  it('tells the user the service is unavailable when the API cannot be reached', async () => {
+    globalThis.fetch = jest.fn(() => Promise.reject(new TypeError('Failed to fetch')));
+
+    renderWithQueryClient(<HealthStatus />);
+
+    expect(await screen.findByText(copy.health.unavailable)).toBeInTheDocument();
+  });
+
   it('shows a checking state while waiting for the answer', () => {
     globalThis.fetch = jest.fn(() => new Promise<Response>(() => undefined));
 

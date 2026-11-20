@@ -175,6 +175,57 @@ describe('team administration', () => {
       expect(underGrandchild.json<{ code: string }>().code).toBe('TEAM_CYCLE');
     });
 
+    it('moves a team under another team', async () => {
+      const newParentId = await insertTeam(db, { name: uniqueName() });
+      const teamId = await insertTeam(db, { name: uniqueName() });
+
+      const response = await send(ADMIN, 'PATCH', `/api/v1/teams/${teamId}`, {
+        parentTeamId: newParentId,
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json<{ parentTeamId: number | null }>().parentTeamId).toBe(newParentId);
+      const stored = await db
+        .selectFrom('team')
+        .select('parentTeamId')
+        .where('id', '=', teamId)
+        .executeTakeFirstOrThrow();
+      expect(stored.parentTeamId).toBe(newParentId);
+    });
+
+    it('refuses to rename a team to a name already used', async () => {
+      const name = uniqueName();
+      await insertTeam(db, { name });
+      const teamId = await insertTeam(db, { name: uniqueName() });
+
+      const response = await send(ADMIN, 'PATCH', `/api/v1/teams/${teamId}`, { name });
+
+      expect(response.statusCode).toBe(409);
+      expect(response.json<{ code: string }>().code).toBe('TEAM_NAME_TAKEN');
+    });
+
+    it('refuses an archived manager when editing', async () => {
+      const teamId = await insertTeam(db, { name: uniqueName() });
+
+      const response = await send(ADMIN, 'PATCH', `/api/v1/teams/${teamId}`, {
+        managerId: archivedId,
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json<{ code: string }>().code).toBe('TEAM_INVALID_PERSON');
+    });
+
+    it('answers 404 when moving a team under an unknown parent', async () => {
+      const teamId = await insertTeam(db, { name: uniqueName() });
+
+      const response = await send(ADMIN, 'PATCH', `/api/v1/teams/${teamId}`, {
+        parentTeamId: 999999,
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(response.json<{ code: string }>().code).toBe('TEAM_NOT_FOUND');
+    });
+
     it('moves a team to the top level', async () => {
       const parentId = await insertTeam(db, { name: uniqueName() });
       const childId = await insertTeam(db, { name: uniqueName(), parentTeamId: parentId });
@@ -223,14 +274,21 @@ describe('team administration', () => {
     });
 
     it('changes only the members when nothing else is sent', async () => {
-      const teamId = await insertTeam(db, { name: uniqueName(), managerId: sophieId });
+      const name = uniqueName();
+      const parentId = await insertTeam(db, { name: uniqueName() });
+      const teamId = await insertTeam(db, { name, parentTeamId: parentId, managerId: sophieId });
 
       const response = await send(ADMIN, 'PATCH', `/api/v1/teams/${teamId}`, {
         memberIds: [leaId],
       });
 
       expect(response.statusCode).toBe(200);
-      expect(response.json<{ manager: { id: number } }>().manager.id).toBe(sophieId);
+      expect(response.json<unknown>()).toMatchObject({
+        name,
+        parentTeamId: parentId,
+        manager: { id: sophieId },
+      });
+      expect(await memberIdsOf(teamId)).toEqual([leaId]);
     });
 
     it('clears the manager', async () => {

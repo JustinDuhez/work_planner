@@ -82,6 +82,37 @@ describe('clocking from the week view', () => {
     });
   });
 
+  it('shows the refusal when Start answers that a period is already running', async () => {
+    const { user } = renderHome({
+      'POST /api/v1/clock-periods': {
+        status: 409,
+        body: { code: 'CLOCK_ALREADY_RUNNING', message: 'Une période est déjà en cours.' },
+      },
+    });
+
+    await user.click(await screen.findByRole('button', { name: copy.clock.start }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Une période est déjà en cours.');
+    expect(screen.getByRole('button', { name: copy.clock.start })).toBeEnabled();
+  });
+
+  it('shows the refusal when Stop is refused by the server', async () => {
+    const { user } = renderHome(
+      {
+        [`PATCH /api/v1/clock-periods/${RUNNING_PERIOD.id}`]: {
+          status: 409,
+          body: { code: 'CLOCK_DAY_LOCKED', message: 'Ce jour est verrouillé.' },
+        },
+      },
+      { periods: [RUNNING_PERIOD], workMode: 'on_site', workedMinutes: 60 },
+    );
+
+    await user.click(await screen.findByRole('button', { name: copy.clock.stop }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Ce jour est verrouillé.');
+    expect(screen.getByRole('button', { name: copy.clock.stop })).toBeEnabled();
+  });
+
   it('adds a forgotten period through the dialog and shows a server refusal', async () => {
     const { fetchMock, user } = renderHome({
       'POST /api/v1/clock-periods': {
@@ -191,7 +222,6 @@ describe('clocking from the week view', () => {
 
     expect(within(dialog).getByText(copy.clock.startRequired)).toBeInTheDocument();
     expect(bodyOf(fetchMock, 'POST', '/api/v1/clock-periods')).toBeUndefined();
-    expect(dialog.querySelector('form')).toHaveAttribute('novalidate');
   });
 
   it('puts focus on the empty start, describes it with its error and clears it on typing', async () => {

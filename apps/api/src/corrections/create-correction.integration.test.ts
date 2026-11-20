@@ -72,6 +72,27 @@ describe('creating a correction', () => {
       .execute();
   }
 
+  // A refused correction must leave the worked day, the corrections and the notifications as they were.
+  async function expectNothingChanged(userId: number, send: () => Promise<unknown>) {
+    const countRows = async () => ({
+      periods: await periodsOf(userId),
+      corrections: await db
+        .selectFrom('clockCorrection')
+        .select('id')
+        .where('userId', '=', userId)
+        .execute(),
+      notifications: await db
+        .selectFrom('notification')
+        .select('id')
+        .where('userId', '=', userId)
+        .execute(),
+    });
+    const before = await countRows();
+    await send();
+    expect(await countRows()).toEqual(before);
+    expect(before.periods).not.toEqual([]);
+  }
+
   beforeAll(async () => {
     db = await createMigratedTestDb();
     const managerId = await insertUser(db, {
@@ -264,25 +285,50 @@ describe('creating a correction', () => {
     ['a future day', '2026-11-10'],
   ])('refuses to correct %s', async (_what, date) => {
     const memberId = await newMember();
+    const day = await db
+      .insertInto('clockDay')
+      .values({ userId: memberId, workDate: date, workMode: 'telework' })
+      .returning('id')
+      .executeTakeFirstOrThrow();
+    await insertClockPeriod(db, {
+      clockDayId: day.id,
+      startedAt: new Date(`${date}T07:00:00Z`),
+      endedAt: new Date(`${date}T08:00:00Z`),
+    });
+    const rows = () =>
+      db
+        .selectFrom('clockPeriod')
+        .select(['clockDayId', 'startedAt', 'endedAt'])
+        .where('clockDayId', '=', day.id)
+        .execute();
+    const periodsBefore = await rows();
 
     const response = await correct(MANAGER, dayOf(memberId, { date, periods: [] }));
 
     expect(response.statusCode).toBe(400);
     expect(response.json<{ code: string }>().code).toBe('CLOCK_CORRECTION_DAY_NOT_PAST');
+    expect(await rows()).toEqual(periodsBefore);
+    expect(
+      await db.selectFrom('clockCorrection').select('id').where('userId', '=', memberId).execute(),
+    ).toEqual([]);
   });
 
   it('points at the faulty period with the E3 message', async () => {
     const memberId = await newMember();
+    await workedDay(memberId, [['2026-11-03T08:00:00Z', '2026-11-03T11:00:00Z']]);
+    let response!: Awaited<ReturnType<typeof correct>>;
 
-    const response = await correct(
-      MANAGER,
-      dayOf(memberId, {
-        periods: [
-          { startedAt: '09:00', endedAt: '12:00' },
-          { startedAt: '11:00', endedAt: '13:00' },
-        ],
-      }),
-    );
+    await expectNothingChanged(memberId, async () => {
+      response = await correct(
+        MANAGER,
+        dayOf(memberId, {
+          periods: [
+            { startedAt: '09:00', endedAt: '12:00' },
+            { startedAt: '11:00', endedAt: '13:00' },
+          ],
+        }),
+      );
+    });
 
     expect(response.statusCode).toBe(400);
     expect(response.json<unknown>()).toMatchObject({
@@ -325,8 +371,12 @@ describe('creating a correction', () => {
 
   it('refuses an impossible date', async () => {
     const memberId = await newMember();
+    await workedDay(memberId, [['2026-11-03T08:00:00Z', '2026-11-03T11:00:00Z']]);
+    let response!: Awaited<ReturnType<typeof correct>>;
 
-    const response = await correct(MANAGER, dayOf(memberId, { date: '2026-02-30', periods: [] }));
+    await expectNothingChanged(memberId, async () => {
+      response = await correct(MANAGER, dayOf(memberId, { date: '2026-02-30', periods: [] }));
+    });
 
     expect(response.statusCode).toBe(400);
     expect(response.json<{ fieldErrors: Record<string, string> }>().fieldErrors.date).toBeDefined();

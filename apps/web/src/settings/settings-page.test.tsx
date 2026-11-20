@@ -5,6 +5,7 @@ import { expectNoAxeViolations } from '../test/axe';
 import { signedInHomeRoutes } from '../test/clock-fixtures';
 import { mockFetchRoutes, type MockResponse } from '../test/mock-fetch';
 import { renderApp } from '../test/render-app';
+import { summaryPlaceholder } from '../test/summary-placeholder';
 import { SIGNED_IN_SESSION } from '../test/sessions';
 
 const ADMIN_SESSION = {
@@ -82,28 +83,15 @@ describe('SettingsPage', () => {
     await expectNoAxeViolations(container);
   });
 
-  it('holds the title and the year in the bar', async () => {
-    const { container } = renderSettings();
-    await screen.findByText('Armistice 1918');
-
-    const bar = container.querySelector('.top-14') as HTMLElement;
-    expect(within(bar).getByRole('heading', { name: copy.settings.title })).toBeInTheDocument();
-    expect(within(bar).getByText('2026')).toBeInTheDocument();
-    expect(
-      within(bar).getByRole('button', { name: copy.settings.previousYear }),
-    ).toBeInTheDocument();
-  });
-
-  it('shows the year start as a big stat in the side card', async () => {
-    const { container } = renderSettings();
+  it('shows the year start as a stat, with no form until edited', async () => {
+    renderSettings();
 
     const card = await screen.findByRole('region', { name: copy.settings.yearStartTitle });
-    expect(container.querySelector('[data-slot="aside"]')).toContainElement(card);
     expect(within(card).getByText('1 juillet')).toBeInTheDocument();
     expect(within(card).queryByLabelText(copy.settings.yearStartMonth)).not.toBeInTheDocument();
   });
 
-  it('keeps the side card placeholder while the year start loads', async () => {
+  it('announces the loading and shows no year start card yet', async () => {
     mockFetchRoutes({
       ...signedInHomeRoutes(),
       'GET /api/v1/me': { status: 200, body: ADMIN_SESSION },
@@ -115,23 +103,11 @@ describe('SettingsPage', () => {
         ? new Promise<Response>(() => undefined)
         : initialFetch(input, init),
     ) as typeof fetch;
-    const { container } = renderApp('/parametres?annee=2026');
+    renderApp('/parametres?annee=2026');
 
-    await waitFor(() =>
-      expect(
-        container.querySelectorAll('[data-slot="aside"] [aria-hidden]').length,
-      ).toBeGreaterThan(0),
-    );
-    expect(container.querySelector('[data-slot="aside"] section')).toBeNull();
-  });
-
-  it('keeps the import action inside the holidays section', async () => {
-    renderSettings();
-
-    const section = await screen.findByRole('region', { name: copy.settings.holidaysTitle });
-    expect(
-      within(section).getByRole('button', { name: 'Importer les jours fériés français 2026' }),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(copy.settings.loading)).toBeInTheDocument();
+    expect(summaryPlaceholder()).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: copy.settings.yearStartTitle })).toBeNull();
   });
 
   it('offers a retry when the holidays cannot be loaded', async () => {
@@ -236,11 +212,26 @@ describe('SettingsPage', () => {
     const row = await screen.findByRole('listitem', { name: /Armistice 1918/ });
 
     await user.click(within(row).getByRole('button', { name: copy.settings.deleteHoliday }));
+    expect(findCall(fetchMock, 'DELETE', '/api/v1/public-holidays/2026-11-11')).toBeUndefined();
     await user.click(within(row).getByRole('button', { name: copy.settings.confirmDelete }));
 
     await waitFor(() =>
       expect(findCall(fetchMock, 'DELETE', '/api/v1/public-holidays/2026-11-11')).toBeDefined(),
     );
+  });
+
+  it('keeps the holiday and sends nothing when the deletion is cancelled', async () => {
+    const { user, fetchMock } = renderSettings();
+    const row = await screen.findByRole('listitem', { name: /Armistice 1918/ });
+
+    await user.click(within(row).getByRole('button', { name: copy.settings.deleteHoliday }));
+    await user.click(within(row).getByRole('button', { name: copy.settings.cancel }));
+
+    expect(
+      within(row).queryByRole('button', { name: copy.settings.confirmDelete }),
+    ).not.toBeInTheDocument();
+    expect(within(row).getByRole('button', { name: copy.settings.deleteHoliday })).toBeVisible();
+    expect(findCall(fetchMock, 'DELETE', '/api/v1/public-holidays/2026-11-11')).toBeUndefined();
   });
 
   it('saves the year start', async () => {

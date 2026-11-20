@@ -45,6 +45,15 @@ describe('correctionPeriodsOf', () => {
     });
   });
 
+  it('points at the end of a period that ends exactly when it starts', () => {
+    const result = correctionPeriodsOf(DAY, [{ startedAt: '09:00', endedAt: '09:00' }], CONTEXT);
+
+    expect(result).toEqual({
+      isValid: false,
+      problem: { violation: 'CLOCK_END_BEFORE_START', periodIndex: 0, field: 'endedAt' },
+    });
+  });
+
   it('points at the start of the later period of an overlap, whatever the order sent', () => {
     const result = correctionPeriodsOf(
       DAY,

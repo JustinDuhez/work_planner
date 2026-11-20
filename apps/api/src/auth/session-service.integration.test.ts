@@ -99,20 +99,30 @@ describe('session service', () => {
     expect(await resolveSession(deps, token)).not.toBeNull();
   });
 
+  it('keeps a session one minute before the eight-hour idle limit', async () => {
+    const userId = await newUser();
+    const { token } = await createSession(deps, userId);
+
+    clock.advanceBy(SESSION_IDLE_TIMEOUT_IN_MILLISECONDS - ONE_MINUTE_IN_MILLISECONDS);
+
+    expect(await resolveSession(deps, token)).not.toBeNull();
+  });
+
   it('ends a session after seven days even if the user is active every few hours', async () => {
     const userId = await newUser();
     const { token } = await createSession(deps, userId);
 
-    let elapsedInMilliseconds = 0;
-    while (
-      elapsedInMilliseconds + SIX_HOURS_IN_MILLISECONDS <
-      SESSION_ABSOLUTE_LIFETIME_IN_MILLISECONDS
-    ) {
-      clock.advanceBy(SIX_HOURS_IN_MILLISECONDS);
-      elapsedInMilliseconds += SIX_HOURS_IN_MILLISECONDS;
-      expect(await resolveSession(deps, token)).not.toBeNull();
+    // Active every six hours up to one minute before the limit: still alive there...
+    const lastActivity = SESSION_ABSOLUTE_LIFETIME_IN_MILLISECONDS - ONE_MINUTE_IN_MILLISECONDS;
+    for (let elapsed = 0; elapsed < lastActivity;) {
+      const step = Math.min(SIX_HOURS_IN_MILLISECONDS, lastActivity - elapsed);
+      clock.advanceBy(step);
+      elapsed += step;
+      await resolveSession(deps, token);
     }
-    clock.advanceBy(SESSION_ABSOLUTE_LIFETIME_IN_MILLISECONDS - elapsedInMilliseconds);
+    expect(await resolveSession(deps, token)).not.toBeNull();
+    // ...and gone once the seven days are over, however recent the activity.
+    clock.advanceBy(ONE_MINUTE_IN_MILLISECONDS);
 
     expect(await resolveSession(deps, token)).toBeNull();
   });

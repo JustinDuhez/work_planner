@@ -188,15 +188,27 @@ describe('managing users', () => {
     expect(findCall(fetchMock, 'PATCH', '/api/v1/users/9/working-time')).toBeUndefined();
   });
 
-  it('shows a manager only the daily time of their team member', async () => {
-    const { user } = renderAsViewer([TEAMMATE]);
+  it('shows a manager only the daily time of their team member, with no identity or access', async () => {
+    const { user, fetchMock } = renderAsViewer([TEAMMATE], {
+      'PATCH /api/v1/users/12/working-time': { status: 200, body: TEAMMATE },
+    });
     const dialog = await openManage(user, /Camille Simon/);
 
-    expect(
-      within(dialog).queryByRole('heading', { name: copy.manageUser.identityTitle }),
-    ).not.toBeInTheDocument();
+    for (const title of [copy.manageUser.identityTitle, copy.manageUser.accessTitle]) {
+      expect(within(dialog).queryByRole('heading', { name: title })).not.toBeInTheDocument();
+    }
+    for (const action of [copy.manageUser.block, copy.manageUser.archive]) {
+      expect(within(dialog).queryByRole('button', { name: action })).not.toBeInTheDocument();
+    }
     expect(within(dialog).queryByLabelText(copy.manageUser.startDate)).not.toBeInTheDocument();
-    expect(within(dialog).getByLabelText(copy.manageUser.dailyTime)).toBeInTheDocument();
+    const duration = within(dialog).getByLabelText(copy.manageUser.dailyTime);
+    await user.clear(duration);
+    await user.type(duration, '6:00');
+    await user.click(within(dialog).getByRole('button', { name: copy.manageUser.saveWorkingTime }));
+
+    expect(await sentBody(fetchMock, 'PATCH', '/api/v1/users/12/working-time')).toEqual({
+      dailyMinutes: 360,
+    });
   });
 
   it('creates a user from the toolbar', async () => {
@@ -244,10 +256,10 @@ describe('managing users', () => {
       'GET /api/v1/users?archived=true': { status: 200, body: [archivedHugo] },
       'PATCH /api/v1/users/9': { status: 200, body: archivedHugo },
     });
-    const fetchMock = mockFetchRoutes(routes([HUGO]));
+    mockFetchRoutes(routes([HUGO]));
     const initialFetch = globalThis.fetch;
+    // Once the archive request is sent, the active list no longer holds Hugo.
     globalThis.fetch = jest.fn((input: RequestInfo | URL, init?: RequestInit) => {
-      // Once the archive request is sent, the active list no longer holds Hugo.
       if (init?.method === 'PATCH') mockFetchRoutes(routes([]));
       return initialFetch(input, init);
     }) as typeof fetch;
@@ -262,7 +274,6 @@ describe('managing users', () => {
 
     expect(await screen.findByRole('row', { name: /Hugo Laurent/ })).toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalled();
   });
 
   it('sends nothing when the working time form is unchanged', async () => {

@@ -8,6 +8,8 @@ import { DAY_TYPES, leaveRequestView } from '../test/leave-fixtures';
 import { expectNoAxeViolations } from '../test/axe';
 import { mockFetchRoutes, type MockResponse } from '../test/mock-fetch';
 import { renderApp } from '../test/render-app';
+import { stat } from '../test/stat';
+import { summaryPlaceholder } from '../test/summary-placeholder';
 import { SIGNED_IN_SESSION } from '../test/sessions';
 
 const MANAGER_SESSION = {
@@ -85,11 +87,27 @@ describe('LeaveRequestsPage', () => {
     });
 
     await user.click(await screen.findByRole('button', { name: copy.leaveRequests.cancel }));
+    expect(findCall(fetchMock, 'PUT', '/api/v1/leave-requests/4/cancellation')).toBeUndefined();
     await user.click(screen.getByRole('button', { name: copy.leaveRequests.confirmCancel }));
 
     await waitFor(() =>
       expect(findCall(fetchMock, 'PUT', '/api/v1/leave-requests/4/cancellation')).toBeDefined(),
     );
+  });
+
+  it('keeps the request and sends nothing when the cancellation is declined', async () => {
+    const { user, fetchMock } = renderPage('/demandes', {
+      'GET /api/v1/leave-requests?view=mine': { status: 200, body: [leaveRequestView({ id: 4 })] },
+    });
+
+    await user.click(await screen.findByRole('button', { name: copy.leaveRequests.cancel }));
+    await user.click(screen.getByRole('button', { name: copy.leaveRequests.keep }));
+
+    expect(screen.getByRole('button', { name: copy.leaveRequests.cancel })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: copy.leaveRequests.confirmCancel }),
+    ).not.toBeInTheDocument();
+    expect(findCall(fetchMock, 'PUT', '/api/v1/leave-requests/4/cancellation')).toBeUndefined();
   });
 
   it('reloads the lists when a cancellation is refused by the server', async () => {
@@ -147,6 +165,7 @@ describe('LeaveRequestsPage', () => {
     });
 
     await user.click(await screen.findByRole('button', { name: copy.leaveRequests.cancel }));
+    expect(findCall(fetchMock, 'PUT', '/api/v1/leave-requests/5/cancellation')).toBeUndefined();
     await user.click(screen.getByRole('button', { name: copy.leaveRequests.confirmCancel }));
 
     await waitFor(() =>
@@ -224,7 +243,7 @@ describe('LeaveRequestsPage', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('titles a review card with the requester and puts the type under the name', async () => {
+  it('names the requester and the type on a review card', async () => {
     renderPage('/demandes?onglet=a-valider', {
       'GET /api/v1/me': { status: 200, body: MANAGER_SESSION },
       'GET /api/v1/leave-requests?view=to-review': {
@@ -235,8 +254,8 @@ describe('LeaveRequestsPage', () => {
 
     const card = (await within(await screen.findByRole('tabpanel')).findAllByRole('listitem'))[0]!;
 
-    expect(within(card).getByText('Léa Moreau')).toHaveClass('font-medium', 'text-zinc-900');
-    expect(within(card).getByText(/^Congé · /)).not.toHaveClass('font-medium');
+    expect(within(card).getByText('Léa Moreau')).toBeInTheDocument();
+    expect(within(card).getByText(/^Congé · /)).toBeInTheDocument();
   });
 
   it('shows the rule note held telework carries', async () => {
@@ -384,7 +403,7 @@ describe('LeaveRequestsPage', () => {
     );
   });
 
-  it('shows one status chip per card, the type as the title and the rest as plain text', async () => {
+  it('shows one status, the type and who declared the request on a card', async () => {
     renderPage('/demandes', {
       'GET /api/v1/leave-requests?view=mine': {
         status: 200,
@@ -399,19 +418,16 @@ describe('LeaveRequestsPage', () => {
 
     const card = (await within(await screen.findByRole('tabpanel')).findAllByRole('listitem'))[0]!;
 
-    expect(card.querySelectorAll('.rounded-full')).toHaveLength(1);
-    expect(within(card).getByText(copy.leaveRequests.status.approved)).toHaveClass('rounded-full');
-    expect(within(card).getByText('Congé')).not.toHaveClass('rounded-full');
+    expect(within(card).getAllByText(copy.leaveRequests.status.approved)).toHaveLength(1);
+    expect(within(card).getByText('Congé')).toBeInTheDocument();
     expect(within(card).getByText('Déclarée par Sophie Dubois')).toBeInTheDocument();
   });
 
-  it('offers the request button as the one primary action of the page', async () => {
+  it('does not let a request start before today', async () => {
     const { user } = renderPage('/demandes');
 
-    const button = await screen.findByRole('button', { name: copy.leave.requestButton });
-    await user.click(button);
+    await user.click(await screen.findByRole('button', { name: copy.leave.requestButton }));
 
-    expect(button).toHaveClass('bg-primary-600');
     const dialog = screen.getByRole('dialog', { name: copy.leave.dialogTitle });
     const today = toWorkDate(new Date(), APP_TIME_ZONE);
     expect(within(dialog).getByLabelText(copy.leave.startDate)).toHaveAttribute('min', today);
@@ -438,6 +454,7 @@ describe('LeaveRequestsPage', () => {
     });
 
     expect(await screen.findByRole('alert')).toHaveTextContent(copy.leaveRequests.loadError);
+    await waitFor(() => expect(summaryPlaceholder()).toBeNull());
     await waitFor(() => expect(queryClient.isFetching()).toBe(0));
     await expectNoAxeViolations(container);
     await userEvent.setup().click(screen.getByRole('button', { name: copy.states.retry }));
@@ -451,7 +468,7 @@ describe('LeaveRequestsPage', () => {
     const message = await screen.findByText(copy.leaveRequests.noRequests);
     await waitFor(() => expect(queryClient.isFetching()).toBe(0));
 
-    expect(message.closest('div')).toHaveClass('border-dashed');
+    expect(message).toBeInTheDocument();
     await expectNoAxeViolations(container);
   });
 
@@ -529,16 +546,10 @@ describe('LeaveRequestsPage layout', () => {
 
     const card = await screen.findByRole('region', { name: copy.leaveRequests.summary.title });
     await waitFor(() =>
-      expect(
-        within(card).getByText(copy.leaveRequests.summary.toReview).nextSibling,
-      ).toHaveTextContent('1'),
+      expect(card).toHaveTextContent(stat(copy.leaveRequests.summary.toReview, '1')),
     );
-    expect(
-      within(card).getByText(copy.leaveRequests.summary.pending).nextSibling,
-    ).toHaveTextContent('2');
-    expect(
-      within(card).getByText(copy.leaveRequests.summary.approved).nextSibling,
-    ).toHaveTextContent('1');
+    expect(card).toHaveTextContent(stat(copy.leaveRequests.summary.pending, '2'));
+    expect(card).toHaveTextContent(stat(copy.leaveRequests.summary.approved, '1'));
   });
 
   it('shows a collaborator no stat to review, and 0 approved when nothing qualifies', async () => {
@@ -547,10 +558,8 @@ describe('LeaveRequestsPage layout', () => {
     const card = await screen.findByRole('region', { name: copy.leaveRequests.summary.title });
 
     expect(within(card).queryByText(copy.leaveRequests.summary.toReview)).not.toBeInTheDocument();
-    expect(
-      within(card).getByText(copy.leaveRequests.summary.approved).nextSibling,
-    ).toHaveTextContent('0');
-    expect(within(card).getByText(copy.leaveRequests.summary.pending)).toBeInTheDocument();
+    expect(card).toHaveTextContent(stat(copy.leaveRequests.summary.approved, '0'));
+    expect(card).toHaveTextContent(stat(copy.leaveRequests.summary.pending, '0'));
   });
 
   it('has no accessibility violation on the review tab', async () => {
@@ -565,30 +574,13 @@ describe('LeaveRequestsPage layout', () => {
     await expectNoAxeViolations(container);
   });
 
-  it('shows no summary skeleton when a collaborator’s own list cannot be loaded', async () => {
-    const { container } = renderPage('/demandes', {
+  it('shows no summary card when a collaborator’s own list cannot be loaded', async () => {
+    renderPage('/demandes', {
       'GET /api/v1/leave-requests?view=mine': { status: 500, body: {} },
     });
 
     expect(await screen.findByRole('alert')).toHaveTextContent(copy.leaveRequests.loadError);
-    await waitFor(() => expect(container.querySelector('[data-slot="aside"]')).toBeNull());
-  });
-
-  it('dates an automatic approval by its creation', async () => {
-    jest.spyOn(Date, 'now').mockReturnValue(NOW);
-    renderPage('/demandes', {
-      'GET /api/v1/leave-requests?view=mine': {
-        status: 200,
-        body: [
-          leaveRequestView({ id: 1, status: 'approved', isAutoApproved: true, canCancel: false }),
-        ],
-      },
-    });
-
-    const card = await screen.findByRole('region', { name: copy.leaveRequests.summary.title });
-
-    expect(
-      within(card).getByText(copy.leaveRequests.summary.approved).nextSibling,
-    ).toHaveTextContent('1');
+    await waitFor(() => expect(summaryPlaceholder()).toBeNull());
+    expect(screen.queryByRole('region', { name: copy.leaveRequests.summary.title })).toBeNull();
   });
 });

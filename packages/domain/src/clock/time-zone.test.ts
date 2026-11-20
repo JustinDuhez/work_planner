@@ -28,6 +28,9 @@ describe('toWorkDate', () => {
     ['winter, at Paris midnight', '2026-11-06T23:00:00Z', '2026-11-07'],
     ['summer, one minute before Paris midnight', '2026-07-01T21:59:00Z', '2026-07-01'],
     ['summer, at Paris midnight', '2026-07-01T22:00:00Z', '2026-07-02'],
+    ['spring clock-change night, at Paris midnight', '2026-03-28T23:00:00Z', '2026-03-29'],
+    ['autumn clock-change night, at Paris midnight', '2026-10-24T22:00:00Z', '2026-10-25'],
+    ['autumn clock-change day, last minute', '2026-10-25T22:59:00Z', '2026-10-25'],
   ])('gives the Paris day %s', (_description, instant, expected) => {
     expect(toWorkDate(new Date(instant), PARIS)).toBe(expected);
   });

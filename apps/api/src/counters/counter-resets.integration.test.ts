@@ -107,6 +107,15 @@ describe('counter resets', () => {
       expect(response.json<{ resetDate: string }>().resetDate).toBe('2026-11-06');
     });
 
+    it('accepts a reset dated exactly the start date', async () => {
+      const memberId = await newMember();
+
+      const response = await postReset(managerEmail, memberId, { resetDate: '2026-10-19' });
+
+      expect(response.statusCode).toBe(201);
+      expect(response.json<{ resetDate: string }>().resetDate).toBe('2026-10-19');
+    });
+
     it('makes the week count from the new reset', async () => {
       const memberId = await newMember();
       await postReset(managerEmail, memberId, { resetDate: '2026-11-04' });
@@ -202,17 +211,18 @@ describe('counter resets', () => {
   });
 
   describe('the reset history', () => {
-    it('lists the resets newest first for a manager', async () => {
+    it('lists the resets most recently created first for a manager', async () => {
       const memberId = await newMember();
-      await postReset(managerEmail, memberId, { resetDate: '2026-11-03' });
+      // The earlier date is recorded last: the list follows creation, not the reset date.
       await postReset(managerEmail, memberId, { resetDate: '2026-11-05' });
+      await postReset(managerEmail, memberId, { resetDate: '2026-11-03' });
 
       const response = await getResets(managerEmail, memberId);
 
       expect(response.statusCode).toBe(200);
       expect(response.json<{ resetDate: string }[]>().map((reset) => reset.resetDate)).toEqual([
-        '2026-11-05',
         '2026-11-03',
+        '2026-11-05',
       ]);
     });
 

@@ -3,6 +3,7 @@ import type { Kysely } from 'kysely';
 import { buildApp } from '../app';
 import type { Database } from '../db/database';
 import { logIn, TEST_ORIGIN } from '../test/auth-helpers';
+import { holdRowLock } from '../test/hold-row-lock';
 import { insertUser } from '../test/fixtures';
 import { createTestClock } from '../test/test-clock';
 import { createTestConfig } from '../test/test-config';
@@ -43,16 +44,19 @@ describe('the last active admin', () => {
         payload: { isAdmin: false },
       });
 
-    const responses = await Promise.all([demote(first, secondId), demote(second, firstId)]);
+    // Both demotions are stuck on the admin rows until released, then run one after the other.
+    const responses = await holdRowLock(db, [firstId, secondId], () => [
+      demote(first, secondId),
+      demote(second, firstId),
+    ]);
     const admins = await db
       .selectFrom('appUser')
       .select('id')
       .where('isAdmin', '=', true)
       .execute();
 
-    // The later one is refused: 409 when both passed authentication, 401 when the first
-    // demotion had already ended the second admin's sessions.
-    expect(responses.filter((response) => response.statusCode === 200)).toHaveLength(1);
+    // The later one re-reads the admins under the lock and is no longer one: refused.
+    expect(responses.map((response) => response.statusCode).sort()).toEqual([200, 403]);
     expect(admins).toHaveLength(1);
   });
 });

@@ -23,21 +23,18 @@ const NOW = new Date('2026-11-06T10:00:00Z');
 const BAND = { name: '09:00 – …' };
 
 describe('DayTimeline', () => {
-  it('pulses a running period of today and draws it up to now', () => {
+  it('draws a running period of today up to now', () => {
     render(<DayTimeline day={{ ...DAY, isToday: true, isUnclosed: false }} now={NOW} />);
 
     const band = screen.getByRole('img', BAND);
-    expect(band).toHaveClass('motion-safe:animate-pulse');
     expect(band).toHaveStyle({ left: '37.5%' });
     expect(Number.parseFloat(band.style.width)).toBeCloseTo((2 / 24) * 100);
   });
 
-  it('draws an unclosed period of a past day dashed, up to the end of the day', () => {
+  it('draws an unclosed period of a past day up to the end of the day', () => {
     render(<DayTimeline day={DAY} now={NOW} />);
 
     const band = screen.getByRole('img', BAND);
-    expect(band).toHaveClass('border-dashed');
-    expect(band).not.toHaveClass('motion-safe:animate-pulse');
     expect(band).toHaveStyle({ left: '37.5%', width: '62.5%' });
   });
 

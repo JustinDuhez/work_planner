@@ -53,6 +53,15 @@ describe('expandWorkableHalfDays', () => {
     ]);
   });
 
+  it('gives nothing for a single day on a public holiday', () => {
+    expect(
+      expandWorkableHalfDays(
+        { startDate: '2026-11-11', startHalf: 'am', endDate: '2026-11-11', endHalf: 'pm' },
+        new Set(['2026-11-11']),
+      ),
+    ).toEqual([]);
+  });
+
   it('gives nothing for a weekend only', () => {
     expect(
       expandWorkableHalfDays(

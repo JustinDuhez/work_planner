@@ -12,15 +12,13 @@ function renderCard(counters: Partial<WeekCounters>, now = new Date(SERVER_NOW))
   render(<CountersCard week={week} now={now} />);
 }
 
-const FLASH = 'motion-safe:animate-[value-flash_600ms_ease-out]';
-
 describe('CountersCard', () => {
   it("shows the week's worked time, target and gap", () => {
     renderCard({ weekCountedWorkedMinutes: 1880, weekTargetMinutes: 2100, weekGapMinutes: -100 });
 
     expect(screen.getByText('31:20')).toBeInTheDocument();
     expect(screen.getByText('35:00')).toBeInTheDocument();
-    expect(screen.getByText('−1:40')).toHaveClass('text-amber-700');
+    expect(screen.getByText('−1:40')).toHaveAttribute('data-tone', 'negative');
   });
 
   it('shows the week and global balances as two labelled stats', () => {
@@ -28,10 +26,10 @@ describe('CountersCard', () => {
 
     const weekStat = screen.getByRole('region', { name: copy.counters.weekTitle });
     expect(within(weekStat).getByText('Semaine')).toBeInTheDocument();
-    expect(within(weekStat).getByText('−1:40')).toHaveClass('text-3xl');
+    expect(within(weekStat).getByText('−1:40')).toBeInTheDocument();
     const globalStat = screen.getByRole('region', { name: copy.counters.globalTitle });
     expect(within(globalStat).getByText('Solde global')).toBeInTheDocument();
-    expect(within(globalStat).getByText('+4:15')).toHaveClass('text-3xl');
+    expect(within(globalStat).getByText('+4:15')).toBeInTheDocument();
     // "Semaine" already names the value: no second "week gap" label.
     expect(screen.queryByText(/Écart/)).not.toBeInTheDocument();
   });
@@ -39,23 +37,24 @@ describe('CountersCard', () => {
   it('highlights a balance when the server answers a new value', () => {
     const now = new Date(SERVER_NOW);
     const before = {
-      ...weekFixture({ counters: { globalGapMinutes: 255 } }),
+      ...weekFixture({ counters: { globalGapMinutes: 255, weekGapMinutes: -10 } }),
       serverNow: SERVER_NOW,
     };
     const after = {
-      ...weekFixture({ counters: { globalGapMinutes: 300 } }),
+      ...weekFixture({ counters: { globalGapMinutes: 300, weekGapMinutes: -10 } }),
       serverNow: SERVER_NOW,
     };
     const { rerender } = render(<CountersCard week={before} now={now} />);
-    expect(screen.getByText('+4:15')).not.toHaveClass(FLASH);
+    expect(screen.getByText('+4:15')).toHaveAttribute('data-highlighted', 'false');
 
     rerender(<CountersCard week={after} now={now} />);
 
-    expect(screen.getByText('+5:00')).toHaveClass(FLASH);
-    screen.getAllByText('0:00').forEach((value) => expect(value).not.toHaveClass(FLASH));
+    expect(screen.getByText('+5:00')).toHaveAttribute('data-highlighted', 'true');
+    // The week gap did not move: it stays calm.
+    expect(screen.getByText('−0:10')).toHaveAttribute('data-highlighted', 'false');
   });
 
-  it('does not highlight the minute-by-minute poll of a running period, only a real change', () => {
+  it('does not highlight the minute-by-minute poll or tick of a running period, only a real change', () => {
     const runningSince = '2026-11-06T14:00:00.000Z';
     const answer = (serverNow: string, globalGapMinutes: number) => ({
       ...weekFixture({ counters: { runningSince, globalGapMinutes } }),
@@ -67,37 +66,34 @@ describe('CountersCard', () => {
     );
     const polled = new Date('2026-11-06T14:31:00.000Z');
     rerender(<CountersCard week={answer('2026-11-06T14:31:00.000Z', 31)} now={polled} />);
-    expect(screen.getAllByText('+0:31').every((value) => !value.classList.contains(FLASH))).toBe(
-      true,
-    );
+    screen
+      .getAllByText('+0:31')
+      .forEach((value) => expect(value).toHaveAttribute('data-highlighted', 'false'));
+
+    // The clock alone ticking on (no new answer) moves the shown value, not the highlight.
+    const ticked = new Date('2026-11-06T14:45:00.000Z');
+    rerender(<CountersCard week={answer('2026-11-06T14:31:00.000Z', 31)} now={ticked} />);
+    const tickedValues = screen.getAllByText('+0:45');
+    expect(tickedValues.length).toBeGreaterThan(0);
+    tickedValues.forEach((value) => expect(value).toHaveAttribute('data-highlighted', 'false'));
 
     // A period added through the dialog moves the balance beyond the running time: highlight.
     rerender(<CountersCard week={answer('2026-11-06T14:31:00.000Z', 91)} now={polled} />);
 
-    expect(screen.getByText('+1:31')).toHaveClass(FLASH);
-  });
-
-  it('does not highlight the minute-by-minute tick of a running period', () => {
-    const counters = { runningSince: '2026-11-06T14:00:00.000Z', globalGapMinutes: 0 };
-    const week = { ...weekFixture({ counters }), serverNow: SERVER_NOW };
-    const { rerender } = render(<CountersCard week={week} now={new Date(SERVER_NOW)} />);
-
-    rerender(<CountersCard week={week} now={new Date('2026-11-06T14:45:00.000Z')} />);
-
-    expect(screen.getAllByText('+0:15')[0]).not.toHaveClass(FLASH);
+    expect(screen.getByText('+1:31')).toHaveAttribute('data-highlighted', 'true');
   });
 
   it('shows a positive global gap in green, with its counting start', () => {
     renderCard({ globalGapMinutes: 255, countingStartDate: '2026-11-03' });
 
-    expect(screen.getByText('+4:15')).toHaveClass('text-emerald-700');
+    expect(screen.getByText('+4:15')).toHaveAttribute('data-tone', 'positive');
     expect(screen.getByText(`${copy.counters.since} 3 nov. 2026`)).toBeInTheDocument();
   });
 
   it('shows the balance in red while a refusal is open', () => {
     renderCard({ hasOpenRefusal: true, globalGapMinutes: 255 });
 
-    expect(screen.getByText('+4:15')).toHaveClass('text-rose-700');
+    expect(screen.getByText('+4:15')).toHaveAttribute('data-tone', 'refused');
   });
 
   it('shows the refusal action only while a refusal is open', () => {
@@ -123,7 +119,7 @@ describe('CountersCard', () => {
 
     const zeroGaps = screen.getAllByText('0:00');
     expect(zeroGaps).toHaveLength(2);
-    zeroGaps.forEach((gap) => expect(gap).toHaveClass('text-zinc-900'));
+    zeroGaps.forEach((gap) => expect(gap).toHaveAttribute('data-tone', 'zero'));
   });
 
   it('says who reset the counter and when', () => {

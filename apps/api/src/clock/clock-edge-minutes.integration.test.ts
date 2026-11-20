@@ -96,6 +96,29 @@ describe('clocking at the edges of a minute', () => {
     });
   });
 
+  it('refuses to add a running period that starts in the last minute of the day', async () => {
+    moveTo(LATE_NIGHT);
+    const { session } = await newPerson();
+
+    const response = await send(session, 'POST', '/api/v1/clock-periods', { startedAt: '23:59' });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json<{ code: string }>().code).toBe('CLOCK_START_TOO_LATE');
+  });
+
+  it('accepts a closed period that ends in the last minute of the day', async () => {
+    moveTo(LATE_NIGHT);
+    const { session } = await newPerson();
+
+    const response = await send(session, 'POST', '/api/v1/clock-periods', {
+      startedAt: '23:00',
+      endedAt: '23:59',
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json<{ endedAt: string }>().endedAt).toBe('2026-11-06T22:59:00.000Z');
+  });
+
   it('drops the period when Stop comes in the minute of the Start', async () => {
     const { id, session } = await newPerson();
     const before = await fridayOf(id, session);

@@ -126,18 +126,23 @@ describe('cancelling as a manager', () => {
     expect((await cancel('claire.mc@example.com', requestId)).statusCode).toBe(200);
   });
 
-  it('refuses a refused request with 409', async () => {
+  it('lets a manager cancel an approved request that starts today', async () => {
     const requestId = await insertLeaveRequest(db, {
       userId: leaId,
       dayTypeCode: 'leave',
-      startDate: '2026-11-25',
-      status: 'refused',
+      startDate: '2026-11-13',
+      status: 'approved',
     });
 
     const response = await cancel('sophie.mc@example.com', requestId);
 
-    expect(response.statusCode).toBe(409);
-    expect(response.json<{ code: string }>().code).toBe('LEAVE_NOT_CANCELLABLE');
+    expect(response.statusCode).toBe(200);
+    const row = await db
+      .selectFrom('leaveRequest')
+      .select('status')
+      .where('id', '=', requestId)
+      .executeTakeFirstOrThrow();
+    expect(row.status).toBe('cancelled');
   });
 
   it('hides the request from someone outside the scope', async () => {

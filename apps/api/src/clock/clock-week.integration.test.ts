@@ -204,6 +204,21 @@ describe('GET /api/v1/users/:userId/clock-weeks/:isoWeek', () => {
     expect(response.json<{ code: string }>().code).toBe('VALIDATION_ERROR');
   });
 
+  it('returns the seven days of a 53-week year, across the new year', async () => {
+    const response = await getWeek('lea.week@example.com', leaId, '2026-W53');
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json<WeekBody>().days.map((day) => day.date)).toEqual([
+      '2026-12-28',
+      '2026-12-29',
+      '2026-12-30',
+      '2026-12-31',
+      '2027-01-01',
+      '2027-01-02',
+      '2027-01-03',
+    ]);
+  });
+
   it('counts real minutes on the 25-hour day of the autumn clock change', async () => {
     const dstDay = await insertClockDay(db, { userId: leaId, workDate: '2026-10-25' });
     // 01:00 → 04:00 Paris wall clock spans the repeated hour: 4 real hours.

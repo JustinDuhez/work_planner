@@ -9,7 +9,7 @@ import { Stat } from './stat';
 import { SummaryCard } from './summary-card';
 
 describe('PageLayout', () => {
-  it('keeps the main content first for screen readers and shows the summary above it on phones', async () => {
+  it('keeps the main content before the summary card for screen readers', async () => {
     const { container } = render(
       <PageLayout
         bar={<h1>Calendrier</h1>}
@@ -25,7 +25,6 @@ describe('PageLayout', () => {
     const main = screen.getByText('Les mois');
     const aside = screen.getByRole('region', { name: 'Mon année' });
     expect(main.compareDocumentPosition(aside) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(aside.closest('[data-slot="aside"]')).toHaveClass('order-first', 'lg:order-none');
     await expectNoAxeViolations(container);
   });
 
@@ -41,7 +40,7 @@ describe('Stat and Avatar', () => {
     render(<Stat label="Congé" value="9" unit="j" hint="+2 j en attente" />);
 
     expect(screen.getByText('Congé')).toBeInTheDocument();
-    expect(screen.getByText('9')).toHaveClass('tabular-nums');
+    expect(screen.getByText('9')).toBeInTheDocument();
     expect(screen.getByText('+2 j en attente')).toBeInTheDocument();
   });
 

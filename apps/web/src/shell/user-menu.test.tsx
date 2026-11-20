@@ -11,7 +11,7 @@ describe('UserMenu', () => {
     localStorage.clear();
   });
 
-  it('switches to dark mode and back, and remembers the choice', async () => {
+  it('switches to dark mode and back, saving each choice', async () => {
     mockFetchRoutes({ ...signedInHomeRoutes() });
     renderApp('/');
     const user = userEvent.setup();
@@ -27,6 +27,7 @@ describe('UserMenu', () => {
     await user.click(toggle);
     expect(toggle).toHaveAttribute('aria-checked', 'false');
     expect(document.documentElement.dataset.theme).toBe('light');
+    expect(localStorage.getItem('theme')).toBe('light');
   });
 
   it("shows the user's initials", async () => {

@@ -5,6 +5,7 @@ import { expectNoAxeViolations } from '../test/axe';
 import { signedInHomeRoutes } from '../test/clock-fixtures';
 import { mockFetchRoutes } from '../test/mock-fetch';
 import { renderApp } from '../test/render-app';
+import { summaryPlaceholder } from '../test/summary-placeholder';
 import { teamView } from '../test/team-fixtures';
 
 const TEAMS = [
@@ -189,7 +190,7 @@ describe('TeamsPage selection and side card', () => {
     expect(await screen.findByText(copy.teams.noMembers)).toBeInTheDocument();
   });
 
-  it('keeps the side card placeholder while the teams load', async () => {
+  it('announces the loading and shows no team card yet', async () => {
     mockFetchRoutes({ ...signedInHomeRoutes() });
     const initialFetch = globalThis.fetch;
     globalThis.fetch = jest.fn((input: RequestInfo | URL, init?: RequestInit) =>
@@ -197,14 +198,11 @@ describe('TeamsPage selection and side card', () => {
         ? new Promise<Response>(() => undefined)
         : initialFetch(input, init),
     ) as typeof fetch;
-    const { container } = renderApp('/equipes');
+    renderApp('/equipes');
 
-    await waitFor(() =>
-      expect(
-        container.querySelectorAll('[data-slot="aside"] [aria-hidden]').length,
-      ).toBeGreaterThan(0),
-    );
-    expect(container.querySelector('[data-slot="aside"] section')).toBeNull();
+    expect(await screen.findByText(copy.teams.loading)).toBeInTheDocument();
+    expect(summaryPlaceholder()).toBeInTheDocument();
+    expect(screen.queryAllByRole('region')).toHaveLength(0);
   });
 });
 
