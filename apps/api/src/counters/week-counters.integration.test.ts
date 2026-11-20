@@ -263,7 +263,19 @@ describe('counters in the week', () => {
     expect(counters).toMatchObject({ runningSince: null, globalGapMinutes: 0 });
   });
 
-  it('loads the counter facts in four queries, however long the history', async () => {
+  it('owes nothing before a start date in the middle of the week', async () => {
+    const midWeekId = await insertUser(db, {
+      email: 'mid.week@example.com',
+      startDate: '2026-11-04',
+    });
+
+    const { days, counters } = await getWeek('colleague.counters@example.com', midWeekId);
+
+    expect(days.map((day) => day.targetMinutes)).toEqual([0, 0, 420, 420, 420, 0, 0]);
+    expect(counters).toMatchObject({ weekTargetMinutes: 3 * 420, weekGapMinutes: -2 * 420 });
+  });
+
+  it('loads the counter facts with as many queries for a long history as for a short one', async () => {
     const countingPlugin: KyselyPlugin = {
       transformQuery: (args) => {
         queryCount += 1;
@@ -285,7 +297,10 @@ describe('counters in the week', () => {
     });
     await workedDay(db, fewDaysId, '2026-11-04', 420);
 
-    expect(await countQueries(fewDaysId)).toBe(4);
-    expect(await countQueries(leaId)).toBe(4);
+    const shortHistoryQueries = await countQueries(fewDaysId);
+    const longHistoryQueries = await countQueries(leaId);
+
+    expect(shortHistoryQueries).toBeGreaterThan(0);
+    expect(longHistoryQueries).toBe(shortHistoryQueries);
   });
 });

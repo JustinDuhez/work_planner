@@ -113,7 +113,7 @@ describe('answering a correction', () => {
     expect(response.json<{ code: string }>().code).toBe('CLOCK_WRITE_CONFLICT');
   });
 
-  it('lets the person see the correction and answer it', async () => {
+  it('shows the person a correction they can answer', async () => {
     const member = await newMember();
     const correction = await correctionFor(member.id);
 
@@ -287,23 +287,30 @@ describe('answering a correction', () => {
     }
   });
 
-  it('lists every status without a filter and rejects an invalid one', async () => {
+  it('lists every status when no filter is given, most recently created first', async () => {
     const member = await newMember();
-    const first = await correctionFor(member.id, '2026-11-02');
-    const second = await correctionFor(member.id, '2026-11-04');
-    await send(member.email, 'PATCH', `/api/v1/clock-corrections/${second.id}`, {
+    // The older work date is corrected last: the list follows creation, not the work date.
+    const first = await correctionFor(member.id, '2026-11-04');
+    const second = await correctionFor(member.id, '2026-11-02');
+    await send(member.email, 'PATCH', `/api/v1/clock-corrections/${first.id}`, {
       status: 'accepted',
     });
 
     const all = await send(member.email, 'GET', `/api/v1/users/${member.id}/clock-corrections`);
-    const invalid = await send(
+
+    expect(all.json<CorrectionBody[]>().map((item) => item.id)).toEqual([second.id, first.id]);
+  });
+
+  it('rejects an invalid status filter', async () => {
+    const member = await newMember();
+
+    const response = await send(
       member.email,
       'GET',
       `/api/v1/users/${member.id}/clock-corrections?statut=maybe`,
     );
 
-    expect(all.json<CorrectionBody[]>().map((item) => item.id)).toEqual([second.id, first.id]);
-    expect(invalid.statusCode).toBe(400);
+    expect(response.statusCode).toBe(400);
   });
 
   it('records an accepted answer, stores an empty comment as null and tells the author', async () => {
@@ -340,10 +347,11 @@ describe('answering a correction', () => {
     expect(response.json<{ code: string }>().code).toBe('CLOCK_CORRECTION_NOT_FOUND');
   });
 
-  it("lists a person's refused corrections newest first, for them and for an admin", async () => {
+  it("lists a person's refused corrections, most recently created first, for them and for an admin", async () => {
     const member = await newMember();
-    const older = await correctionFor(member.id, '2026-11-02');
-    const newer = await correctionFor(member.id, '2026-11-04');
+    // The older work date is corrected last: the list follows creation, not the work date.
+    const older = await correctionFor(member.id, '2026-11-04');
+    const newer = await correctionFor(member.id, '2026-11-02');
     await send(member.email, 'PATCH', `/api/v1/clock-corrections/${older.id}`, {
       status: 'refused',
     });

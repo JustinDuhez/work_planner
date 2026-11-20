@@ -155,7 +155,7 @@ describe('corrections in the week', () => {
     );
   });
 
-  it('ignores a refusal on a day before the counter reset', async () => {
+  it('ignores a refusal on a day before the counter reset date', async () => {
     const memberId = await newMember();
     await correction(memberId, '2026-11-03', 'refused', '2026-11-04T09:00:00Z');
     await insertCounterReset(db, {
@@ -163,6 +163,28 @@ describe('corrections in the week', () => {
       resetDate: '2026-11-04',
       authorId: managerId,
     });
+
+    expect((await weekOf('manager.week@example.com', memberId)).counters.hasOpenRefusal).toBe(
+      false,
+    );
+  });
+
+  it('keeps the red counter for a refusal on the counter reset day itself', async () => {
+    const memberId = await newMember();
+    await correction(memberId, '2026-11-03', 'refused', '2026-11-04T09:00:00Z');
+    await insertCounterReset(db, {
+      userId: memberId,
+      resetDate: '2026-11-03',
+      authorId: managerId,
+    });
+
+    expect((await weekOf('manager.week@example.com', memberId)).counters.hasOpenRefusal).toBe(true);
+  });
+
+  it('clears the red counter when a new correction is pending after the refusal', async () => {
+    const memberId = await newMember();
+    await correction(memberId, '2026-11-03', 'refused', '2026-11-04T09:00:00Z');
+    await correction(memberId, '2026-11-03', 'pending', '2026-11-05T09:00:00Z');
 
     expect((await weekOf('manager.week@example.com', memberId)).counters.hasOpenRefusal).toBe(
       false,

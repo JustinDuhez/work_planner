@@ -87,7 +87,8 @@ describe('resetting several counters', () => {
     expect(await resetCount()).toBe(before);
   });
 
-  it('refuses a date before one person’s start and names them', async () => {
+  it('refuses a date before one person’s start, names them and resets nobody', async () => {
+    const before = await resetCount();
     const response = await resetMany('ines.rb@example.com', {
       userIds: [leaId, tomId],
       resetDate: '2026-11-03',
@@ -98,6 +99,7 @@ describe('resetting several counters', () => {
       'COUNTER_RESET_DATE_BEFORE_START',
     );
     expect(response.json<{ message: string }>().message).toMatch(/\(.+\)$/);
+    expect(await resetCount()).toBe(before);
   });
 
   it('refuses a future date', async () => {
@@ -113,10 +115,13 @@ describe('resetting several counters', () => {
     expect((await resetMany('ines.rb@example.com', payload)).statusCode).toBe(400);
   });
 
-  it('answers 404 for an unknown person', async () => {
+  it('answers 404 for an unknown person and resets nobody', async () => {
+    const before = await resetCount();
+
     const response = await resetMany('ines.rb@example.com', { userIds: [leaId, 999999] });
 
     expect(response.statusCode).toBe(404);
     expect(response.json<{ code: string }>().code).toBe('USER_NOT_FOUND');
+    expect(await resetCount()).toBe(before);
   });
 });
