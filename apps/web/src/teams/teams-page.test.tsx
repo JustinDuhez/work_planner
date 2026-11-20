@@ -5,6 +5,7 @@ import { expectNoAxeViolations } from '../test/axe';
 import { signedInHomeRoutes } from '../test/clock-fixtures';
 import { mockFetchRoutes } from '../test/mock-fetch';
 import { renderApp } from '../test/render-app';
+import { summaryPlaceholder } from '../test/summary-placeholder';
 import { teamView } from '../test/team-fixtures';
 
 const TEAMS = [
@@ -200,6 +201,7 @@ describe('TeamsPage selection and side card', () => {
     renderApp('/equipes');
 
     expect(await screen.findByText(copy.teams.loading)).toBeInTheDocument();
+    expect(summaryPlaceholder()).toBeInTheDocument();
     expect(screen.queryAllByRole('region')).toHaveLength(0);
   });
 });

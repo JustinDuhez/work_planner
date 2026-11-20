@@ -8,6 +8,8 @@ import { DAY_TYPES, leaveRequestView } from '../test/leave-fixtures';
 import { expectNoAxeViolations } from '../test/axe';
 import { mockFetchRoutes, type MockResponse } from '../test/mock-fetch';
 import { renderApp } from '../test/render-app';
+import { stat } from '../test/stat';
+import { summaryPlaceholder } from '../test/summary-placeholder';
 import { SIGNED_IN_SESSION } from '../test/sessions';
 
 const MANAGER_SESSION = {
@@ -40,11 +42,6 @@ function findCall(fetchMock: jest.Mock, method: string, url: string) {
   return fetchMock.mock.calls.find(
     ([callUrl, init]) => callUrl === url && (init as RequestInit | undefined)?.method === method,
   ) as [string, RequestInit] | undefined;
-}
-
-/** The number shown under a stat label of the summary card. */
-function statOf(card: HTMLElement, label: string) {
-  return (within(card).getByText(label).closest('div')?.textContent ?? '').replace(label, '');
 }
 
 describe('LeaveRequestsPage', () => {
@@ -457,6 +454,7 @@ describe('LeaveRequestsPage', () => {
     });
 
     expect(await screen.findByRole('alert')).toHaveTextContent(copy.leaveRequests.loadError);
+    await waitFor(() => expect(summaryPlaceholder()).toBeNull());
     await waitFor(() => expect(queryClient.isFetching()).toBe(0));
     await expectNoAxeViolations(container);
     await userEvent.setup().click(screen.getByRole('button', { name: copy.states.retry }));
@@ -547,9 +545,11 @@ describe('LeaveRequestsPage layout', () => {
     });
 
     const card = await screen.findByRole('region', { name: copy.leaveRequests.summary.title });
-    await waitFor(() => expect(statOf(card, copy.leaveRequests.summary.toReview)).toBe('1'));
-    expect(statOf(card, copy.leaveRequests.summary.pending)).toBe('2');
-    expect(statOf(card, copy.leaveRequests.summary.approved)).toBe('1');
+    await waitFor(() =>
+      expect(card).toHaveTextContent(stat(copy.leaveRequests.summary.toReview, '1')),
+    );
+    expect(card).toHaveTextContent(stat(copy.leaveRequests.summary.pending, '2'));
+    expect(card).toHaveTextContent(stat(copy.leaveRequests.summary.approved, '1'));
   });
 
   it('shows a collaborator no stat to review, and 0 approved when nothing qualifies', async () => {
@@ -558,8 +558,8 @@ describe('LeaveRequestsPage layout', () => {
     const card = await screen.findByRole('region', { name: copy.leaveRequests.summary.title });
 
     expect(within(card).queryByText(copy.leaveRequests.summary.toReview)).not.toBeInTheDocument();
-    expect(statOf(card, copy.leaveRequests.summary.approved)).toBe('0');
-    expect(statOf(card, copy.leaveRequests.summary.pending)).toBe('0');
+    expect(card).toHaveTextContent(stat(copy.leaveRequests.summary.approved, '0'));
+    expect(card).toHaveTextContent(stat(copy.leaveRequests.summary.pending, '0'));
   });
 
   it('has no accessibility violation on the review tab', async () => {
@@ -580,6 +580,7 @@ describe('LeaveRequestsPage layout', () => {
     });
 
     expect(await screen.findByRole('alert')).toHaveTextContent(copy.leaveRequests.loadError);
+    await waitFor(() => expect(summaryPlaceholder()).toBeNull());
     expect(screen.queryByRole('region', { name: copy.leaveRequests.summary.title })).toBeNull();
   });
 });

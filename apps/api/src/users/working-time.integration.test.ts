@@ -124,9 +124,6 @@ describe('working time', () => {
 
   it('makes two edits of one person wait for each other, then keeps one history row', async () => {
     const memberId = await newMember();
-    // Sessions exist before the lock is taken, so the requests only wait on the person's row.
-    await logIn(app, MANAGER);
-    await logIn(app, ADMIN);
 
     const responses = await holdRowLock(db, memberId, () => [
       patch(MANAGER, memberId, { dailyMinutes: 360, effectiveDate: '2026-11-16' }),

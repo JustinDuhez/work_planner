@@ -6,6 +6,7 @@ import { signedInHomeRoutes } from '../test/clock-fixtures';
 import { expectNoAxeViolations } from '../test/axe';
 import { mockFetchRoutes, type MockResponse } from '../test/mock-fetch';
 import { renderApp } from '../test/render-app';
+import { summaryPlaceholder } from '../test/summary-placeholder';
 
 const CALENDAR = yearCalendar({
   halfDays: [
@@ -304,6 +305,7 @@ describe('YearCalendarPage', () => {
     renderApp('/calendrier?periode=2026');
 
     expect(await screen.findByText(copy.calendar.loading)).toBeInTheDocument();
+    expect(summaryPlaceholder()).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: copy.calendar.yearTitle })).not.toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
@@ -319,6 +321,7 @@ describe('YearCalendarPage', () => {
     renderApp('/calendrier');
 
     expect(await screen.findByText(copy.calendar.loading)).toBeInTheDocument();
+    expect(summaryPlaceholder()).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: copy.calendar.yearTitle })).not.toBeInTheDocument();
   });
 

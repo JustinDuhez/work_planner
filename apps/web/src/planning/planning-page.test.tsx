@@ -7,6 +7,7 @@ import { expectNoAxeViolations } from '../test/axe';
 import { mockFetchRoutes, type MockResponse } from '../test/mock-fetch';
 import { teamMonth } from '../test/planning-fixtures';
 import { renderApp } from '../test/render-app';
+import { summaryPlaceholder } from '../test/summary-placeholder';
 
 function renderPlanning(path: string, extra: Record<string, MockResponse> = {}) {
   mockFetchRoutes({
@@ -432,6 +433,7 @@ describe('PlanningPage', () => {
     renderApp('/planning?mois=2026-11');
 
     expect(await screen.findByText(copy.planning.loading)).toBeInTheDocument();
+    expect(summaryPlaceholder()).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: copy.planning.absentToday })).toBeNull();
   });
 });

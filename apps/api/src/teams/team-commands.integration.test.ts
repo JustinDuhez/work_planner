@@ -183,7 +183,14 @@ describe('team administration', () => {
         parentTeamId: newParentId,
       });
 
+      expect(response.statusCode).toBe(200);
       expect(response.json<{ parentTeamId: number | null }>().parentTeamId).toBe(newParentId);
+      const stored = await db
+        .selectFrom('team')
+        .select('parentTeamId')
+        .where('id', '=', teamId)
+        .executeTakeFirstOrThrow();
+      expect(stored.parentTeamId).toBe(newParentId);
     });
 
     it('refuses to rename a team to a name already used', async () => {

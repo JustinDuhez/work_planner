@@ -2,6 +2,8 @@ import { z } from 'zod';
 import { ApiError, apiGet, apiSend, apiSendNoContent, setCsrfToken } from './api-client';
 import { mockFetchRoutes } from '../test/mock-fetch';
 
+afterEach(() => setCsrfToken(undefined));
+
 const itemSchema = z.object({ name: z.string() });
 
 function mockFetch(status: number, readBody: () => Promise<unknown>): void {
@@ -38,7 +40,6 @@ describe('apiGet', () => {
     setCsrfToken('csrf-789');
 
     await apiGet('/api/v1/items/1', itemSchema);
-    setCsrfToken(undefined);
 
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(init.headers).not.toHaveProperty('X-CSRF-Token');
@@ -79,10 +80,6 @@ describe('apiGet', () => {
 });
 
 describe('apiSend', () => {
-  afterEach(() => {
-    setCsrfToken(undefined);
-  });
-
   it('sends JSON with the CSRF token and parses the answer', async () => {
     const fetchMock = mockFetchRoutes({
       'PATCH /api/v1/items/1': { status: 200, body: { name: 'B' } },

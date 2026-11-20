@@ -5,6 +5,7 @@ import { expectNoAxeViolations } from '../test/axe';
 import { signedInHomeRoutes } from '../test/clock-fixtures';
 import { mockFetchRoutes, type MockResponse } from '../test/mock-fetch';
 import { renderApp } from '../test/render-app';
+import { summaryPlaceholder } from '../test/summary-placeholder';
 import { SIGNED_IN_SESSION } from '../test/sessions';
 
 const ADMIN_SESSION = {
@@ -105,6 +106,7 @@ describe('SettingsPage', () => {
     renderApp('/parametres?annee=2026');
 
     expect(await screen.findByText(copy.settings.loading)).toBeInTheDocument();
+    expect(summaryPlaceholder()).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: copy.settings.yearStartTitle })).toBeNull();
   });
 

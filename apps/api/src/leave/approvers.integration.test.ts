@@ -56,10 +56,18 @@ describe('finding who can approve a leave request', () => {
     expect(await findLeaveApproverIds(db, memberId)).toEqual([adminId]);
   });
 
-  // Last: it leaves a second admin behind for the other tests.
   it('never includes the requester, even an admin, while the other admins stay', async () => {
     const otherAdminId = await user({ isAdmin: true });
 
-    expect(await findLeaveApproverIds(db, otherAdminId)).toEqual([adminId]);
+    try {
+      expect(await findLeaveApproverIds(db, otherAdminId)).toEqual([adminId]);
+    } finally {
+      // Leave no second active admin behind: the other tests do not depend on their order.
+      await db
+        .updateTable('appUser')
+        .set({ archivedAt: new Date() })
+        .where('id', '=', otherAdminId)
+        .execute();
+    }
   });
 });

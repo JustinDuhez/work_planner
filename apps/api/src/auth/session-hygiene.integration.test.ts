@@ -6,6 +6,7 @@ import { DEFAULT_TEST_PASSWORD, insertUser } from '../test/fixtures';
 import { logIn, TEST_ORIGIN } from '../test/auth-helpers';
 import { createTestClock } from '../test/test-clock';
 import { createTestConfig } from '../test/test-config';
+import { withSampleParams } from '../test/sample-params';
 import { createMigratedTestDb } from '../test/test-database';
 import { PUBLIC_API_ROUTES } from '../http/protected-routes';
 import { createSession, deleteAllSessions, purgeExpiredSessions } from './session-service';
@@ -87,7 +88,7 @@ describe('forced password change', () => {
       if (PUBLIC_API_ROUTES.has(route) || openRoutes.has(route) || method === 'HEAD') continue;
       const response = await app.inject({
         method: method as 'GET',
-        url: url.replace(/:w+/g, '1'),
+        url: withSampleParams(url),
         headers: { cookie, origin: TEST_ORIGIN, 'x-csrf-token': csrfToken },
       });
       const code = response.statusCode === 403 && response.json<{ code: string }>().code;

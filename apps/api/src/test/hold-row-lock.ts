@@ -33,26 +33,31 @@ export async function holdRowLock<T>(
   });
   await lockTaken;
 
-  const requests = start();
-  const settled = new Set<number>();
-  requests.forEach((request, index) => void request.then(() => settled.add(index)));
-  const deadline = Date.now() + WAIT_LIMIT_MS;
-  for (;;) {
-    const { rows } = await sql<{ waiting: string }>`
-      select count(*) as waiting from pg_stat_activity
-      where datname = current_database() and wait_event_type = 'Lock'`.execute(db);
-    if (Number(rows[0]?.waiting) >= requests.length) break;
-    if (settled.size > 0 || Date.now() > deadline) {
-      release();
-      await holder;
-      await Promise.allSettled(requests);
-      throw new Error(
-        `Requests were not all blocked on the row lock (${settled.size} finished early)`,
-      );
+  try {
+    const requests = start();
+    const settled = new Set<number>();
+    const mark = (index: number) => () => void settled.add(index);
+    requests.forEach((request, index) => void request.then(mark(index), mark(index)));
+    const deadline = Date.now() + WAIT_LIMIT_MS;
+    for (;;) {
+      const { rows } = await sql<{ waiting: string }>`
+        select count(*) as waiting from pg_stat_activity
+        where datname = current_database() and wait_event_type = 'Lock'`.execute(db);
+      if (Number(rows[0]?.waiting) >= requests.length) break;
+      if (settled.size > 0 || Date.now() > deadline) {
+        release();
+        await holder;
+        await Promise.allSettled(requests);
+        throw new Error(
+          `Requests were not all blocked on the row lock (${settled.size} finished early)`,
+        );
+      }
+      await new Promise((resolve) => setTimeout(resolve, WAIT_STEP_MS));
     }
-    await new Promise((resolve) => setTimeout(resolve, WAIT_STEP_MS));
+    release();
+    await holder;
+    return await Promise.all(requests);
+  } finally {
+    release();
   }
-  release();
-  await holder;
-  return Promise.all(requests);
 }

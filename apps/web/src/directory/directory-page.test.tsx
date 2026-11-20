@@ -6,6 +6,8 @@ import { signedInHomeRoutes } from '../test/clock-fixtures';
 import { directoryEntry } from '../test/directory-fixtures';
 import { mockFetchRoutes } from '../test/mock-fetch';
 import { renderApp } from '../test/render-app';
+import { stat } from '../test/stat';
+import { summaryPlaceholder } from '../test/summary-placeholder';
 import { SIGNED_IN_SESSION } from '../test/sessions';
 
 const LEA = directoryEntry();
@@ -180,10 +182,8 @@ const ADMIN_SESSION = {
   user: { ...SIGNED_IN_SESSION.user, roles: { isAdmin: true, isManager: false } },
 };
 
-function statValue(label: string): string | null | undefined {
-  const card = screen.queryByRole('region', { name: copy.directory.summaryTitle });
-  const stat = card ? within(card).queryByText(label)?.closest('div') : undefined;
-  return stat ? (stat.textContent ?? '').replace(label, '') : undefined;
+function summaryCard() {
+  return screen.getByRole('region', { name: copy.directory.summaryTitle });
 }
 
 describe('DirectoryPage summary and layout', () => {
@@ -200,9 +200,9 @@ describe('DirectoryPage summary and layout', () => {
 
     await screen.findByRole('row', { name: /Hugo Laurent/ });
 
-    expect(statValue(copy.directory.peopleCount)).toBe('4');
-    expect(statValue(copy.directory.teamCount)).toBe('3');
-    expect(statValue(copy.directory.archivedCount)).toBeUndefined();
+    expect(summaryCard()).toHaveTextContent(stat(copy.directory.peopleCount, '4'));
+    expect(summaryCard()).toHaveTextContent(stat(copy.directory.teamCount, '3'));
+    expect(summaryCard()).not.toHaveTextContent(copy.directory.archivedCount);
   });
 
   it('keeps the counts when a search narrows the list', async () => {
@@ -210,7 +210,7 @@ describe('DirectoryPage summary and layout', () => {
 
     await user.type(await screen.findByLabelText(copy.directory.search), 'fournier');
 
-    expect(statValue(copy.directory.peopleCount)).toBe('4');
+    expect(summaryCard()).toHaveTextContent(stat(copy.directory.peopleCount, '4'));
   });
 
   it('hides the new person button from people who are not admins', async () => {
@@ -236,8 +236,10 @@ describe('DirectoryPage summary and layout', () => {
 
     await user.click(screen.getByLabelText(copy.directory.archived));
 
-    await waitFor(() => expect(statValue(copy.directory.archivedCount)).toBe('1'));
-    expect(statValue(copy.directory.peopleCount)).toBe('1');
+    await waitFor(() =>
+      expect(summaryCard()).toHaveTextContent(stat(copy.directory.archivedCount, '1')),
+    );
+    expect(summaryCard()).toHaveTextContent(stat(copy.directory.peopleCount, '1'));
   });
 
   it('announces the loading and shows no summary card yet', async () => {
@@ -251,6 +253,7 @@ describe('DirectoryPage summary and layout', () => {
     renderApp('/annuaire');
 
     expect(await screen.findByText(copy.directory.loading)).toBeInTheDocument();
+    expect(summaryPlaceholder()).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: copy.directory.summaryTitle })).toBeNull();
   });
 
