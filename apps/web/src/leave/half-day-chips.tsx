@@ -32,6 +32,7 @@ function Chip({
   const text = `${label}${halfLabel ? ` · ${halfLabel}` : ''}${isPending ? ` ${copy.leave.pending}` : ''}`;
   return (
     <span
+      data-state={isPending ? 'pending' : 'approved'}
       className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${isPending ? classes.pending : classes.approved}`}
     >
       {text}

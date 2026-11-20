@@ -162,6 +162,23 @@ describe('NotificationBell', () => {
       [cancelled],
     );
 
+    const answerBeforeMarking = globalThis.fetch;
+    let isMarked = false;
+    // Once the notification is marked read, the server reports nothing unread.
+    globalThis.fetch = jest.fn((input: RequestInfo | URL, init?: RequestInit) =>
+      (isMarked ||= init?.method === 'PATCH') && input === '/api/v1/notifications'
+        ? Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () =>
+              Promise.resolve({
+                unreadCount: 0,
+                notifications: [{ ...cancelled, readAt: '2026-11-09T10:00:00.000Z' }],
+              }),
+          } as Response)
+        : answerBeforeMarking(input, init),
+    ) as typeof fetch;
+
     await user.click(await screen.findByRole('button', { name: `${copy.notifications.bell} (1)` }));
     expect(screen.queryByRole('link', { name: /a annulé sa demande/ })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /a annulé sa demande/ }));
@@ -170,6 +187,9 @@ describe('NotificationBell', () => {
       '/api/v1/notifications/4',
       expect.objectContaining({ method: 'PATCH' }),
     );
+    expect(
+      await screen.findByRole('button', { name: copy.notifications.bell }),
+    ).toBeInTheDocument();
   });
 
   it('words an accepted answer', async () => {

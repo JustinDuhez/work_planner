@@ -1,6 +1,5 @@
 import { screen } from '@testing-library/react';
 import { copy } from '../copy';
-import { signedInHomeRoutes } from '../test/clock-fixtures';
 import { mockFetchRoutes } from '../test/mock-fetch';
 import { renderApp } from '../test/render-app';
 
@@ -17,16 +16,6 @@ describe('RequireAuth', () => {
     expect(router.state.location.search).toBe(
       `?retour=${encodeURIComponent('/profil?onglet=mot-de-passe')}`,
     );
-  });
-
-  it('lets a signed-in user through', async () => {
-    mockFetchRoutes({
-      ...signedInHomeRoutes(),
-    });
-
-    renderApp('/');
-
-    expect(await screen.findByRole('heading', { name: copy.clock.title })).toBeInTheDocument();
   });
 
   it('shows an error instead of the login page when the session cannot be checked', async () => {

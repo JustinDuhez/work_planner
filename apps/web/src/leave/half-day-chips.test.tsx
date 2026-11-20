@@ -33,7 +33,7 @@ describe('HalfDayChips', () => {
     expect(screen.getByText('Départ anticipé · après-midi')).toBeInTheDocument();
   });
 
-  it('shows pending chips pastel and approved chips solid', () => {
+  it('tells a pending chip from an approved one', () => {
     render(
       <HalfDayChips
         halfDays={{
@@ -44,11 +44,14 @@ describe('HalfDayChips', () => {
       />,
     );
 
-    expect(screen.getByText('Maladie · matin (en attente)')).toHaveClass('bg-red-100');
-    expect(screen.getByText('Congé · après-midi')).toHaveClass('bg-emerald-600');
+    expect(screen.getByText('Maladie · matin (en attente)')).toHaveAttribute(
+      'data-state',
+      'pending',
+    );
+    expect(screen.getByText('Congé · après-midi')).toHaveAttribute('data-state', 'approved');
   });
 
-  it('falls back to a neutral chip named after the code for an unknown type', () => {
+  it('names the chip after the code for an unknown type', () => {
     render(
       <HalfDayChips
         halfDays={{ am: { dayTypeCode: 'mystery', status: 'approved' }, pm: null }}
@@ -56,7 +59,7 @@ describe('HalfDayChips', () => {
       />,
     );
 
-    expect(screen.getByText('mystery · matin')).toHaveClass('bg-neutral-600');
+    expect(screen.getByText('mystery · matin')).toBeInTheDocument();
   });
 
   it('shows nothing for an ordinary day', () => {

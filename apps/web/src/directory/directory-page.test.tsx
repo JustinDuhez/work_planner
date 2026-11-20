@@ -97,12 +97,23 @@ describe('DirectoryPage', () => {
     ).toBeInTheDocument();
   });
 
-  it('searches by name or email', async () => {
+  it('searches by name', async () => {
     const { user } = renderDirectory();
 
     await user.type(await screen.findByLabelText(copy.directory.search), 'fournier');
 
     expect(screen.getAllByRole('row')).toHaveLength(2); // header + Lucas
+    expect(screen.getByRole('row', { name: /Lucas Fournier/ })).toBeInTheDocument();
+  });
+
+  it('searches by an email fragment that is not in the name', async () => {
+    const { user } = renderDirectory();
+
+    // "hugo.laurent" (with a dot) only occurs in the e-mail, the name is "Hugo Laurent".
+    await user.type(await screen.findByLabelText(copy.directory.search), 'hugo.laurent');
+
+    expect(screen.getAllByRole('row')).toHaveLength(2); // header + Hugo
+    expect(screen.getByRole('row', { name: /Hugo Laurent/ })).toBeInTheDocument();
   });
 
   it('filters by team', async () => {
@@ -170,8 +181,9 @@ const ADMIN_SESSION = {
 };
 
 function statValue(label: string): string | null | undefined {
-  const aside = document.querySelector<HTMLElement>('[data-slot="aside"]');
-  return aside ? within(aside).queryByText(label)?.nextElementSibling?.textContent : undefined;
+  const card = screen.queryByRole('region', { name: copy.directory.summaryTitle });
+  const stat = card ? within(card).queryByText(label)?.closest('div') : undefined;
+  return stat ? (stat.textContent ?? '').replace(label, '') : undefined;
 }
 
 describe('DirectoryPage summary and layout', () => {
@@ -228,7 +240,7 @@ describe('DirectoryPage summary and layout', () => {
     expect(statValue(copy.directory.peopleCount)).toBe('1');
   });
 
-  it('keeps the side card placeholder while the directory loads', async () => {
+  it('announces the loading and shows no summary card yet', async () => {
     mockFetchRoutes({ ...signedInHomeRoutes() });
     const initialFetch = globalThis.fetch;
     globalThis.fetch = jest.fn((input: RequestInfo | URL, init?: RequestInit) =>
@@ -236,14 +248,10 @@ describe('DirectoryPage summary and layout', () => {
         ? new Promise<Response>(() => undefined)
         : initialFetch(input, init),
     ) as typeof fetch;
-    const { container } = renderApp('/annuaire');
+    renderApp('/annuaire');
 
-    await waitFor(() =>
-      expect(
-        container.querySelectorAll('[data-slot="aside"] [aria-hidden]').length,
-      ).toBeGreaterThan(0),
-    );
-    expect(container.querySelector('[data-slot="aside"] section')).toBeNull();
+    expect(await screen.findByText(copy.directory.loading)).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: copy.directory.summaryTitle })).toBeNull();
   });
 
   it('has no accessibility problems when empty', async () => {

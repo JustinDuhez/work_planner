@@ -38,10 +38,9 @@ describe('ProfilePage', () => {
   });
 
   it('shows the identity from /me in a side card', async () => {
-    const { container } = renderProfile();
+    renderProfile();
 
     const card = await screen.findByRole('region', { name: copy.profile.identityTitle });
-    expect(container.querySelector('[data-slot="aside"]')).toContainElement(card);
     expect(within(card).getByText('Léa Moreau')).toBeInTheDocument();
     expect(within(card).getByText('LM')).toBeInTheDocument();
     expect(within(card).getByText('Collaborateur')).toBeInTheDocument();
@@ -60,12 +59,10 @@ describe('ProfilePage', () => {
     expect(within(info).getByLabelText(copy.profile.firstName)).toBeInTheDocument();
   });
 
-  it('holds the title in the bar', async () => {
-    const { container } = renderProfile();
-    await screen.findByLabelText(copy.profile.firstName);
+  it('titles the page', async () => {
+    renderProfile();
 
-    const bar = container.querySelector('.top-14') as HTMLElement;
-    expect(within(bar).getByRole('heading', { name: copy.profile.title })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: copy.profile.title })).toBeInTheDocument();
   });
 
   it('saves new names with the CSRF token and confirms it', async () => {
