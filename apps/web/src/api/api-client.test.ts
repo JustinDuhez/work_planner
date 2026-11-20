@@ -31,6 +31,19 @@ describe('network failures', () => {
 });
 
 describe('apiGet', () => {
+  it('never sends the CSRF token on a read', async () => {
+    const fetchMock = mockFetchRoutes({
+      'GET /api/v1/items/1': { status: 200, body: { name: 'A' } },
+    });
+    setCsrfToken('csrf-789');
+
+    await apiGet('/api/v1/items/1', itemSchema);
+    setCsrfToken(undefined);
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(init.headers).not.toHaveProperty('X-CSRF-Token');
+  });
+
   it('returns the body once it matches the expected contract', async () => {
     mockFetch(200, () => Promise.resolve({ name: 'Alice' }));
 
@@ -86,6 +99,19 @@ describe('apiSend', () => {
       body: '{"name":"B"}',
       headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': 'csrf-123' },
     });
+  });
+
+  it('sends the CSRF token on a write without content too, and none when no token is set', async () => {
+    const fetchMock = mockFetchRoutes({ 'DELETE /api/v1/items/1': { status: 204 } });
+    setCsrfToken('csrf-456');
+    await apiSendNoContent('DELETE', '/api/v1/items/1');
+    setCsrfToken(undefined);
+    await apiSendNoContent('DELETE', '/api/v1/items/1');
+
+    const headersOfCall = (index: number) =>
+      (fetchMock.mock.calls[index] as [string, RequestInit])[1].headers;
+    expect(headersOfCall(0)).toMatchObject({ 'X-CSRF-Token': 'csrf-456' });
+    expect(headersOfCall(1)).not.toHaveProperty('X-CSRF-Token');
   });
 
   it('accepts an answer without content', async () => {

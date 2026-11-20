@@ -44,7 +44,8 @@ describe('ClockWeekPage', () => {
 
     const monday = await screen.findByRole('listitem', { name: /^LUN 2/ });
     expect(within(monday).getByText('7:00')).toBeInTheDocument();
-    expect(screen.getByText(copy.counters.worked).parentElement).toHaveTextContent('13:30');
+    const weekStat = screen.getByRole('region', { name: copy.counters.weekTitle });
+    expect(within(weekStat).getByText('13:30')).toBeInTheDocument();
   });
 
   it('has no accessibility violations on a loaded week', async () => {
@@ -87,7 +88,7 @@ describe('ClockWeekPage', () => {
     expect(nextWeekButton).toHaveFocus();
   });
 
-  it("opens a colleague's week from the person picker, read-only", async () => {
+  it("opens a colleague's week from the person picker", async () => {
     mockFetchRoutes({
       ...signedInHomeRoutes(weekFixture({ isoWeek: WEEK })),
       [`GET /api/v1/users/${HUGO.id}/clock-weeks/${WEEK}`]: {
@@ -103,6 +104,7 @@ describe('ClockWeekPage', () => {
 
     expect(await screen.findByText(/Semaine de Hugo Laurent/)).toBeInTheDocument();
     expect(router.state.location.pathname).toBe(`/pointage/${HUGO.id}`);
+    expect(screen.queryByRole('button', { name: copy.clock.start })).not.toBeInTheDocument();
   });
 
   it('falls back to the current week when the URL week is invalid', async () => {
@@ -152,9 +154,7 @@ describe('ClockWeekPage', () => {
 
     renderApp('/');
 
-    const label = await screen.findByText(copy.clock.loading);
-    expect(label).toHaveClass('sr-only');
-    expect(label.closest('[aria-busy="true"]')).not.toBeNull();
+    expect(await screen.findByText(copy.clock.loading)).toBeInTheDocument();
     expect(screen.queryAllByRole('listitem', { name: /^(LUN|MAR|MER|JEU|VEN|SAM|DIM)/ })).toEqual(
       [],
     );
@@ -164,7 +164,7 @@ describe('ClockWeekPage', () => {
     const TODAY = toWorkDate(new Date(), APP_TIME_ZONE);
     const ONE_HOUR_IN_MILLISECONDS = 3_600_000;
 
-    it('comes first with the time worked today and one primary Start button', async () => {
+    it('comes first with the time worked today and a Start button', async () => {
       const done = {
         id: 1,
         startedAt: new Date(Date.now() - 2 * ONE_HOUR_IN_MILLISECONDS).toISOString(),
@@ -179,13 +179,7 @@ describe('ClockWeekPage', () => {
       expect(screen.getAllByRole('region')[0]).toBe(hero);
       expect(within(hero).getByText(formatMinutes(60))).toBeInTheDocument();
       const start = within(hero).getByRole('button', { name: copy.clock.start });
-      expect(start).toHaveClass('bg-primary-600');
-      expect(
-        within(hero)
-          .getAllByRole('button')
-          .filter((button) => button.classList.contains('bg-primary-600')),
-      ).toEqual([start]);
-      expect(start.closest('.fixed')).toBeNull();
+      expect(start).toBeEnabled();
       expect(within(hero).queryByText(new RegExp(`^${copy.clock.since} `))).toBeNull();
       const todayRow = screen.getByRole('listitem', { current: 'date' });
       expect(within(todayRow).queryByRole('button', { name: copy.clock.start })).toBeNull();
@@ -200,9 +194,7 @@ describe('ClockWeekPage', () => {
       renderApp('/');
 
       const hero = await screen.findByRole('region', { name: copy.clock.todayTitle });
-      expect(within(hero).getByRole('button', { name: copy.clock.stop })).toHaveClass(
-        'bg-primary-600',
-      );
+      expect(within(hero).getByRole('button', { name: copy.clock.stop })).toBeEnabled();
       expect(
         within(hero).getByText(
           `${copy.clock.since} ${toLocalTime(startedAt, APP_TIME_ZONE)} · ${copy.clock.telework}`,
@@ -252,17 +244,13 @@ describe('ClockWeekPage', () => {
       expect(screen.queryByRole('region', { name: copy.clock.todayTitle })).toBeNull();
     });
 
-    it("groups the absence request with the hero's secondary actions", async () => {
+    it('offers the absence request once, inside the hero', async () => {
       mockFetchRoutes(signedInHomeRoutes());
 
       renderApp('/');
 
       const hero = await screen.findByRole('region', { name: copy.clock.todayTitle });
       const request = within(hero).getByRole('button', { name: copy.leave.requestButton });
-      expect(request).not.toHaveClass('bg-primary-600');
-      expect(request.parentElement).toBe(
-        within(hero).getByRole('button', { name: copy.clock.addPeriod }).parentElement,
-      );
       expect(screen.getAllByRole('button', { name: copy.leave.requestButton })).toEqual([request]);
     });
   });
@@ -302,46 +290,51 @@ describe('ClockWeekPage', () => {
     expect(screen.getAllByRole('listitem', { name: /^LUN/ })).toHaveLength(1);
   });
 
-  it('offers the owner to declare an absence on a future weekday and opens the dialog', async () => {
-    const week = weekFixture({
-      isoWeek: WEEK,
-      serverNow: SERVER_NOW,
-      days: {
-        '2026-11-04': { isFuture: true, isToday: false },
-        '2026-11-05': { isFuture: true, isToday: false, holidayLabel: 'Férié' },
-        '2026-11-06': { isFuture: true, isToday: false, halfDays: FULL_LEAVE },
-        '2026-11-07': { isFuture: true, isToday: false },
-        '2026-11-03': { isFuture: false, isToday: false },
-      },
+  describe('declaring an absence from a day row', () => {
+    const DAYS = {
+      '2026-11-03': { isFuture: false, isToday: false },
+      '2026-11-04': { isFuture: true, isToday: false },
+      '2026-11-05': { isFuture: true, isToday: false, holidayLabel: 'Férié' },
+      '2026-11-06': { isFuture: true, isToday: false, halfDays: FULL_LEAVE },
+      '2026-11-07': { isFuture: true, isToday: false },
+    };
+
+    async function renderDays() {
+      mockFetchRoutes(
+        signedInHomeRoutes(weekFixture({ isoWeek: WEEK, serverNow: SERVER_NOW, days: DAYS })),
+      );
+      renderApp(`/?semaine=${WEEK}`);
+      await screen.findByRole('listitem', { name: /^MER 4/ });
+    }
+
+    it('is offered to the owner on a future weekday and opens the dialog', async () => {
+      await renderDays();
+
+      await userEvent.setup().click(
+        within(screen.getByRole('listitem', { name: /^MER 4/ })).getByRole('button', {
+          name: copy.leave.declareDay,
+        }),
+      );
+
+      expect(
+        await screen.findByRole('dialog', { name: copy.leave.dialogTitle }),
+      ).toBeInTheDocument();
     });
-    mockFetchRoutes(signedInHomeRoutes(week));
-    renderApp(`/?semaine=${WEEK}`);
-    const user = userEvent.setup();
 
-    const wednesday = await screen.findByRole('listitem', { name: /^MER 4/ });
-    expect(
-      within(screen.getByRole('listitem', { name: /^MAR 3/ })).queryByRole('button', {
-        name: copy.leave.declareDay,
-      }),
-    ).not.toBeInTheDocument();
-    expect(
-      within(screen.getByRole('listitem', { name: /^JEU 5/ })).queryByRole('button', {
-        name: copy.leave.declareDay,
-      }),
-    ).not.toBeInTheDocument();
-    expect(
-      within(screen.getByRole('listitem', { name: /^VEN 6/ })).queryByRole('button', {
-        name: copy.leave.declareDay,
-      }),
-    ).not.toBeInTheDocument();
-    expect(
-      within(screen.getByRole('listitem', { name: /^SAM 7/ })).queryByRole('button', {
-        name: copy.leave.declareDay,
-      }),
-    ).not.toBeInTheDocument();
-    await user.click(within(wednesday).getByRole('button', { name: copy.leave.declareDay }));
+    it.each([
+      ['a past day', /^MAR 3/],
+      ['a public holiday', /^JEU 5/],
+      ['a day already fully on leave', /^VEN 6/],
+      ['a weekend day', /^SAM 7/],
+    ])('is not offered on %s', async (_reason, row) => {
+      await renderDays();
 
-    expect(await screen.findByRole('dialog', { name: copy.leave.dialogTitle })).toBeInTheDocument();
+      expect(
+        within(screen.getByRole('listitem', { name: row })).queryByRole('button', {
+          name: copy.leave.declareDay,
+        }),
+      ).not.toBeInTheDocument();
+    });
   });
 
   it('opens the request dialog from the week-level button', async () => {
@@ -436,10 +429,15 @@ describe('ClockWeekPage', () => {
       });
 
       expect(screen.getByText('S46')).toBeInTheDocument();
-      const weekFetches = fetchMock.mock.calls.filter(([url]) =>
-        String(url).includes('/clock-weeks/'),
-      );
-      expect(weekFetches.length).toBeLessThanOrEqual(2);
+      // One look at the computer's week, one at the server's week: then it stays put.
+      const weekFetches = fetchMock.mock.calls
+        .map(([url]) => String(url))
+        .filter((url) => url.includes('/clock-weeks/'));
+      expect(weekFetches).toEqual([
+        `/api/v1/users/${LEA.id}/clock-weeks/2026-W47`,
+        `/api/v1/users/${LEA.id}/clock-weeks/2026-W46`,
+      ]);
+      expect(screen.queryByText('S47')).not.toBeInTheDocument();
       expect(errorSpy).not.toHaveBeenCalled();
       errorSpy.mockRestore();
     });

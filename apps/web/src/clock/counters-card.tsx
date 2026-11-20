@@ -10,24 +10,37 @@ const REFUSED_TONE = 'text-rose-700';
 const VALUE_FLASH = 'motion-safe:animate-[value-flash_600ms_ease-out]';
 const STAT_VALUE = 'text-3xl -mx-1 rounded-inner-sm px-1 tracking-tight';
 
-function gapToneClass(minutes: number): string {
-  if (minutes > 0) return 'text-emerald-700';
-  if (minutes < 0) return 'text-amber-700';
-  return 'text-zinc-900';
+const GAP_TONES = {
+  positive: { name: 'positive', className: 'text-emerald-700' },
+  negative: { name: 'negative', className: 'text-amber-700' },
+  zero: { name: 'zero', className: 'text-zinc-900' },
+  refused: { name: 'refused', className: REFUSED_TONE },
+} as const;
+
+function gapTone(minutes: number, isRefused: boolean) {
+  if (isRefused) return GAP_TONES.refused;
+  if (minutes > 0) return GAP_TONES.positive;
+  if (minutes < 0) return GAP_TONES.negative;
+  return GAP_TONES.zero;
 }
 
 export function Gap({
   minutes,
   className,
   isRefused = false,
+  isHighlighted = false,
 }: {
   minutes: number;
   className: string;
   isRefused?: boolean;
+  isHighlighted?: boolean;
 }) {
+  const tone = gapTone(minutes, isRefused);
   return (
     <span
-      className={`font-semibold tabular-nums ${isRefused ? REFUSED_TONE : gapToneClass(minutes)} ${className}`}
+      data-tone={tone.name}
+      data-highlighted={isHighlighted}
+      className={`font-semibold tabular-nums ${tone.className} ${className}`}
     >
       {formatSignedMinutes(minutes)}
     </span>
@@ -62,6 +75,7 @@ function FlashingGap({
       key={settledMinutes}
       minutes={liveMinutes}
       isRefused={isRefused}
+      isHighlighted={hasChanged}
       className={`${STAT_VALUE} ${hasChanged ? VALUE_FLASH : ''}`}
     />
   );

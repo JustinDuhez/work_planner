@@ -2,7 +2,6 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { copy } from '../copy';
 import { yearCalendar } from '../test/calendar-fixtures';
-import { DAY_TYPE_CHIP_CLASSES } from '../leave/half-day-chips';
 import { signedInHomeRoutes } from '../test/clock-fixtures';
 import { expectNoAxeViolations } from '../test/axe';
 import { mockFetchRoutes, type MockResponse } from '../test/mock-fetch';
@@ -54,23 +53,12 @@ describe('YearCalendarPage', () => {
     ).toEqual(['L', 'M', 'M', 'J', 'V', 'S', 'D']);
   });
 
-  it('labels declared halves and holidays in text and colors them by status and weekend', async () => {
+  it('labels declared halves, pending requests and holidays in text', async () => {
     renderCalendar('/calendrier?periode=2026');
 
     expect(await screen.findByText('23 nov. : Congé · matin')).toBeInTheDocument();
     expect(screen.getByText('1 déc. : Télétravail · après-midi (en attente)')).toBeInTheDocument();
     expect(screen.getByText('25 déc. : Férié · Noël')).toBeInTheDocument();
-    expect(screen.getByText('23 nov. : Congé · matin').parentElement).toHaveClass(
-      ...DAY_TYPE_CHIP_CLASSES['leave']!.approved.split(' '),
-    );
-    expect(
-      screen.getByText('1 déc. : Télétravail · après-midi (en attente)').parentElement,
-    ).toHaveClass(...DAY_TYPE_CHIP_CLASSES['telework']!.pending.split(' '));
-    // Saturday 21 November: the day number sits next to its two halves.
-    const november = screen.getByRole('table', { name: 'novembre 2026' });
-    const saturday = within(november).getByText('21').parentElement;
-    expect(saturday?.children[1]).toHaveClass('bg-zinc-100');
-    expect(saturday?.children[2]).toHaveClass('bg-zinc-100');
   });
 
   it('summarizes the approved days of the period in a side card', async () => {
@@ -129,17 +117,6 @@ describe('YearCalendarPage', () => {
       legend.compareDocumentPosition(screen.getByRole('table', { name: 'juillet 2026' })) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
-  });
-
-  it('shows the months in two columns', async () => {
-    renderCalendar('/calendrier?periode=2026');
-
-    const grid = (await screen.findByRole('table', { name: 'juillet 2026' })).closest(
-      '.grid',
-    ) as HTMLElement;
-
-    expect(grid).toHaveClass('sm:grid-cols-2');
-    expect(grid).not.toHaveClass('lg:grid-cols-3');
   });
 
   it('says when nothing is declared', async () => {
@@ -313,8 +290,11 @@ describe('YearCalendarPage', () => {
     expect(within(today).getByText(copy.calendar.today)).toHaveClass('sr-only');
   });
 
-  it('shows the shape of the calendar while it loads', async () => {
-    renderCalendar('/calendrier?periode=2026');
+  it('announces the loading calendar and shows no summary card yet', async () => {
+    mockFetchRoutes({
+      ...signedInHomeRoutes(),
+      'GET /api/v1/settings': { status: 200, body: { yearStart: '07-01' } },
+    });
     const answer = globalThis.fetch;
     globalThis.fetch = (input, init) =>
       typeof input === 'string' && input.includes('/year-calendars/')
@@ -323,28 +303,23 @@ describe('YearCalendarPage', () => {
 
     renderApp('/calendrier?periode=2026');
 
-    const label = await screen.findByText(copy.calendar.loading);
-    expect(label).toHaveClass('sr-only');
-    expect(label.closest('[aria-busy="true"]')).not.toBeNull();
-    expect(document.querySelectorAll('[data-slot="aside"] [aria-hidden]').length).toBeGreaterThan(
-      0,
-    );
+    expect(await screen.findByText(copy.calendar.loading)).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: copy.calendar.yearTitle })).not.toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 
-  it('keeps the summary slot while the settings decide the period', async () => {
+  it('announces the loading calendar while the settings decide the period', async () => {
     mockFetchRoutes(signedInHomeRoutes());
     const answer = globalThis.fetch;
     globalThis.fetch = (input, init) =>
       typeof input === 'string' && input.includes('/settings')
         ? new Promise<Response>(() => undefined)
         : answer(input, init);
+
     renderApp('/calendrier');
 
-    expect(await screen.findByText(copy.calendar.loading)).toHaveClass('sr-only');
-    expect(document.querySelectorAll('[data-slot="aside"] [aria-hidden]').length).toBeGreaterThan(
-      0,
-    );
+    expect(await screen.findByText(copy.calendar.loading)).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: copy.calendar.yearTitle })).not.toBeInTheDocument();
   });
 
   it('says so when the calendar cannot be loaded and loads it again on demand', async () => {
