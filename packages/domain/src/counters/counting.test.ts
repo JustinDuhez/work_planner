@@ -6,6 +6,7 @@ import {
   dailyMinutesOn,
   type CountingRules,
 } from './counting';
+import { dayBounds } from '../clock/time-zone';
 
 const at = (isoInstant: string) => new Date(isoInstant);
 
@@ -115,6 +116,29 @@ describe('counterDays', () => {
     ]);
   });
 
+  it('expects a future weekday but makes it neither badgeable nor worked', () => {
+    // Monday 9 November is after today (Friday 6): periods already present there do not count yet.
+    const withFuturePeriod = new Map([
+      [
+        '2026-11-09',
+        [{ startedAt: at('2026-11-09T08:00:00Z'), endedAt: at('2026-11-09T15:00:00Z') }],
+      ],
+    ]);
+
+    const [monday] = counterDays(
+      { fromDate: '2026-11-09', toDate: '2026-11-09' },
+      withFuturePeriod,
+      RULES,
+    );
+
+    expect(monday).toEqual({
+      date: '2026-11-09',
+      targetMinutes: 420,
+      badgeableMinutes: 0,
+      workedMinutes: 0,
+    });
+  });
+
   it('counts only the closed periods of a day left unclosed', () => {
     const unclosed = new Map([
       [
@@ -135,23 +159,33 @@ describe('counterDays', () => {
     expect(thursday?.workedMinutes).toBe(180);
   });
 
-  it('counts weekend work in real minutes, on the 25-hour clock-change Sunday too', () => {
+  it('counts the real elapsed minutes of weekend work, with no target', () => {
     const sunday = new Map([
       [
-        '2026-10-25',
-        [{ startedAt: at('2026-10-24T23:00:00Z'), endedAt: at('2026-10-25T03:00:00Z') }],
+        '2026-11-08',
+        [{ startedAt: at('2026-11-08T08:00:00Z'), endedAt: at('2026-11-08T12:00:00Z') }],
       ],
     ]);
-    const rules = { ...RULES, countingStart: '2026-10-01' };
+    const rules = { ...RULES, today: '2026-11-10', now: at('2026-11-10T10:00:00Z') };
 
-    const [day] = counterDays({ fromDate: '2026-10-25', toDate: '2026-10-25' }, sunday, rules);
+    const [day] = counterDays({ fromDate: '2026-11-08', toDate: '2026-11-08' }, sunday, rules);
 
     expect(day).toEqual({
-      date: '2026-10-25',
+      date: '2026-11-08',
       targetMinutes: 0,
       badgeableMinutes: 0,
       workedMinutes: 240,
     });
+  });
+
+  it('counts the 25 real hours of the autumn clock-change day', () => {
+    const { start, nextStart } = dayBounds('2026-10-25', 'Europe/Paris');
+    const sunday = new Map([['2026-10-25', [{ startedAt: start, endedAt: nextStart }]]]);
+    const rules = { ...RULES, countingStart: '2026-10-01' };
+
+    const [day] = counterDays({ fromDate: '2026-10-25', toDate: '2026-10-25' }, sunday, rules);
+
+    expect(day?.workedMinutes).toBe(25 * 60);
   });
 
   it('uses the daily time in force on each day', () => {
@@ -196,6 +230,35 @@ describe('counterDays', () => {
     const days = counterDays({ fromDate: '2026-11-04', toDate: '2026-11-05' }, new Map(), rules);
 
     expect(days.map((day) => day.targetMinutes)).toEqual([210, 0]);
+  });
+
+  it('never expects a negative time when more than two half-days are absent', () => {
+    const rules = { ...RULES, absentHalfDaysByDate: new Map([['2026-11-04', 3]]) };
+
+    const [day] = counterDays({ fromDate: '2026-11-04', toDate: '2026-11-04' }, new Map(), rules);
+
+    expect(day?.targetMinutes).toBe(0);
+  });
+
+  it('expects nothing on a public holiday even with an absent half-day, but counts the work done', () => {
+    const rules = {
+      ...RULES,
+      publicHolidayDates: new Set(['2026-11-04']),
+      absentHalfDaysByDate: new Map([['2026-11-04', 1]]),
+    };
+
+    const [day] = counterDays(
+      { fromDate: '2026-11-04', toDate: '2026-11-04' },
+      periodsByDate,
+      rules,
+    );
+
+    expect(day).toEqual({
+      date: '2026-11-04',
+      targetMinutes: 0,
+      badgeableMinutes: 0,
+      workedMinutes: 420,
+    });
   });
 });
 

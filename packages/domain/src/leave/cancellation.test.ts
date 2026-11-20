@@ -12,6 +12,11 @@ describe('canCancelLeaveRequest', () => {
       true,
     ],
     ['an approved request starting today', { status: 'approved', startDate: TODAY }, false],
+    [
+      'an approved request that has started',
+      { status: 'approved', startDate: '2026-11-02' },
+      false,
+    ],
     ['a refused request', { status: 'refused', startDate: '2026-11-20' }, false],
     ['a cancelled request', { status: 'cancelled', startDate: '2026-11-20' }, false],
   ] as const)('answers for %s', (_what, request, canCancel) => {

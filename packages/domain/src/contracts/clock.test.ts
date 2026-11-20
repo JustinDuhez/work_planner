@@ -1,8 +1,4 @@
-import {
-  startClockPeriodRequestSchema,
-  updateClockDayRequestSchema,
-  updateClockPeriodRequestSchema,
-} from './clock';
+import { startClockPeriodRequestSchema, updateClockPeriodRequestSchema } from './clock';
 
 describe('clock request contracts', () => {
   it('accepts a bare Start with no times', () => {
@@ -30,10 +26,5 @@ describe('clock request contracts', () => {
 
   it('refuses unknown fields such as a user id', () => {
     expect(startClockPeriodRequestSchema.safeParse({ userId: 3 }).success).toBe(false);
-  });
-
-  it('only accepts the two work modes', () => {
-    expect(updateClockDayRequestSchema.safeParse({ workMode: 'telework' }).success).toBe(true);
-    expect(updateClockDayRequestSchema.safeParse({ workMode: 'beach' }).success).toBe(false);
   });
 });

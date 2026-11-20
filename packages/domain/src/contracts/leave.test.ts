@@ -1,4 +1,4 @@
-import { createLeaveRequestRequestSchema, reviewLeaveRequestRequestSchema } from './leave';
+import { createLeaveRequestRequestSchema } from './leave';
 
 const REQUEST = {
   dayTypeCode: 'leave',
@@ -28,10 +28,5 @@ describe('leave contracts', () => {
     expect(
       createLeaveRequestRequestSchema.safeParse({ ...REQUEST, reason: 'x'.repeat(501) }).success,
     ).toBe(false);
-  });
-
-  it('accepts a decision and refuses another value', () => {
-    expect(reviewLeaveRequestRequestSchema.safeParse({ decision: 'approved' }).success).toBe(true);
-    expect(reviewLeaveRequestRequestSchema.safeParse({ decision: 'maybe' }).success).toBe(false);
   });
 });

@@ -17,6 +17,14 @@ describe('periodMinutes', () => {
   it('counts whole minutes', () => {
     expect(periodMinutes(morning.startedAt, morning.endedAt)).toBe(210);
   });
+
+  it('drops the seconds of an incomplete minute', () => {
+    expect(periodMinutes(at('2026-11-06T08:00:00Z'), at('2026-11-06T08:01:59Z'))).toBe(1);
+  });
+
+  it('never goes below zero when the end is before the start', () => {
+    expect(periodMinutes(at('2026-11-06T09:00:00Z'), at('2026-11-06T08:00:00Z'))).toBe(0);
+  });
 });
 
 describe('dayWorkedMinutes', () => {
@@ -34,6 +42,28 @@ describe('dayWorkedMinutes', () => {
 
   it('gives an empty day zero minutes', () => {
     expect(dayWorkedMinutes([], { now: NOW, isToday: true })).toBe(0);
+  });
+});
+
+describe('findDayPeriodViolation on days of 23, 24 and 25 hours', () => {
+  const AFTER_ALL_DAYS = at('2026-11-10T12:00:00Z');
+
+  it.each([
+    ['a 23-hour day (spring clock change)', '2026-03-29'],
+    ['a 24-hour day', '2026-11-06'],
+    ['a 25-hour day (autumn clock change)', '2026-10-25'],
+  ])('applies the 23:59 limit on %s', (_description, date) => {
+    const bounds = dayBounds(date, PARIS);
+    const lastMinute = new Date(bounds.nextStart.getTime() - 60_000);
+    const minuteBefore = new Date(bounds.nextStart.getTime() - 120_000);
+    const dayBefore = new Date(bounds.start.getTime() - 60_000);
+    const violationOf = (startedAt: Date, endedAt: Date | null) =>
+      findDayPeriodViolation([{ startedAt, endedAt }], bounds, AFTER_ALL_DAYS);
+
+    expect(violationOf(lastMinute, null)).toBe('CLOCK_START_TOO_LATE');
+    expect(violationOf(minuteBefore, null)).toBeNull();
+    expect(violationOf(minuteBefore, bounds.nextStart)).toBe('CLOCK_TIME_OUTSIDE_DAY');
+    expect(violationOf(dayBefore, bounds.start)).toBe('CLOCK_TIME_OUTSIDE_DAY');
   });
 });
 
@@ -56,10 +86,18 @@ describe('findDayPeriodViolation', () => {
     expect(findDayPeriodViolation([morning, backToBack, afternoonRunning], BOUNDS, NOW)).toBeNull();
   });
 
-  it('refuses an end before or at the start', () => {
+  it('refuses an end before the start', () => {
     const reversed = { startedAt: morning.endedAt, endedAt: morning.startedAt };
 
     expect(findDayPeriodViolation([reversed], BOUNDS, NOW)).toBe('CLOCK_END_BEFORE_START');
+  });
+
+  it('refuses an end equal to the start', () => {
+    const instant = at('2026-11-06T08:00:00Z');
+
+    expect(findDayPeriodViolation([{ startedAt: instant, endedAt: instant }], BOUNDS, NOW)).toBe(
+      'CLOCK_END_BEFORE_START',
+    );
   });
 
   it('refuses a start before the day begins', () => {

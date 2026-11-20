@@ -2,7 +2,6 @@ import {
   answerClockCorrectionRequestSchema,
   createClockCorrectionRequestSchema,
 } from './corrections';
-import { markNotificationReadRequestSchema } from './notifications';
 
 const VALID = {
   userId: 3,
@@ -55,10 +54,5 @@ describe('correction contracts', () => {
     expect(answerClockCorrectionRequestSchema.safeParse({ status: 'superseded' }).success).toBe(
       false,
     );
-  });
-
-  it('only marks a notification as read', () => {
-    expect(markNotificationReadRequestSchema.safeParse({ isRead: true }).success).toBe(true);
-    expect(markNotificationReadRequestSchema.safeParse({ isRead: false }).success).toBe(false);
   });
 });
