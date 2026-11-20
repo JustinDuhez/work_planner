@@ -105,11 +105,11 @@ Les droits passent tous par un seul module, `packages/domain/src/policy.ts` : un
 
 ## Tests
 
-`npm test` lance environ 1 400 tests Jest :
+`npm test` lance 1 467 tests Jest :
 
-- **Domaine** (≈ 390) : fonctions pures (changement d'heure, minuit, temps badgeable, règle des 3 jours, remises à zéro) et une table exhaustive des droits (rôle × relation × action).
-- **API** (≈ 560) : routes et services contre une vraie base PostgreSQL (`work_planner_test`, vidée à chaque suite) : droits, SQL, transactions et codes HTTP ensemble.
-- **Web** (≈ 460) : écrans rendus avec Testing Library, interactions au clavier, et un contrôle d'accessibilité (jest-axe) sur les états chargé, vide et en erreur.
+- **Domaine** (411) : fonctions pures (changement d'heure, minuit, temps badgeable, règle des 3 jours, remises à zéro) et une table exhaustive des droits (rôle × relation × action).
+- **API** (588) : routes et services contre une vraie base PostgreSQL (`work_planner_test`, vidée à chaque suite) : droits, SQL, transactions et codes HTTP ensemble.
+- **Web** (468) : écrans rendus avec Testing Library, interactions au clavier, et un contrôle d'accessibilité (jest-axe) sur les états chargé, vide et en erreur.
 
 La CI GitHub (`.github/workflows`) exécute à chaque pull request et à chaque push sur `main` : `npm audit` (dépendances livrées), Prettier, ESLint, TypeScript, les tests et le build ; Render ne déploie `main` que si elle passe.
 
@@ -127,7 +127,6 @@ La CI GitHub (`.github/workflows`) exécute à chaque pull request et à chaque 
 - **Notifications** dans l'application seulement (cloche actualisée toutes les 30 s), pas d'e-mail ; pas de mot de passe oublié par e-mail : un admin réinitialise le mot de passe.
 - **Profil** : le temps de travail journalier n'y est pas affiché, car l'API renvoie la valeur planifiée et non celle en vigueur aujourd'hui (l'Annuaire et le Pointage utilisent la bonne).
 - **Mode sombre** mémorisé par navigateur, pas sur le compte.
-- **Semaine de télétravail** (F6.3b) non faite : la plage de dates de la demande couvre déjà une semaine.
 - **Hébergement gratuit** : mise en veille après 15 minutes (premier chargement lent).
 
 ## Déploiement
